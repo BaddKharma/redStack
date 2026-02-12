@@ -1,0 +1,27 @@
+# Sensitive files - DO NOT COMMIT
+terraform.tfvars
+*.pem
+*.key
+
+# Terraform state (contains secrets in plaintext)
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+
+# Terraform working directory
+.terraform/
+.terraform.lock.hcl
+
+# Editor/OS artifacts
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.backup
+
+# Crash logs
+crash.log
+crash.*.log

