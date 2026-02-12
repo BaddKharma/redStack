@@ -163,16 +163,6 @@ locals {
 # MYTHIC TEAM SERVER
 # ============================================================================
 
-# Elastic IP for Mythic (stable backend address)
-resource "aws_eip" "mythic" {
-  domain   = "vpc"
-  instance = aws_instance.mythic.id
-
-  tags = {
-    Name = "${var.project_name}-mythic-eip"
-  }
-}
-
 resource "aws_instance" "mythic" {
   ami           = data.aws_ami.debian12.id
   instance_type = var.mythic_instance_type
@@ -188,7 +178,7 @@ resource "aws_instance" "mythic" {
     encrypted             = true
   }
 
-  user_data = templatefile("${path.module}/user_data/mythic_setup.sh", {
+  user_data = templatefile("${path.module}/setup_scripts/mythic_setup.sh", {
     localPub_ip         = var.localPub_ip
     enable_autostart    = var.enable_mythic_autostart
     ssh_password        = random_password.lab.result
@@ -236,7 +226,7 @@ resource "aws_instance" "guacamole" {
     encrypted             = true
   }
 
-  user_data = templatefile("${path.module}/user_data/guacamole_setup.sh", {
+  user_data = templatefile("${path.module}/setup_scripts/guacamole_setup.sh", {
     guac_admin_password   = random_password.lab.result
     windows_private_ip    = aws_instance.windows.private_ip
     windows_username      = "Administrator"
@@ -279,7 +269,7 @@ resource "aws_instance" "windows" {
     encrypted             = true
   }
 
-  user_data = templatefile("${path.module}/user_data/windows_setup.ps1", {
+  user_data = templatefile("${path.module}/setup_scripts/windows_setup.ps1", {
     lab_password = random_password.lab.result
   })
 

@@ -109,7 +109,7 @@ resource "aws_instance" "havoc" {
     encrypted             = true
   }
 
-  user_data = templatefile("${path.module}/user_data/havoc_setup.sh", {
+  user_data = templatefile("${path.module}/setup_scripts/havoc_setup.sh", {
     ssh_password        = random_password.lab.result
     redirector_vpc_cidr = aws_vpc.redirector.cidr_block
   })

@@ -1,9 +1,12 @@
-# RedStack: Boot-to-Breach
+# redStack: A Boot-to-Breach Lab Environment for Red Team Operations
+
+> [!WARNING]
+> This is still very much in development! Please excuse the mess while I continue to get this to a more stable release version.
 
 ## Complete Deployment Walkthrough
 
 **Purpose:** Step-by-step guide to deploy and verify your boot-to-breach lab environment
-**Difficulty:** Intermediate
+**Difficulty:** Intermediate to Advanced
 
 ---
 
@@ -26,7 +29,7 @@
 
 ```bash
 ╔═══════════════════════════════════════════════════════════════════════╗
-║                       NETWORK ARCHITECTURE                          ║
+║                       NETWORK ARCHITECTURE                            ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 
 VPC A - Team Server Infrastructure (10.50.0.0/16 or Default VPC)

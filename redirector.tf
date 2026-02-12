@@ -179,9 +179,9 @@ resource "aws_instance" "redirector" {
     encrypted             = true
   }
 
-  user_data = replace(templatefile("${path.module}/user_data/redirector_userdata.sh", {
+  user_data = replace(templatefile("${path.module}/setup_scripts/redirector_userdata.sh", {
     ssh_password     = random_password.lab.result
-    setup_script_b64 = base64gzip(replace(templatefile("${path.module}/user_data/redirector_setup.sh", {
+    setup_script_b64 = base64gzip(replace(templatefile("${path.module}/setup_scripts/redirector_setup.sh", {
       mythic_private_ip = aws_instance.mythic.private_ip
       sliver_private_ip = aws_instance.sliver.private_ip
       havoc_private_ip  = aws_instance.havoc.private_ip
