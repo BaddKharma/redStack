@@ -28,12 +28,12 @@
 ## Architecture Overview
 
 ```bash
-╔═══════════════════════════════════════════════════════════════════════╗
-║                       NETWORK ARCHITECTURE                            ║
-╚═══════════════════════════════════════════════════════════════════════╝
++---------------------------------------------------------------------+
+|                     NETWORK ARCHITECTURE                            |
++---------------------------------------------------------------------+
 
 VPC A - Team Server Infrastructure (10.50.0.0/16 or Default VPC)
-├── Mythic Team Server     (Elastic IP - public facing)
+├── Mythic Team Server     (internal only - no public IP)
 ├── Sliver C2 Server       (internal only - no public IP)
 ├── Havoc C2 Server        (internal only - no public IP)
 ├── Guacamole Server       (Elastic IP - public facing)
@@ -50,8 +50,8 @@ Traffic Flow (URI Prefix Routing - all on ports 80/443):
 [Target] → /api/     → Redirector → Havoc
 
 Security Posture:
+✓ ALL C2 servers have NO public IPs (internal only)
 ✓ C2 servers ONLY accept traffic from Redirector VPC (10.60.0.0/16)
-✓ Sliver/Havoc have NO public IPs (internal only)
 ✓ Redirector in separate VPC (simulates external provider isolation)
 ✓ Windows workstation isolated (RDP only from Guacamole)
 ```
@@ -224,8 +224,8 @@ terraform plan
 - **~50+ resources** to be created
 - 6 EC2 instances (Mythic, Sliver, Havoc, Guacamole, Windows, Redirector)
 - 2 VPCs (team server VPC + redirector VPC)
-- 3 Elastic IPs (Mythic, Guacamole, Redirector) - **all static, persistent IPs**
-- Sliver and Havoc have **no public IPs** (internal only)
+- 2 Elastic IPs (Guacamole, Redirector) - **static, persistent IPs**
+- Mythic, Sliver, and Havoc have **no public IPs** (internal only)
 - Security groups, VPC peering, route tables
 - No errors or warnings
 
@@ -317,16 +317,18 @@ Verify all six components are operational and accessible.
 
 ### Step 2.1: Verify Mythic Team Server
 
-**Get Connection Info:**
+Mythic is internal only (no public IP). Access it via Guacamole SSH or from another instance in the VPC.
+
+**Access via Guacamole:**
+
+1. Open Guacamole UI
+2. Click **"Mythic Team Server (SSH)"**
+3. Should connect automatically
+
+**Or via direct SSH (instructor only):**
 
 ```bash
-terraform output mythic_server
-```
-
-**SSH to Mythic:**
-
-```bash
-MYTHIC_IP=$(terraform output -json mythic_server | jq -r '.public_ip')
+MYTHIC_IP=$(terraform output -json mythic_server | jq -r '.private_ip')
 ssh -i your-key.pem admin@$MYTHIC_IP
 ```
 
@@ -356,12 +358,12 @@ sudo cat .env | grep MYTHIC_ADMIN_PASSWORD
 
 **Checkpoint:** ✅ 10+ containers running, password obtained
 
-**Access Web UI:**
+**Access Web UI (via Windows workstation or Guacamole):**
 
-```bash
-exit  # Exit SSH
-echo "https://$MYTHIC_IP:7443"
-# Open in browser (accept self-signed cert warning)
+The Mythic Web UI at `https://<MYTHIC_PRIVATE_IP>:7443` is only accessible from within the VPC. Use the Windows attacker workstation (via Guacamole RDP) to open a browser and navigate to:
+
+```text
+https://<MYTHIC_PRIVATE_IP>:7443
 ```
 
 - Login: `mythic_admin`
@@ -745,10 +747,10 @@ Configure Mythic HTTP listener and generate test agent.
 
 ### Step 4.1: Create HTTP Listener
 
-**Access Mythic UI:**
+**Access Mythic UI (from Windows workstation via Guacamole RDP):**
 
-```bash
-https://$MYTHIC_IP:7443
+```text
+https://<MYTHIC_PRIVATE_IP>:7443
 ```
 
 **Navigate:** C2 Profiles → HTTP
@@ -1000,14 +1002,9 @@ Verify complete infrastructure and security posture.
 
 **Critical Test - C2 Servers Should NOT Be Directly Accessible:**
 
-```bash
-# Mythic - should timeout
-curl -v -m 5 http://$MYTHIC_IP/
+All three C2 servers (Mythic, Sliver, Havoc) have no public IPs and are unreachable from the internet by design. They can only be accessed internally via Guacamole or through the redirector's VPC peering.
 
-# Sliver and Havoc have no public IPs at all - they are internal only
-```
-
-**Expected:** Connection timeout for Mythic. Sliver and Havoc are unreachable from the internet by design (no public IP, no Elastic IP).
+**Expected:** No C2 server has a public IP. All C2 traffic must flow through the Apache redirector.
 
 **Checkpoint:** ✅ C2 servers not directly accessible (GOOD!)
 
@@ -1064,7 +1061,7 @@ REDSTACK DEPLOYMENT COMPLETE
 Deployment Date: $(date)
 
 INFRASTRUCTURE (6 EC2 instances):
-- Mythic C2:    $MYTHIC_IP (public)
+- Mythic C2:    internal only (access via Guacamole)
 - Sliver C2:    internal only (access via Guacamole)
 - Havoc C2:     internal only (access via Guacamole)
 - Guacamole:    $GUAC_IP (public)
@@ -1137,7 +1134,10 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
 **Solution:**
 
 ```bash
-ssh admin@$MYTHIC_IP
+# Access via Guacamole SSH, or direct SSH with private IP:
+MYTHIC_IP=$(terraform output -json mythic_server | jq -r '.private_ip')
+ssh -i your-key.pem admin@$MYTHIC_IP
+
 cd /opt/Mythic
 sudo ./mythic-cli logs  # Check for errors
 sudo ./mythic-cli restart
@@ -1299,7 +1299,7 @@ At the end of this deployment, you should have:
 - ✅ All 6 EC2 instances running and accessible
 - ✅ 2 VPCs with peering configured
 - ✅ Apache redirector routing traffic to 3 C2 servers via URI prefixes on 80/443
-- ✅ Mythic team server isolated (HTTP/HTTPS only from redirector)
+- ✅ Mythic C2 server isolated (no public IP, internal only)
 - ✅ Sliver C2 server isolated (no public IP, internal only)
 - ✅ Havoc C2 server isolated (no public IP, internal only)
 - ✅ Mythic HTTP listener configured through redirector (/news/)
