@@ -71,3 +71,37 @@ output "deployment_info" {
 
   EOT
 }
+
+output "network_architecture" {
+  description = "Network architecture diagram with actual IPs"
+  value       = <<-EOT
+
+  +---------------------------------------------------------------------+
+  |                     NETWORK ARCHITECTURE                            |
+  +---------------------------------------------------------------------+
+
+  VPC A - Team Server Infrastructure (${var.use_default_vpc ? "Default VPC" : var.vpc_cidr})
+    Mythic Team Server      ${aws_instance.mythic.private_ip} (internal only)
+    Sliver C2 Server        ${aws_instance.sliver.private_ip} (internal only)
+    Havoc C2 Server         ${aws_instance.havoc.private_ip} (internal only)
+    Guacamole Server        ${aws_eip.guacamole.public_ip} (public)
+    Windows 11 Workstation  ${aws_instance.windows.private_ip} (internal only)
+
+  VPC B - Redirector Infrastructure (${aws_vpc.redirector.cidr_block})
+    Apache Redirector       ${aws_eip.redirector.public_ip} (public)
+
+  VPC Peering: VPC A <-> VPC B
+
+  Traffic Flow (URI Prefix Routing - ports 80/443):
+    [Target] -> ${var.mythic_uri_prefix}/  -> ${aws_eip.redirector.public_ip} -> ${aws_instance.mythic.private_ip} (Mythic)
+    [Target] -> ${var.sliver_uri_prefix}/  -> ${aws_eip.redirector.public_ip} -> ${aws_instance.sliver.private_ip} (Sliver)
+    [Target] -> ${var.havoc_uri_prefix}/   -> ${aws_eip.redirector.public_ip} -> ${aws_instance.havoc.private_ip} (Havoc)
+
+  Security Posture:
+    [x] ALL C2 servers have NO public IPs (internal only)
+    [x] C2 servers ONLY accept traffic from Redirector VPC (${aws_vpc.redirector.cidr_block})
+    [x] Redirector in separate VPC (simulates external provider isolation)
+    [x] Windows workstation isolated (RDP only from Guacamole)
+
+  EOT
+}
