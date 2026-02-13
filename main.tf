@@ -230,7 +230,7 @@ resource "aws_instance" "guacamole" {
     guac_admin_password   = random_password.lab.result
     windows_private_ip    = aws_instance.windows.private_ip
     windows_username      = "Administrator"
-    windows_password      = aws_instance.windows.password_data != "" ? rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)) : ""
+    windows_password      = try(rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)), "")
     ssh_password          = random_password.lab.result
     mythic_private_ip     = aws_instance.mythic.private_ip
     redirector_private_ip = aws_instance.redirector.private_ip

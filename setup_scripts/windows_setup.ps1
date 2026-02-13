@@ -86,6 +86,34 @@ $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";
 Write-Host "[*] Installing Windows Terminal via Chocolatey..."
 & "$env:ProgramData\chocolatey\bin\choco.exe" install microsoft-windows-terminal -y --no-progress
 
+# ============================================================================
+# INSTALL GOOGLE CHROME
+# ============================================================================
+
+Write-Host "[*] Installing Google Chrome..."
+& "$env:ProgramData\chocolatey\bin\choco.exe" install googlechrome -y --no-progress
+
+# ============================================================================
+# INSTALL VS CODE
+# ============================================================================
+
+Write-Host "[*] Installing Visual Studio Code..."
+& "$env:ProgramData\chocolatey\bin\choco.exe" install vscode -y --no-progress
+
+# ============================================================================
+# INSTALL MOBAXTERM
+# ============================================================================
+
+Write-Host "[*] Installing MobaXterm..."
+& "$env:ProgramData\chocolatey\bin\choco.exe" install mobaxterm -y --no-progress
+
+# ============================================================================
+# INSTALL VISUAL STUDIO BUILD TOOLS
+# ============================================================================
+
+Write-Host "[*] Installing Visual Studio 2022 Build Tools (C/C++, .NET, C#)..."
+& "$env:ProgramData\chocolatey\bin\choco.exe" install visualstudio2022buildtools -y --no-progress --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools --add Microsoft.VisualStudio.Workload.NetCoreBuildTools --passive --norestart"
+
 Write-Host "===== Windows Client Setup Completed $(Get-Date) ====="
 Write-Host "===== Use 'aws ec2 get-password-data' to retrieve Administrator password ====="
 Write-Host "===== NOTE: A reboot may be required to complete WSL installation ====="
