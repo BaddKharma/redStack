@@ -64,8 +64,8 @@ output "deployment_info" {
   | 6. WINDOWS ATTACKER WORKSTATION                                     |
   +---------------------------------------------------------------------+
     Private IP:   ${aws_instance.windows.private_ip}
-    Username:     attacker
-    Password:     ${nonsensitive(random_password.lab.result)}
+    Username:     Administrator
+    Password:     ${aws_instance.windows.password_data != "" ? rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)) : "(not yet available)"}
     Access:       RDP via Guacamole
     Guacamole:    Windows 11 Attacker Workstation (RDP)
 

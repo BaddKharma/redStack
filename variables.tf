@@ -26,6 +26,11 @@ variable "ssh_key_name" {
   type        = string
 }
 
+variable "ssh_private_key_path" {
+  description = "Path to the SSH private key file (.pem) for decrypting Windows Administrator password"
+  type        = string
+}
+
 variable "mythic_instance_type" {
   description = "EC2 instance type for Mythic team server"
   type        = string

@@ -32,14 +32,7 @@ Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\W
 Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
 Write-Host "[*] RDP setup complete - ready for access!"
-
-# Create attacker user with lab password
-Write-Host "[*] Creating attacker user..."
-$SecurePassword = ConvertTo-SecureString "${lab_password}" -AsPlainText -Force
-New-LocalUser -Name "attacker" -Password $SecurePassword -FullName "Attacker" -Description "redStack lab user" -PasswordNeverExpires -ErrorAction SilentlyContinue
-Add-LocalGroupMember -Group "Administrators" -Member "attacker" -ErrorAction SilentlyContinue
-Add-LocalGroupMember -Group "Remote Desktop Users" -Member "attacker" -ErrorAction SilentlyContinue
-Write-Host "[*] Attacker user created"
+Write-Host "[*] Using default Administrator account (AWS-generated password)"
 
 # ============================================================================
 # INSTALL WSL WITH DEBIAN

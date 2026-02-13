@@ -13,6 +13,7 @@ echo "===== Guacamole Server Setup Started $(date) ====="
 GUAC_ADMIN_PASSWORD="${guac_admin_password}"
 WINDOWS_PRIVATE_IP="${windows_private_ip}"
 WINDOWS_USERNAME="${windows_username}"
+WINDOWS_PASSWORD="${windows_password}"
 SSH_PASSWORD="${ssh_password}"
 MYTHIC_PRIVATE_IP="${mythic_private_ip}"
 REDIRECTOR_PRIVATE_IP="${redirector_private_ip}"
@@ -212,6 +213,7 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
                 \"hostname\": \"$WINDOWS_PRIVATE_IP\",
                 \"port\": \"3389\",
                 \"username\": \"$WINDOWS_USERNAME\",
+                \"password\": \"$WINDOWS_PASSWORD\",
                 \"security\": \"any\",
                 \"ignore-cert\": \"true\",
                 \"enable-drive\": \"true\",

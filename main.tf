@@ -230,6 +230,7 @@ resource "aws_instance" "guacamole" {
     guac_admin_password   = random_password.lab.result
     windows_private_ip    = aws_instance.windows.private_ip
     windows_username      = "Administrator"
+    windows_password      = aws_instance.windows.password_data != "" ? rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)) : ""
     ssh_password          = random_password.lab.result
     mythic_private_ip     = aws_instance.mythic.private_ip
     redirector_private_ip = aws_instance.redirector.private_ip
@@ -262,6 +263,8 @@ resource "aws_instance" "windows" {
 
   vpc_security_group_ids = [aws_security_group.windows.id]
 
+  get_password_data = true
+
   root_block_device {
     volume_size           = 50
     volume_type           = "gp3"
@@ -269,9 +272,7 @@ resource "aws_instance" "windows" {
     encrypted             = true
   }
 
-  user_data = templatefile("${path.module}/setup_scripts/windows_setup.ps1", {
-    lab_password = random_password.lab.result
-  })
+  user_data = file("${path.module}/setup_scripts/windows_setup.ps1")
 
   metadata_options {
     http_endpoint = "enabled"
