@@ -118,11 +118,11 @@ Write-Host "[*] Installing Windows Terminal via Chocolatey..."
 & "$env:ProgramData\chocolatey\bin\choco.exe" install microsoft-windows-terminal -y --no-progress
 
 # ============================================================================
-# INSTALL GOOGLE CHROME
+# INSTALL CHROMIUM
 # ============================================================================
 
-Write-Host "[*] Installing Google Chrome..."
-& "$env:ProgramData\chocolatey\bin\choco.exe" install googlechrome -y --no-progress
+Write-Host "[*] Installing Chromium..."
+& "$env:ProgramData\chocolatey\bin\choco.exe" install chromium -y --no-progress
 
 # ============================================================================
 # INSTALL VS CODE
