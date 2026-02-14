@@ -58,7 +58,7 @@ Security Posture:
 ✓ Redirector in separate VPC (simulates external provider isolation)
 ✓ Header validation (X-Request-ID + token) required for C2 proxy
 ✓ URI prefix routing with CDN/cloud-style paths
-✓ redirect.rules: AV vendors, cloud scanners, TOR exits blocked (403)
+✓ redirect.rules: AV vendors, TOR exits blocked (403); cloud IPs commented out for AWS compatibility
 ✓ Decoy page served to requests without valid C2 header
 ✓ All hosts have descriptive hostnames and /etc/hosts entries for name resolution
 ```
@@ -314,7 +314,7 @@ dig +short c2.yourdomain.com
 - Sliver (`sliver`): Installing Sliver C2 server binary, configuring firewall (Debian 12)
 - Havoc (`havoc`): Installing Go, cloning and building Havoc teamserver from source (Debian 12)
 - Guacamole (`guac`): Setting up PostgreSQL, Nginx, Docker containers (Debian 12)
-- Windows (`WIN-OPERATOR`): Disabling Defender/Firewall, enabling RDP, installing dev tools (VS Code, Chrome, MobaXterm, VS Build Tools), WSL Debian, and Windows Terminal
+- Windows (`WIN-OPERATOR`): Disabling Defender/Firewall, enabling RDP, installing tools (Chromium, VS Code, MobaXterm, 7-Zip)
 - Redirector (`redirector`): Installing Apache with mod_rewrite/proxy, configuring header+URI validation, downloading redirect.rules, setting up SSL and decoy page (Debian 12, fully automated)
 
 ---
@@ -460,18 +460,9 @@ The Windows instance uses the default AWS `Administrator` account. The password 
 
 - Windows desktop loads
 - Logged in as `Administrator` (local admin)
-- Windows Terminal is installed (check Start Menu)
-- WSL with Debian is available (a reboot may be required to finalize WSL)
+- Chromium, VS Code, MobaXterm, and 7-Zip installed
 
-**Verify WSL (after reboot if needed):**
-
-```powershell
-wsl -l -v
-```
-
-Should show `Debian` listed as an installed distribution.
-
-**Checkpoint:** ✅ Can RDP into Windows via Guacamole, Windows Terminal and WSL available
+**Checkpoint:** ✅ Can RDP into Windows via Guacamole, tools available
 
 **If Connection Fails:**
 
@@ -543,7 +534,23 @@ This tests Apache status, VirtualHost configuration, and connectivity to all thr
 grep -c 'RewriteCond' /etc/apache2/redirect.rules
 ```
 
-The redirect.rules file is downloaded at boot time from curi0usJack's gist and automatically transformed to return 403 Forbidden (instead of 302 redirects) for known security scanners, AV vendor IPs, cloud analysis sandboxes, and TOR exit nodes.
+The redirect.rules file is downloaded at boot time from curi0usJack's gist and automatically transformed to return 403 Forbidden (instead of 302 redirects) for known security scanners, AV vendor IPs, and TOR exit nodes.
+
+> **Note:** AWS and Azure cloud IP blocks are **commented out by default** in redirect.rules because this lab runs in AWS. Blocking cloud subnets would prevent C2 callbacks from reaching the redirector. If you deploy outside of cloud environments, you can re-enable them by uncommenting the relevant sections in `/etc/apache2/redirect.rules`:
+>
+> ```bash
+> # On the redirector, edit the rules file:
+> sudo nano /etc/apache2/redirect.rules
+>
+> # Uncomment the following sections:
+> #   - "Class A Exclusions" (AWS/Azure /8 ranges)
+> #   - "AWS Fine Grained" (specific AWS subnets)
+> #   - "Azure" (Azure subnets)
+> #   - "Other VT hosts" (VirusTotal analysis hosts)
+>
+> # Then reload Apache:
+> sudo systemctl reload apache2
+> ```
 
 **Checkpoint:** ✅ Apache running, header+URI validation active, redirect.rules blocking scanners
 
@@ -698,6 +705,7 @@ The file `/etc/apache2/redirect.rules` is downloaded at boot from [curi0usJack's
 
 - Setup directives stripped (`Define REDIR_TARGET`, `RewriteEngine On`, `RewriteOptions Inherit`)
 - All `302` redirects replaced with `403 Forbidden` responses
+- AWS/Azure/cloud IP blocks **commented out** (would block our own AWS-hosted C2 callbacks)
 - Included in both HTTP and HTTPS VirtualHosts via `Include /etc/apache2/redirect.rules`
 
 ```bash
@@ -1239,17 +1247,6 @@ telnet $WIN_IP 3389
 - Security group misconfiguration
 - Guacamole didn't auto-configure connection
 
-### Windows Terminal or WSL Not Working
-
-**Symptoms:** Windows Terminal not in Start Menu, or WSL shows no distributions
-
-**Solution:**
-
-- A reboot is typically required after WSL feature installation
-- Check `C:\Windows\Temp\user-data.log` for installation errors
-- Manually install WSL: `wsl --install -d Debian`
-- Manually install Windows Terminal: open PowerShell as Admin and run `choco install microsoft-windows-terminal -y`
-
 ### Agent Won't Callback
 
 **Symptoms:** Agent executes but no callback in Mythic/Sliver/Havoc
@@ -1342,14 +1339,14 @@ At the end of this deployment, you should have:
 - ✅ Sliver HTTP listener configured through redirector (/cloud/storage/objects/)
 - ✅ Havoc HTTP listener configured through redirector (/edge/cache/assets/)
 - ✅ Header validation (X-Request-ID) filtering unauthorized requests
-- ✅ redirect.rules blocking AV vendors, scanners, and TOR exits (403)
+- ✅ redirect.rules blocking AV vendors and TOR exits (403); cloud IPs commented out for AWS compatibility
 - ✅ Decoy page served for requests without valid C2 header
 - ✅ At least 1 active agent callback per C2 framework
 - ✅ Can execute commands through all C2 paths
 - ✅ All 6 Guacamole connections auto-created (1 RDP, 5 SSH)
 - ✅ Guacamole providing web-based access to all infrastructure components
 - ✅ SSH password authentication working from VPC, keys required from public IPs
-- ✅ Windows workstation with Windows Terminal and WSL Debian installed
+- ✅ Windows workstation with Chromium, VS Code, MobaXterm, and 7-Zip installed
 - ✅ Windows Administrator accessible via Guacamole (AWS-generated password auto-configured)
 
 **Your Boot-to-Breach lab environment is operational.**
