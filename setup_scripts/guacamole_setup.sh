@@ -225,7 +225,7 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
     curl -s -X POST "http://localhost:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
         -H "Content-Type: application/json" \
         -d "{
-            \"name\": \"Windows 11 Operator Workstation\",
+            \"name\": \"Windows Operator Workstation\",
             \"protocol\": \"rdp\",
             \"parameters\": {
                 \"hostname\": \"$WINDOWS_PRIVATE_IP\",

@@ -178,7 +178,7 @@ resource "aws_security_group_rule" "guacamole_egress" {
 
 resource "aws_security_group" "windows" {
   name        = "${var.project_name}-windows-sg"
-  description = "Security group for Windows 11 operator workstation"
+  description = "Security group for Windows operator workstation"
   vpc_id      = local.vpc_id
 
   tags = {

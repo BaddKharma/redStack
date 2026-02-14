@@ -1,5 +1,34 @@
+<script>
+REM ============================================================================
+REM PHASE 1: Disable Windows Defender via batch (bypasses AMSI)
+REM AMSI scans PowerShell scripts at parse time and blocks scripts that contain
+REM security-disabling commands. Batch scripts are not subject to AMSI scanning.
+REM ============================================================================
+
+REM Disable Defender via registry
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableBehaviorMonitoring /t REG_DWORD /d 1 /f
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableIOAVProtection /t REG_DWORD /d 1 /f
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScanOnRealtimeEnable /t REG_DWORD /d 1 /f
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScriptScanning /t REG_DWORD /d 1 /f
+
+REM Stop Defender service
+sc stop WinDefend
+sc config WinDefend start= disabled
+
+REM Disable Windows Firewall
+netsh advfirewall set allprofiles state off
+
+REM Enable RDP
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
+netsh advfirewall firewall set rule group="Remote Desktop" new enable=yes
+
+echo [*] Phase 1 complete - Defender disabled, firewall off, RDP enabled
+</script>
 <powershell>
-# windows_setup.ps1 - User data script for Windows client initialization
+# windows_setup.ps1 - Phase 2: Main setup (runs after Defender is disabled)
 
 # Logging
 Start-Transcript -Path "C:\Windows\Temp\user-data.log" -Append
@@ -25,23 +54,13 @@ $UserKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8
 Set-ItemProperty -Path $AdminKey -Name "IsInstalled" -Value 0 -Force
 Set-ItemProperty -Path $UserKey -Name "IsInstalled" -Value 0 -Force
 
-# Disable Windows Defender (training only - CRITICAL: Explain this to operators)
-Write-Host "[*] Disabling Windows Defender (TRAINING ONLY)..."
+# Reinforce Defender disable via PowerShell (belt and suspenders)
+Write-Host "[*] Reinforcing Defender disable (TRAINING ONLY)..."
 Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
 Set-MpPreference -DisableIOAVProtection $true -ErrorAction SilentlyContinue
 Set-MpPreference -DisableBehaviorMonitoring $true -ErrorAction SilentlyContinue
 Set-MpPreference -DisableScriptScanning $true -ErrorAction SilentlyContinue
 Add-MpPreference -ExclusionPath "C:\" -ErrorAction SilentlyContinue
-
-# Disable Windows Firewall (training only)
-Write-Host "[*] Disabling Windows Firewall (TRAINING ONLY)..."
-Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
-
-# Enable RDP and disable NLA (Network Level Authentication)
-Write-Host "[*] Enabling Remote Desktop..."
-Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0
-Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
 Write-Host "[*] RDP setup complete - ready for access!"
 Write-Host "[*] Using default Administrator account (AWS-generated password)"
@@ -125,6 +144,20 @@ Write-Host "[*] Installing MobaXterm..."
 
 Write-Host "[*] Installing Visual Studio 2022 Build Tools (C/C++, .NET, C#)..."
 & "$env:ProgramData\chocolatey\bin\choco.exe" install visualstudio2022buildtools -y --no-progress --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools --add Microsoft.VisualStudio.Workload.NetCoreBuildTools --passive --norestart"
+
+# ============================================================================
+# INSTALL 7-ZIP
+# ============================================================================
+
+Write-Host "[*] Installing 7-Zip..."
+& "$env:ProgramData\chocolatey\bin\choco.exe" install 7zip -y --no-progress
+
+# ============================================================================
+# INSTALL PYTHON 3
+# ============================================================================
+
+Write-Host "[*] Installing Python 3..."
+& "$env:ProgramData\chocolatey\bin\choco.exe" install python3 -y --no-progress
 
 Write-Host "===== Windows Client Setup Completed $(Get-Date) ====="
 Write-Host "===== Use 'aws ec2 get-password-data' to retrieve Administrator password ====="

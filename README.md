@@ -38,7 +38,7 @@ VPC A - Team Server Infrastructure (10.50.0.0/16 or Default VPC)
 ├── sliver       - Sliver C2 Server       (Debian 12 - internal only, no public IP)
 ├── havoc        - Havoc C2 Server        (Debian 12 - internal only, no public IP)
 ├── guac         - Guacamole Server       (Debian 12 - Elastic IP, public facing)
-└── WIN-OPERATOR - Windows 11 Workstation (internal only - RDP via Guacamole)
+└── WIN-OPERATOR - Windows Workstation    (internal only - RDP via Guacamole)
 
 VPC B - Redirector Infrastructure (10.60.0.0/16)
 └── redirector   - Apache Redirector      (Debian 12 - Elastic IP, public facing)
@@ -434,7 +434,7 @@ echo "https://$GUAC_IP/guacamole"
 
 After logging in, you should see **6 pre-configured connections**:
 
-1. **Windows 11 Operator Workstation** (RDP) - auto-connects with Administrator credentials
+1. **Windows Operator Workstation** (RDP) - auto-connects with Administrator credentials
 2. **Mythic C2 Server (SSH)** - green-black terminal theme
 3. **Guacamole Server (SSH)** - green-black terminal theme
 4. **Apache Redirector (SSH)** - green-black terminal theme
@@ -452,7 +452,7 @@ The Windows instance uses the default AWS `Administrator` account. The password 
 **Access via Guacamole:**
 
 1. Open Guacamole UI
-2. Click **"Windows 11 Operator Workstation"**
+2. Click **"Windows Operator Workstation"**
 3. RDP connects automatically (credentials are pre-configured)
 4. Wait 10-30 seconds for RDP connection
 
@@ -830,7 +830,7 @@ https://<MYTHIC_PRIVATE_IP>:7443
 **Access Windows Workstation:**
 
 1. Open Guacamole UI
-2. Click "Windows 11 Operator Workstation"
+2. Click "Windows Operator Workstation"
 3. Use file transfer to upload `apollo.exe`
 
 **Or use Guacamole's file share:**

@@ -44,7 +44,7 @@ variable "guacamole_instance_type" {
 }
 
 variable "windows_instance_type" {
-  description = "EC2 instance type for Windows 11 client"
+  description = "EC2 instance type for Windows client"
   type        = string
   default     = "t3.medium"
 }

@@ -31,7 +31,8 @@ provider "aws" {
 resource "random_password" "lab" {
   length           = 16
   special          = true
-  override_special = "!@#%"
+  min_special      = 2
+  override_special = "-_.~+!@"
 }
 
 # Random token for C2 header validation (auto-generated if not user-specified)
@@ -69,7 +70,7 @@ data "aws_ami" "debian12" {
   }
 }
 
-# Get latest Windows Server 2022 AMI (closest to Win11)
+# Get latest Windows Server 2022 AMI
 data "aws_ami" "windows2022" {
   most_recent = true
   owners      = ["801119661308"] # Amazon
