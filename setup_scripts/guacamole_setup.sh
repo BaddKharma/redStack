@@ -150,8 +150,8 @@ echo "[*] Starting Guacamole containers..."
 docker-compose up -d
 
 # Wait for Guacamole to be ready
-echo "[*] Waiting for Guacamole to initialize (60 seconds)..."
-sleep 60
+echo "[*] Waiting for Guacamole containers to start..."
+sleep 10
 
 # Configure Nginx reverse proxy with self-signed SSL
 echo "[*] Configuring Nginx reverse proxy..."
@@ -197,17 +197,28 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl restart nginx
 
-# Wait a bit more for Guacamole API to be ready
-sleep 30
+# Wait for Guacamole API to be fully ready (poll with retries)
+echo "[*] Waiting for Guacamole API to become available..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+TOKEN=""
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    TOKEN=$(curl -s -X POST "http://localhost:8080/guacamole/api/tokens" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d "username=guacadmin&password=guacadmin" 2>/dev/null | jq -r '.authToken' 2>/dev/null)
+    if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+        echo "[+] Guacamole API ready after $((RETRY_COUNT * 10)) seconds"
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "[*] Guacamole not ready yet, retrying in 10s... ($RETRY_COUNT/$MAX_RETRIES)"
+    sleep 10
+done
 
 # Change default Guacamole admin password using API
 echo "[*] Changing default Guacamole admin password..."
-PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-
-# Get auth token
-TOKEN=$(curl -s -X POST "http://localhost:8080/guacamole/api/tokens" \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "username=guacadmin&password=guacadmin" | jq -r '.authToken')
+IMDS_TOKEN_V2=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+PUBLIC_IP=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN_V2" http://169.254.169.254/latest/meta-data/public-ipv4)
 
 if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
     # Update password
