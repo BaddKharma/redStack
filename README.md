@@ -491,7 +491,7 @@ ssh -i your-key.pem admin@$REDIR_IP
 - Apache2 with modules: rewrite, ssl, proxy, proxy_http, headers, deflate
 - Header validation (`X-Request-ID` + auto-generated token) — requests without the correct header get a decoy page
 - URI prefix routing to each C2 server (CDN/cloud-style paths)
-- [redirect.rules](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10) — blocks AV vendors, cloud sandboxes, TOR exit nodes (403 Forbidden)
+- [redirect.rules](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10) (adapted) — blocks AV vendors, cloud sandboxes, TOR exit nodes (403 Forbidden)
 - CloudEdge CDN maintenance decoy page (served when header validation fails)
 - Self-signed SSL certificate (placeholder until Certbot is configured)
 - UFW firewall (ports 22, 80, 443)
@@ -534,7 +534,7 @@ This tests Apache status, VirtualHost configuration, and connectivity to all thr
 grep -c 'RewriteCond' /etc/apache2/redirect.rules
 ```
 
-The redirect.rules file is downloaded at boot time from curi0usJack's gist and automatically transformed to return 403 Forbidden (instead of 302 redirects) for known security scanners, AV vendor IPs, and TOR exit nodes.
+The redirect.rules file is downloaded at boot time from the redStack GitHub repo (adapted from [curi0usJack's gist](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10)) and returns 403 Forbidden for known security scanners, AV vendor IPs, and TOR exit nodes.
 
 > **Note:** AWS and Azure cloud IP blocks are **commented out by default** in redirect.rules because this lab runs in AWS. Blocking cloud subnets would prevent C2 callbacks from reaching the redirector. If you deploy outside of cloud environments, you can re-enable them by uncommenting the relevant sections in `/etc/apache2/redirect.rules`:
 >
@@ -701,10 +701,10 @@ Each VirtualHost uses three security layers before proxying traffic:
 
 **Layer 1: redirect.rules (Automated Scanner Blocking)**
 
-The file `/etc/apache2/redirect.rules` is downloaded at boot from [curi0usJack's gist](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10) and automatically adapted:
+The file `/etc/apache2/redirect.rules` is downloaded at boot from the [redStack GitHub repo](https://github.com/BaddKharma/redStack), which maintains an adapted version of [curi0usJack's redirect rules](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10):
 
-- Setup directives stripped (`Define REDIR_TARGET`, `RewriteEngine On`, `RewriteOptions Inherit`)
 - All `302` redirects replaced with `403 Forbidden` responses
+- Setup directives stripped (`Define REDIR_TARGET`, `RewriteEngine On`, `RewriteOptions Inherit`)
 - AWS/Azure/cloud IP blocks **commented out** (would block our own AWS-hosted C2 callbacks)
 - Included in both HTTP and HTTPS VirtualHosts via `Include /etc/apache2/redirect.rules`
 
@@ -716,10 +716,9 @@ grep -c 'RewriteCond' /etc/apache2/redirect.rules
 To update redirect.rules manually:
 
 ```bash
-# Re-download and apply
-curl -sL "https://gist.githubusercontent.com/curi0usJack/971385e8334e189d93a6cb4671238b10/raw" | \
-  sed -e '/^Define REDIR_TARGET/d' -e '/^RewriteEngine On/d' -e '/^RewriteOptions Inherit/d' \
-      -e 's|\[L,R=302\]|[F,L]|g' > /etc/apache2/redirect.rules
+# Re-download from redStack repo
+curl -sL "https://raw.githubusercontent.com/BaddKharma/redStack/main/setup_scripts/redirect.rules" \
+  -o /etc/apache2/redirect.rules
 sudo systemctl reload apache2
 ```
 
