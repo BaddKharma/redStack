@@ -82,6 +82,26 @@ resource "aws_route" "teamserver_to_redirector" {
 }
 
 # ============================================================================
+# EXTERNAL VPN ROUTING (Optional - for HTB/THM access)
+# ============================================================================
+
+# Route VPN target CIDRs to redirector instance ENI (for VPN forwarding)
+resource "aws_route" "redirector_vpn_targets" {
+  count                  = var.enable_external_vpn ? length(var.external_vpn_cidrs) : 0
+  route_table_id         = aws_route_table.redirector.id
+  destination_cidr_block = var.external_vpn_cidrs[count.index]
+  network_interface_id   = aws_network_interface.redirector.id
+}
+
+# Route VPN target CIDRs from main VPC to redirector VPC via peering
+resource "aws_route" "teamserver_vpn_targets" {
+  count                     = var.enable_external_vpn ? length(var.external_vpn_cidrs) : 0
+  route_table_id            = var.use_default_vpc ? data.aws_vpc.default[0].main_route_table_id : aws_route_table.training[0].id
+  destination_cidr_block    = var.external_vpn_cidrs[count.index]
+  vpc_peering_connection_id = aws_vpc_peering_connection.redirector_to_teamserver.id
+}
+
+# ============================================================================
 # REDIRECTOR SECURITY GROUP
 # ============================================================================
 
@@ -107,14 +127,14 @@ resource "aws_security_group_rule" "redirector_ssh" {
   security_group_id = aws_security_group.redirector.id
 }
 
-# SSH from Guacamole (via VPC peering for web-based SSH access)
-resource "aws_security_group_rule" "redirector_ssh_from_guacamole" {
+# All traffic from main VPC (internal lab connectivity via VPC peering)
+resource "aws_security_group_rule" "redirector_all_from_main_vpc" {
   type              = "ingress"
-  from_port         = 22
-  to_port           = 22
-  protocol          = "tcp"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
   cidr_blocks       = [var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr]
-  description       = "SSH from Guacamole via VPC peering"
+  description       = "All traffic from main VPC for lab connectivity"
   security_group_id = aws_security_group.redirector.id
 }
 
@@ -150,14 +170,39 @@ resource "aws_security_group_rule" "redirector_egress" {
   security_group_id = aws_security_group.redirector.id
 }
 
+# All traffic from main VPC when VPN routing is enabled
+resource "aws_security_group_rule" "redirector_vpn_from_main_vpc" {
+  count             = var.enable_external_vpn ? 1 : 0
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr]
+  description       = "All traffic from main VPC for VPN routing"
+  security_group_id = aws_security_group.redirector.id
+}
+
+# ============================================================================
+# REDIRECTOR NETWORK INTERFACE
+# ============================================================================
+
+resource "aws_network_interface" "redirector" {
+  subnet_id         = aws_subnet.redirector.id
+  security_groups   = [aws_security_group.redirector.id]
+  source_dest_check = var.enable_external_vpn ? false : true
+  tags              = { Name = "${var.project_name}-redirector-eni" }
+}
+
 # ============================================================================
 # VPS REDIRECTOR EC2 INSTANCE
 # ============================================================================
 
 # Elastic IP for redirector (stable public IP)
 resource "aws_eip" "redirector" {
-  domain   = "vpc"
-  instance = aws_instance.redirector.id
+  domain            = "vpc"
+  network_interface = aws_network_interface.redirector.id
+
+  depends_on = [aws_instance.redirector]
 
   tags = {
     Name = "${var.project_name}-redirector-eip"
@@ -165,12 +210,14 @@ resource "aws_eip" "redirector" {
 }
 
 resource "aws_instance" "redirector" {
-  ami           = data.aws_ami.ubuntu2204.id
+  ami           = data.aws_ami.debian12.id
   instance_type = var.redirector_instance_type
   key_name      = var.ssh_key_name
-  subnet_id     = aws_subnet.redirector.id
 
-  vpc_security_group_ids = [aws_security_group.redirector.id]
+  network_interface {
+    network_interface_id = aws_network_interface.redirector.id
+    device_index         = 0
+  }
 
   root_block_device {
     volume_size           = 20
@@ -180,15 +227,25 @@ resource "aws_instance" "redirector" {
   }
 
   user_data = replace(templatefile("${path.module}/setup_scripts/redirector_userdata.sh", {
-    ssh_password     = random_password.lab.result
+    ssh_password          = random_password.lab.result
+    redirector_private_ip = aws_network_interface.redirector.private_ip
+    guacamole_private_ip  = aws_network_interface.guacamole.private_ip
+    mythic_private_ip     = aws_network_interface.mythic.private_ip
+    sliver_private_ip     = aws_network_interface.sliver.private_ip
+    havoc_private_ip      = aws_network_interface.havoc.private_ip
+    windows_private_ip    = aws_network_interface.windows.private_ip
     setup_script_b64 = base64gzip(replace(templatefile("${path.module}/setup_scripts/redirector_setup.sh", {
-      mythic_private_ip = aws_instance.mythic.private_ip
-      sliver_private_ip = aws_instance.sliver.private_ip
-      havoc_private_ip  = aws_instance.havoc.private_ip
-      domain_name       = var.redirector_domain != "" ? var.redirector_domain : "c2.example.com"
-      mythic_uri_prefix = var.mythic_uri_prefix
-      sliver_uri_prefix = var.sliver_uri_prefix
-      havoc_uri_prefix  = var.havoc_uri_prefix
+      mythic_private_ip   = aws_network_interface.mythic.private_ip
+      sliver_private_ip   = aws_network_interface.sliver.private_ip
+      havoc_private_ip    = aws_network_interface.havoc.private_ip
+      domain_name         = var.redirector_domain != "" ? var.redirector_domain : "c2.example.com"
+      mythic_uri_prefix   = var.mythic_uri_prefix
+      sliver_uri_prefix   = var.sliver_uri_prefix
+      havoc_uri_prefix    = var.havoc_uri_prefix
+      c2_header_name      = var.c2_header_name
+      c2_header_value     = local.c2_header_value
+      enable_external_vpn = var.enable_external_vpn
+      main_vpc_cidr       = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
     }), "\r", ""))
   }), "\r", "")
 
@@ -199,10 +256,7 @@ resource "aws_instance" "redirector" {
 
   depends_on = [
     aws_vpc_peering_connection.redirector_to_teamserver,
-    aws_route.redirector_to_teamserver,
-    aws_instance.mythic,
-    aws_instance.sliver,
-    aws_instance.havoc
+    aws_route.redirector_to_teamserver
   ]
 
   tags = {

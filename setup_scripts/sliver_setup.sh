@@ -12,6 +12,23 @@ echo "===== Sliver C2 Server Setup Started $(date) ====="
 SSH_PASSWORD="${ssh_password}"
 REDIRECTOR_VPC_CIDR="${redirector_vpc_cidr}"
 
+# Set hostname
+echo "[*] Setting hostname..."
+hostnamectl set-hostname sliver
+
+# Configure /etc/hosts for lab machines
+echo "[*] Configuring /etc/hosts..."
+cat >> /etc/hosts << HOSTS
+
+# redStack lab hosts
+${sliver_private_ip}     sliver
+${guacamole_private_ip}  guac
+${mythic_private_ip}     mythic
+${havoc_private_ip}      havoc
+${redirector_private_ip} redirector
+${windows_private_ip}    win-attacker
+HOSTS
+
 # Update system
 echo "[*] Updating system packages..."
 apt-get update
@@ -30,7 +47,7 @@ apt-get install -y \
 
 # Configure SSH password authentication for Guacamole access
 echo "[*] Configuring SSH authentication..."
-echo "ubuntu:$SSH_PASSWORD" | chpasswd
+echo "admin:$SSH_PASSWORD" | chpasswd
 
 cat >> /etc/ssh/sshd_config << 'SSHCONF'
 

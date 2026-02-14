@@ -2,7 +2,7 @@
 
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -34,6 +34,11 @@ resource "random_password" "lab" {
   override_special = "!@#%"
 }
 
+# Random token for C2 header validation (auto-generated if not user-specified)
+resource "random_id" "c2_header_token" {
+  byte_length = 16
+}
+
 # Data sources for existing resources
 data "aws_vpc" "default" {
   count   = var.use_default_vpc ? 1 : 0
@@ -56,22 +61,6 @@ data "aws_ami" "debian12" {
   filter {
     name   = "name"
     values = ["debian-12-amd64-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
-# Get latest Ubuntu 22.04 AMI
-data "aws_ami" "ubuntu2204" {
-  most_recent = true
-  owners      = ["099720109477"] # Canonical
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
 
   filter {
@@ -155,8 +144,31 @@ data "aws_availability_zones" "available" {
 
 # Local variables
 locals {
-  vpc_id    = var.use_default_vpc ? data.aws_vpc.default[0].id : aws_vpc.training[0].id
-  subnet_id = var.use_default_vpc ? sort(data.aws_subnets.default[0].ids)[0] : aws_subnet.training[0].id
+  vpc_id          = var.use_default_vpc ? data.aws_vpc.default[0].id : aws_vpc.training[0].id
+  subnet_id       = var.use_default_vpc ? sort(data.aws_subnets.default[0].ids)[0] : aws_subnet.training[0].id
+  c2_header_value = var.c2_header_value != "" ? var.c2_header_value : random_id.c2_header_token.hex
+}
+
+# ============================================================================
+# NETWORK INTERFACES (pre-created so all instances can reference each other's IPs)
+# ============================================================================
+
+resource "aws_network_interface" "mythic" {
+  subnet_id       = local.subnet_id
+  security_groups = [aws_security_group.mythic.id]
+  tags            = { Name = "${var.project_name}-mythic-eni" }
+}
+
+resource "aws_network_interface" "guacamole" {
+  subnet_id       = local.subnet_id
+  security_groups = [aws_security_group.guacamole.id]
+  tags            = { Name = "${var.project_name}-guacamole-eni" }
+}
+
+resource "aws_network_interface" "windows" {
+  subnet_id       = local.subnet_id
+  security_groups = [aws_security_group.windows.id]
+  tags            = { Name = "${var.project_name}-windows-eni" }
 }
 
 # ============================================================================
@@ -167,9 +179,11 @@ resource "aws_instance" "mythic" {
   ami           = data.aws_ami.debian12.id
   instance_type = var.mythic_instance_type
   key_name      = var.ssh_key_name
-  subnet_id     = local.subnet_id
 
-  vpc_security_group_ids = [aws_security_group.mythic.id]
+  network_interface {
+    network_interface_id = aws_network_interface.mythic.id
+    device_index         = 0
+  }
 
   root_block_device {
     volume_size           = 30
@@ -179,11 +193,17 @@ resource "aws_instance" "mythic" {
   }
 
   user_data = templatefile("${path.module}/setup_scripts/mythic_setup.sh", {
-    localPub_ip         = var.localPub_ip
-    enable_autostart    = var.enable_mythic_autostart
-    ssh_password        = random_password.lab.result
-    vpc_cidr            = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
-    redirector_vpc_cidr = aws_vpc.redirector.cidr_block
+    localPub_ip           = var.localPub_ip
+    enable_autostart      = var.enable_mythic_autostart
+    ssh_password          = random_password.lab.result
+    vpc_cidr              = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
+    redirector_vpc_cidr   = aws_vpc.redirector.cidr_block
+    mythic_private_ip     = aws_network_interface.mythic.private_ip
+    guacamole_private_ip  = aws_network_interface.guacamole.private_ip
+    sliver_private_ip     = aws_network_interface.sliver.private_ip
+    havoc_private_ip      = aws_network_interface.havoc.private_ip
+    redirector_private_ip = aws_network_interface.redirector.private_ip
+    windows_private_ip    = aws_network_interface.windows.private_ip
   })
 
   metadata_options {
@@ -203,8 +223,10 @@ resource "aws_instance" "mythic" {
 
 # Elastic IP for Guacamole (stable access portal address)
 resource "aws_eip" "guacamole" {
-  domain   = "vpc"
-  instance = aws_instance.guacamole.id
+  domain            = "vpc"
+  network_interface = aws_network_interface.guacamole.id
+
+  depends_on = [aws_instance.guacamole]
 
   tags = {
     Name = "${var.project_name}-guacamole-eip"
@@ -212,12 +234,14 @@ resource "aws_eip" "guacamole" {
 }
 
 resource "aws_instance" "guacamole" {
-  ami           = data.aws_ami.ubuntu2204.id
+  ami           = data.aws_ami.debian12.id
   instance_type = var.guacamole_instance_type
   key_name      = var.ssh_key_name
-  subnet_id     = local.subnet_id
 
-  vpc_security_group_ids = [aws_security_group.guacamole.id]
+  network_interface {
+    network_interface_id = aws_network_interface.guacamole.id
+    device_index         = 0
+  }
 
   root_block_device {
     volume_size           = 20
@@ -228,14 +252,15 @@ resource "aws_instance" "guacamole" {
 
   user_data = templatefile("${path.module}/setup_scripts/guacamole_setup.sh", {
     guac_admin_password   = random_password.lab.result
-    windows_private_ip    = aws_instance.windows.private_ip
+    windows_private_ip    = aws_network_interface.windows.private_ip
     windows_username      = "Administrator"
     windows_password      = try(rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)), "")
     ssh_password          = random_password.lab.result
-    mythic_private_ip     = aws_instance.mythic.private_ip
-    redirector_private_ip = aws_instance.redirector.private_ip
-    sliver_private_ip     = aws_instance.sliver.private_ip
-    havoc_private_ip      = aws_instance.havoc.private_ip
+    mythic_private_ip     = aws_network_interface.mythic.private_ip
+    redirector_private_ip = aws_network_interface.redirector.private_ip
+    sliver_private_ip     = aws_network_interface.sliver.private_ip
+    havoc_private_ip      = aws_network_interface.havoc.private_ip
+    guacamole_private_ip  = aws_network_interface.guacamole.private_ip
   })
 
   metadata_options {
@@ -243,7 +268,7 @@ resource "aws_instance" "guacamole" {
     http_tokens   = "required"
   }
 
-  depends_on = [aws_instance.windows, aws_instance.sliver, aws_instance.havoc]
+  depends_on = [aws_instance.windows]
 
   tags = {
     Name = "${var.project_name}-guacamole-server"
@@ -259,9 +284,11 @@ resource "aws_instance" "windows" {
   ami           = data.aws_ami.windows2022.id
   instance_type = var.windows_instance_type
   key_name      = var.ssh_key_name
-  subnet_id     = local.subnet_id
 
-  vpc_security_group_ids = [aws_security_group.windows.id]
+  network_interface {
+    network_interface_id = aws_network_interface.windows.id
+    device_index         = 0
+  }
 
   get_password_data = true
 
@@ -272,7 +299,18 @@ resource "aws_instance" "windows" {
     encrypted             = true
   }
 
-  user_data = file("${path.module}/setup_scripts/windows_setup.ps1")
+  user_data = replace(
+    file("${path.module}/setup_scripts/windows_setup.ps1"),
+    "__HOSTS_ENTRIES__",
+    join("\r\n", [
+      "# redStack lab hosts",
+      "${aws_network_interface.guacamole.private_ip}    guac",
+      "${aws_network_interface.mythic.private_ip}    mythic",
+      "${aws_network_interface.sliver.private_ip}    sliver",
+      "${aws_network_interface.havoc.private_ip}    havoc",
+      "${aws_network_interface.redirector.private_ip}    redirector",
+    ])
+  )
 
   metadata_options {
     http_endpoint = "enabled"

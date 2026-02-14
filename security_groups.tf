@@ -50,6 +50,28 @@ resource "aws_security_group_rule" "mythic_web_ui_from_windows" {
 # NOTE: HTTP/HTTPS C2 rules are defined in redirector.tf
 # They are restricted to redirector IP only for operational security
 
+# All traffic from main VPC (internal lab connectivity)
+resource "aws_security_group_rule" "mythic_all_from_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr]
+  description       = "All internal lab traffic from main VPC"
+  security_group_id = aws_security_group.mythic.id
+}
+
+# All traffic from redirector VPC (cross-VPC lab connectivity)
+resource "aws_security_group_rule" "mythic_all_from_redirector_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [aws_vpc.redirector.cidr_block]
+  description       = "All traffic from redirector VPC for lab connectivity"
+  security_group_id = aws_security_group.mythic.id
+}
+
 # Outbound - allow all
 resource "aws_security_group_rule" "mythic_egress" {
   type              = "egress"
@@ -118,6 +140,28 @@ resource "aws_security_group_rule" "guacamole_http" {
   security_group_id = aws_security_group.guacamole.id
 }
 
+# All traffic from main VPC (internal lab connectivity)
+resource "aws_security_group_rule" "guacamole_all_from_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr]
+  description       = "All internal lab traffic from main VPC"
+  security_group_id = aws_security_group.guacamole.id
+}
+
+# All traffic from redirector VPC (cross-VPC lab connectivity)
+resource "aws_security_group_rule" "guacamole_all_from_redirector_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [aws_vpc.redirector.cidr_block]
+  description       = "All traffic from redirector VPC for lab connectivity"
+  security_group_id = aws_security_group.guacamole.id
+}
+
 # Outbound - allow all
 resource "aws_security_group_rule" "guacamole_egress" {
   type              = "egress"
@@ -161,6 +205,28 @@ resource "aws_security_group_rule" "windows_rdp_instructor" {
   protocol          = "tcp"
   cidr_blocks       = [var.localPub_ip]
   description       = "TEMPORARY: RDP from instructor for initial setup"
+  security_group_id = aws_security_group.windows.id
+}
+
+# All traffic from main VPC (internal lab connectivity)
+resource "aws_security_group_rule" "windows_all_from_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr]
+  description       = "All internal lab traffic from main VPC"
+  security_group_id = aws_security_group.windows.id
+}
+
+# All traffic from redirector VPC (cross-VPC lab connectivity)
+resource "aws_security_group_rule" "windows_all_from_redirector_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [aws_vpc.redirector.cidr_block]
+  description       = "All traffic from redirector VPC for lab connectivity"
   security_group_id = aws_security_group.windows.id
 }
 

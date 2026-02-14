@@ -97,22 +97,46 @@ variable "enable_redirector_htaccess_filtering" {
   default     = true
 }
 
+variable "enable_external_vpn" {
+  description = "Enable OpenVPN client on redirector for external platform access (HTB/THM)"
+  type        = bool
+  default     = false
+}
+
+variable "external_vpn_cidrs" {
+  description = "CIDR blocks routable through the redirector's VPN tunnel (e.g., HTB/THM target ranges)"
+  type        = list(string)
+  default     = ["10.10.0.0/16"]
+}
+
 variable "mythic_uri_prefix" {
   description = "URI prefix for Mythic C2 callbacks on the redirector"
   type        = string
-  default     = "/news"
+  default     = "/cdn/media/stream"
 }
 
 variable "sliver_uri_prefix" {
   description = "URI prefix for Sliver C2 callbacks on the redirector"
   type        = string
-  default     = "/images"
+  default     = "/cloud/storage/objects"
 }
 
 variable "havoc_uri_prefix" {
   description = "URI prefix for Havoc C2 callbacks on the redirector"
   type        = string
-  default     = "/api"
+  default     = "/edge/cache/assets"
+}
+
+variable "c2_header_name" {
+  description = "HTTP header name required for C2 traffic to pass through the redirector"
+  type        = string
+  default     = "X-Request-ID"
+}
+
+variable "c2_header_value" {
+  description = "HTTP header value required for C2 traffic (leave empty to auto-generate)"
+  type        = string
+  default     = ""
 }
 
 variable "tags" {

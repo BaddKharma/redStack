@@ -19,6 +19,24 @@ MYTHIC_PRIVATE_IP="${mythic_private_ip}"
 REDIRECTOR_PRIVATE_IP="${redirector_private_ip}"
 SLIVER_PRIVATE_IP="${sliver_private_ip}"
 HAVOC_PRIVATE_IP="${havoc_private_ip}"
+GUACAMOLE_PRIVATE_IP="${guacamole_private_ip}"
+
+# Set hostname
+echo "[*] Setting hostname..."
+hostnamectl set-hostname guac
+
+# Configure /etc/hosts for lab machines
+echo "[*] Configuring /etc/hosts..."
+cat >> /etc/hosts << HOSTS
+
+# redStack lab hosts
+$GUACAMOLE_PRIVATE_IP    guac
+$MYTHIC_PRIVATE_IP       mythic
+$SLIVER_PRIVATE_IP       sliver
+$HAVOC_PRIVATE_IP        havoc
+$REDIRECTOR_PRIVATE_IP   redirector
+$WINDOWS_PRIVATE_IP      win-attacker
+HOSTS
 
 # Update system
 echo "[*] Updating system packages..."
@@ -41,13 +59,13 @@ apt-get install -y \
 systemctl enable docker
 systemctl start docker
 
-# Add ubuntu user to docker group
-usermod -aG docker ubuntu
+# Add admin user to docker group
+usermod -aG docker admin
 
 # Configure SSH password authentication for Guacamole access only
 # Public IP access still requires SSH keys, only localhost/VPC can use passwords
 echo "[*] Configuring SSH authentication (keys for public, passwords for VPC)..."
-echo "ubuntu:$SSH_PASSWORD" | chpasswd
+echo "admin:$SSH_PASSWORD" | chpasswd
 
 # Configure SSH: default requires keys, localhost/VPC IPs can use passwords
 cat >> /etc/ssh/sshd_config << 'SSHCONF'
@@ -241,7 +259,7 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
                 \"port\": \"22\",
                 \"username\": \"admin\",
                 \"password\": \"$SSH_PASSWORD\",
-                \"color-scheme\": \"gray-black\",
+                \"color-scheme\": \"green-black\",
                 \"font-size\": \"12\"
             },
             \"attributes\": {
@@ -262,7 +280,7 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
             \"parameters\": {
                 \"hostname\": \"$GUAC_PRIVATE_IP\",
                 \"port\": \"22\",
-                \"username\": \"ubuntu\",
+                \"username\": \"admin\",
                 \"password\": \"$SSH_PASSWORD\",
                 \"color-scheme\": \"green-black\",
                 \"font-size\": \"12\"
@@ -283,9 +301,9 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
             \"parameters\": {
                 \"hostname\": \"$REDIRECTOR_PRIVATE_IP\",
                 \"port\": \"22\",
-                \"username\": \"ubuntu\",
+                \"username\": \"admin\",
                 \"password\": \"$SSH_PASSWORD\",
-                \"color-scheme\": \"solarized\",
+                \"color-scheme\": \"green-black\",
                 \"font-size\": \"12\"
             },
             \"attributes\": {
@@ -304,9 +322,9 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
             \"parameters\": {
                 \"hostname\": \"$SLIVER_PRIVATE_IP\",
                 \"port\": \"22\",
-                \"username\": \"ubuntu\",
+                \"username\": \"admin\",
                 \"password\": \"$SSH_PASSWORD\",
-                \"color-scheme\": \"white-black\",
+                \"color-scheme\": \"green-black\",
                 \"font-size\": \"12\"
             },
             \"attributes\": {
@@ -325,9 +343,9 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
             \"parameters\": {
                 \"hostname\": \"$HAVOC_PRIVATE_IP\",
                 \"port\": \"22\",
-                \"username\": \"ubuntu\",
+                \"username\": \"admin\",
                 \"password\": \"$SSH_PASSWORD\",
-                \"color-scheme\": \"black-white\",
+                \"color-scheme\": \"green-black\",
                 \"font-size\": \"12\"
             },
             \"attributes\": {

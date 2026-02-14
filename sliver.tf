@@ -80,6 +80,28 @@ resource "aws_security_group_rule" "sliver_multiplexer_from_guacamole" {
   security_group_id        = aws_security_group.sliver.id
 }
 
+# All traffic from main VPC (internal lab connectivity)
+resource "aws_security_group_rule" "sliver_all_from_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr]
+  description       = "All internal lab traffic from main VPC"
+  security_group_id = aws_security_group.sliver.id
+}
+
+# All traffic from redirector VPC (cross-VPC lab connectivity)
+resource "aws_security_group_rule" "sliver_all_from_redirector_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = [aws_vpc.redirector.cidr_block]
+  description       = "All traffic from redirector VPC for lab connectivity"
+  security_group_id = aws_security_group.sliver.id
+}
+
 # Outbound - allow all
 resource "aws_security_group_rule" "sliver_egress" {
   type              = "egress"
@@ -91,16 +113,28 @@ resource "aws_security_group_rule" "sliver_egress" {
 }
 
 # ============================================================================
+# SLIVER NETWORK INTERFACE
+# ============================================================================
+
+resource "aws_network_interface" "sliver" {
+  subnet_id       = local.subnet_id
+  security_groups = [aws_security_group.sliver.id]
+  tags            = { Name = "${var.project_name}-sliver-eni" }
+}
+
+# ============================================================================
 # SLIVER C2 EC2 INSTANCE (no public IP)
 # ============================================================================
 
 resource "aws_instance" "sliver" {
-  ami           = data.aws_ami.ubuntu2204.id
+  ami           = data.aws_ami.debian12.id
   instance_type = var.sliver_instance_type
   key_name      = var.ssh_key_name
-  subnet_id     = local.subnet_id
 
-  vpc_security_group_ids = [aws_security_group.sliver.id]
+  network_interface {
+    network_interface_id = aws_network_interface.sliver.id
+    device_index         = 0
+  }
 
   root_block_device {
     volume_size           = 25
@@ -110,8 +144,14 @@ resource "aws_instance" "sliver" {
   }
 
   user_data = templatefile("${path.module}/setup_scripts/sliver_setup.sh", {
-    ssh_password        = random_password.lab.result
-    redirector_vpc_cidr = aws_vpc.redirector.cidr_block
+    ssh_password          = random_password.lab.result
+    redirector_vpc_cidr   = aws_vpc.redirector.cidr_block
+    sliver_private_ip     = aws_network_interface.sliver.private_ip
+    guacamole_private_ip  = aws_network_interface.guacamole.private_ip
+    mythic_private_ip     = aws_network_interface.mythic.private_ip
+    havoc_private_ip      = aws_network_interface.havoc.private_ip
+    redirector_private_ip = aws_network_interface.redirector.private_ip
+    windows_private_ip    = aws_network_interface.windows.private_ip
   })
 
   metadata_options {

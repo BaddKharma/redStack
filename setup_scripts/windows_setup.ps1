@@ -6,6 +6,18 @@ Start-Transcript -Path "C:\Windows\Temp\user-data.log" -Append
 
 Write-Host "===== Windows Client Setup Started $(Get-Date) ====="
 
+# Set hostname
+Write-Host "[*] Setting hostname to WIN-ATTACKER..."
+Rename-Computer -NewName "WIN-ATTACKER" -Force
+
+# Configure hosts file for lab machines
+Write-Host "[*] Configuring hosts file for lab machines..."
+$hostsContent = @"
+
+__HOSTS_ENTRIES__
+"@
+Add-Content -Path "C:\Windows\System32\drivers\etc\hosts" -Value $hostsContent
+
 # Disable IE Enhanced Security (for easier web browsing in training)
 Write-Host "[*] Disabling IE Enhanced Security Configuration..."
 $AdminKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}"

@@ -12,6 +12,23 @@ echo "===== Havoc C2 Server Setup Started $(date) ====="
 SSH_PASSWORD="${ssh_password}"
 REDIRECTOR_VPC_CIDR="${redirector_vpc_cidr}"
 
+# Set hostname
+echo "[*] Setting hostname..."
+hostnamectl set-hostname havoc
+
+# Configure /etc/hosts for lab machines
+echo "[*] Configuring /etc/hosts..."
+cat >> /etc/hosts << HOSTS
+
+# redStack lab hosts
+${havoc_private_ip}      havoc
+${guacamole_private_ip}  guac
+${mythic_private_ip}     mythic
+${sliver_private_ip}     sliver
+${redirector_private_ip} redirector
+${windows_private_ip}    win-attacker
+HOSTS
+
 # Update system
 echo "[*] Updating system packages..."
 apt-get update
@@ -34,7 +51,7 @@ apt-get install -y \
 
 # Configure SSH password authentication for Guacamole access
 echo "[*] Configuring SSH authentication..."
-echo "ubuntu:$SSH_PASSWORD" | chpasswd
+echo "admin:$SSH_PASSWORD" | chpasswd
 
 cat >> /etc/ssh/sshd_config << 'SSHCONF'
 
@@ -83,7 +100,7 @@ go version
 # Clone Havoc C2 framework
 echo "[*] Cloning Havoc C2 framework..."
 git clone https://github.com/HavocFramework/Havoc.git /opt/Havoc
-chown -R ubuntu:ubuntu /opt/Havoc
+chown -R admin:admin /opt/Havoc
 
 # Build Havoc teamserver
 echo "[*] Building Havoc teamserver (this may take several minutes)..."
@@ -129,7 +146,7 @@ Listeners {
     }
 }
 PROFILE
-chown -R ubuntu:ubuntu /opt/Havoc
+chown -R admin:admin /opt/Havoc
 
 # Create systemd service for Havoc teamserver
 echo "[*] Creating Havoc systemd service..."
@@ -142,7 +159,7 @@ After=network.target
 Type=simple
 WorkingDirectory=/opt/Havoc/teamserver
 ExecStart=/opt/Havoc/teamserver/teamserver server --profile /opt/Havoc/profiles/default.yaotl
-User=ubuntu
+User=admin
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

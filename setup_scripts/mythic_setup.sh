@@ -16,6 +16,23 @@ SSH_PASSWORD="${ssh_password}"
 VPC_CIDR="${vpc_cidr}"
 REDIRECTOR_VPC_CIDR="${redirector_vpc_cidr}"
 
+# Set hostname
+echo "[*] Setting hostname..."
+hostnamectl set-hostname mythic
+
+# Configure /etc/hosts for lab machines
+echo "[*] Configuring /etc/hosts..."
+cat >> /etc/hosts << HOSTS
+
+# redStack lab hosts
+${mythic_private_ip}     mythic
+${guacamole_private_ip}  guac
+${sliver_private_ip}     sliver
+${havoc_private_ip}      havoc
+${redirector_private_ip} redirector
+${windows_private_ip}    win-attacker
+HOSTS
+
 # Update system
 echo "[*] Updating system packages..."
 apt-get update
