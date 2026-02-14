@@ -13,7 +13,7 @@ echo "===== Guacamole Server Setup Started $(date) ====="
 GUAC_ADMIN_PASSWORD="${guac_admin_password}"
 WINDOWS_PRIVATE_IP="${windows_private_ip}"
 WINDOWS_USERNAME="${windows_username}"
-WINDOWS_PASSWORD="${windows_password}"
+WINDOWS_PASSWORD=$(echo "${windows_password_b64}" | base64 -d)
 SSH_PASSWORD="${ssh_password}"
 MYTHIC_PRIVATE_IP="${mythic_private_ip}"
 REDIRECTOR_PRIVATE_IP="${redirector_private_ip}"
@@ -231,32 +231,37 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
         -H "Content-Type: application/x-www-form-urlencoded" \
         -d "username=guacadmin&password=$GUAC_ADMIN_PASSWORD" | jq -r '.authToken')
 
-    # Create RDP connection to Windows client
+    # Create RDP connection to Windows client (use jq to safely escape password in JSON)
     echo "[*] Creating RDP connection to Windows client..."
+    RDP_JSON=$(jq -n \
+        --arg host "$WINDOWS_PRIVATE_IP" \
+        --arg user "$WINDOWS_USERNAME" \
+        --arg pass "$WINDOWS_PASSWORD" \
+        '{
+            name: "Windows Operator Workstation",
+            protocol: "rdp",
+            parameters: {
+                hostname: $host,
+                port: "3389",
+                username: $user,
+                password: $pass,
+                security: "any",
+                "ignore-cert": "true",
+                "enable-drive": "true",
+                "drive-name": "SharedDrive",
+                "drive-path": "/drive",
+                "create-drive-path": "true",
+                console: "true",
+                "server-layout": "en-us-qwerty"
+            },
+            attributes: {
+                "max-connections": "2",
+                "max-connections-per-user": "1"
+            }
+        }')
     curl -s -X POST "http://localhost:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
         -H "Content-Type: application/json" \
-        -d "{
-            \"name\": \"Windows Operator Workstation\",
-            \"protocol\": \"rdp\",
-            \"parameters\": {
-                \"hostname\": \"$WINDOWS_PRIVATE_IP\",
-                \"port\": \"3389\",
-                \"username\": \"$WINDOWS_USERNAME\",
-                \"password\": \"$WINDOWS_PASSWORD\",
-                \"security\": \"any\",
-                \"ignore-cert\": \"true\",
-                \"enable-drive\": \"true\",
-                \"drive-name\": \"SharedDrive\",
-                \"drive-path\": \"/drive\",
-                \"create-drive-path\": \"true\",
-                \"console\": \"true\",
-                \"server-layout\": \"en-us-qwerty\"
-            },
-            \"attributes\": {
-                \"max-connections\": \"2\",
-                \"max-connections-per-user\": \"1\"
-            }
-        }"
+        -d "$RDP_JSON"
 
     # Create SSH connection to Mythic Team Server
     echo "[*] Creating SSH connection to Mythic Team Server..."

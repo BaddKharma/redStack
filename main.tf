@@ -255,7 +255,7 @@ resource "aws_instance" "guacamole" {
     guac_admin_password   = random_password.lab.result
     windows_private_ip    = aws_network_interface.windows.private_ip
     windows_username      = "Administrator"
-    windows_password      = try(rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)), "")
+    windows_password_b64  = base64encode(try(rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)), ""))
     ssh_password          = random_password.lab.result
     mythic_private_ip     = aws_network_interface.mythic.private_ip
     redirector_private_ip = aws_network_interface.redirector.private_ip
@@ -264,12 +264,12 @@ resource "aws_instance" "guacamole" {
     guacamole_private_ip  = aws_network_interface.guacamole.private_ip
   })
 
+  depends_on = [aws_instance.windows]
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
   }
-
-  depends_on = [aws_instance.windows]
 
   tags = {
     Name = "${var.project_name}-guacamole-server"

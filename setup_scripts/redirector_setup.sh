@@ -164,17 +164,10 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 # REDIRECT RULES (block security scanners, AV vendors, TOR exit nodes)
 # ============================================================================
 
-echo "[*] Downloading redirect.rules (curi0usJack OPSEC rules)..."
-REDIRECT_URL="https://gist.githubusercontent.com/curi0usJack/971385e8334e189d93a6cb4671238b10/raw"
-if curl -sL --max-time 30 "$REDIRECT_URL" -o /tmp/redirect.rules.raw; then
-    # Strip setup lines and replace 302 redirects with 403 Forbidden
-    sed -e '/^Define REDIR_TARGET/d' \
-        -e '/^RewriteEngine On/d' \
-        -e '/^RewriteOptions Inherit/d' \
-        -e 's|\[L,R=302\]|[F,L]|g' \
-        /tmp/redirect.rules.raw > /etc/apache2/redirect.rules
-    rm -f /tmp/redirect.rules.raw
-    echo "[+] Installed $(grep -c 'RewriteCond' /etc/apache2/redirect.rules) blocking rules"
+echo "[*] Downloading redirect.rules from redStack repo..."
+REDIRECT_URL="https://raw.githubusercontent.com/BaddKharma/redStack/main/setup_scripts/redirect.rules"
+if curl -sL --max-time 30 "$REDIRECT_URL" -o /etc/apache2/redirect.rules; then
+    echo "[+] Installed redirect.rules ($(grep -c 'RewriteCond' /etc/apache2/redirect.rules) total rules, cloud IPs commented out)"
 else
     echo "[!] Failed to download redirect.rules - creating empty placeholder"
     echo "# redirect.rules - download failed at $(date), add rules manually" > /etc/apache2/redirect.rules
