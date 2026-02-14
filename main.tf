@@ -272,7 +272,7 @@ resource "aws_instance" "guacamole" {
 
   tags = {
     Name = "${var.project_name}-guacamole-server"
-    Role = "attacker-access"
+    Role = "operator-access"
   }
 }
 
@@ -319,6 +319,6 @@ resource "aws_instance" "windows" {
 
   tags = {
     Name = "${var.project_name}-windows-client"
-    Role = "attacker-workstation"
+    Role = "operator-workstation"
   }
 }

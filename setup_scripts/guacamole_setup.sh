@@ -35,7 +35,7 @@ $MYTHIC_PRIVATE_IP       mythic
 $SLIVER_PRIVATE_IP       sliver
 $HAVOC_PRIVATE_IP        havoc
 $REDIRECTOR_PRIVATE_IP   redirector
-$WINDOWS_PRIVATE_IP      win-attacker
+$WINDOWS_PRIVATE_IP      win-operator
 HOSTS
 
 # Update system
@@ -225,7 +225,7 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
     curl -s -X POST "http://localhost:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
         -H "Content-Type: application/json" \
         -d "{
-            \"name\": \"Windows 11 Attacker Workstation\",
+            \"name\": \"Windows 11 Operator Workstation\",
             \"protocol\": \"rdp\",
             \"parameters\": {
                 \"hostname\": \"$WINDOWS_PRIVATE_IP\",

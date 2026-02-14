@@ -88,7 +88,7 @@ resource "aws_security_group_rule" "mythic_egress" {
 
 resource "aws_security_group" "guacamole" {
   name        = "${var.project_name}-guacamole-sg"
-  description = "Security group for Guacamole attacker access portal"
+  description = "Security group for Guacamole operator access portal"
   vpc_id      = local.vpc_id
 
   tags = {
@@ -118,14 +118,14 @@ resource "aws_security_group_rule" "guacamole_ssh_self" {
   security_group_id        = aws_security_group.guacamole.id
 }
 
-# HTTPS from anywhere (attacker access)
+# HTTPS from anywhere (operator access)
 resource "aws_security_group_rule" "guacamole_https" {
   type              = "ingress"
   from_port         = 443
   to_port           = 443
   protocol          = "tcp"
   cidr_blocks       = ["0.0.0.0/0"]
-  description       = "HTTPS access for attackers"
+  description       = "HTTPS access for operators"
   security_group_id = aws_security_group.guacamole.id
 }
 
@@ -178,7 +178,7 @@ resource "aws_security_group_rule" "guacamole_egress" {
 
 resource "aws_security_group" "windows" {
   name        = "${var.project_name}-windows-sg"
-  description = "Security group for Windows 11 attacker workstation"
+  description = "Security group for Windows 11 operator workstation"
   vpc_id      = local.vpc_id
 
   tags = {
@@ -230,7 +230,7 @@ resource "aws_security_group_rule" "windows_all_from_redirector_vpc" {
   security_group_id = aws_security_group.windows.id
 }
 
-# Outbound - allow all (attacker needs internet)
+# Outbound - allow all (operator needs internet)
 resource "aws_security_group_rule" "windows_egress" {
   type              = "egress"
   from_port         = 0

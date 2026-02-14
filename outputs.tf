@@ -83,13 +83,13 @@ ${var.enable_external_vpn ? <<-VPNINFO
 VPNINFO
 : ""}
   +---------------------------------------------------------------------+
-  | 6. WINDOWS ATTACKER WORKSTATION                                     |
+  | 6. WINDOWS OPERATOR WORKSTATION                                     |
   +---------------------------------------------------------------------+
     Private IP:   ${aws_network_interface.windows.private_ip}
     Username:     Administrator
     Password:     ${try(rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)), "(not yet available)")}
     Access:       RDP via Guacamole
-    Guacamole:    Windows 11 Attacker Workstation (RDP)
+    Guacamole:    Windows 11 Operator Workstation (RDP)
 
   EOT
 }
@@ -107,7 +107,7 @@ output "network_architecture" {
     Sliver C2 Server        ${aws_network_interface.sliver.private_ip} (internal only)
     Havoc C2 Server         ${aws_network_interface.havoc.private_ip} (internal only)
     Guacamole Server        ${aws_eip.guacamole.public_ip} (public)
-    Windows 11 Workstation  ${aws_network_interface.windows.private_ip} (internal only)
+    Windows 11 Operator     ${aws_network_interface.windows.private_ip} (internal only)
 
   VPC B - Redirector Infrastructure (${aws_vpc.redirector.cidr_block})
     Apache Redirector       ${aws_eip.redirector.public_ip} (public)

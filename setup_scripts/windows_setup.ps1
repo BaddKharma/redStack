@@ -7,8 +7,8 @@ Start-Transcript -Path "C:\Windows\Temp\user-data.log" -Append
 Write-Host "===== Windows Client Setup Started $(Get-Date) ====="
 
 # Set hostname
-Write-Host "[*] Setting hostname to WIN-ATTACKER..."
-Rename-Computer -NewName "WIN-ATTACKER" -Force
+Write-Host "[*] Setting hostname to WIN-OPERATOR..."
+Rename-Computer -NewName "WIN-OPERATOR" -Force
 
 # Configure hosts file for lab machines
 Write-Host "[*] Configuring hosts file for lab machines..."
@@ -25,7 +25,7 @@ $UserKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8
 Set-ItemProperty -Path $AdminKey -Name "IsInstalled" -Value 0 -Force
 Set-ItemProperty -Path $UserKey -Name "IsInstalled" -Value 0 -Force
 
-# Disable Windows Defender (training only - CRITICAL: Explain this to attackers)
+# Disable Windows Defender (training only - CRITICAL: Explain this to operators)
 Write-Host "[*] Disabling Windows Defender (TRAINING ONLY)..."
 Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
 Set-MpPreference -DisableIOAVProtection $true -ErrorAction SilentlyContinue

@@ -26,7 +26,7 @@ ${guacamole_private_ip}  guac
 ${mythic_private_ip}     mythic
 ${sliver_private_ip}     sliver
 ${redirector_private_ip} redirector
-${windows_private_ip}    win-attacker
+${windows_private_ip}    win-operator
 HOSTS
 
 # Update system
