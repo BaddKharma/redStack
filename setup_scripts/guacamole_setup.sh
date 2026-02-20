@@ -228,10 +228,10 @@ if [ -n "$TOKEN" ]; then
         -d "{\"oldPassword\":\"guacadmin\",\"newPassword\":\"$GUAC_ADMIN_PASSWORD\"}") || true
     echo "[*] Password change response: $PW_RESP"
 
-    # Get new token with updated password
+    # Get new token with updated password (use --data-urlencode so special chars like + aren't misinterpreted)
     RESPONSE=$(curl -s -X POST "http://localhost:8080/guacamole/api/tokens" \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "username=guacadmin&password=$GUAC_ADMIN_PASSWORD" 2>/dev/null) || true
+        --data-urlencode "username=guacadmin" \
+        --data-urlencode "password=$GUAC_ADMIN_PASSWORD" 2>/dev/null) || true
     TOKEN=$(printf '%s' "$RESPONSE" | jq -r '.authToken // empty' 2>/dev/null) || TOKEN=""
 
     # If new password token failed, password may already have been set on a prior run
