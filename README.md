@@ -38,7 +38,7 @@ VPC A - Team Server Infrastructure (10.50.0.0/16 or Default VPC)
 ├── sliver       - Sliver C2 Server       (Debian 12 - internal only, no public IP)
 ├── havoc        - Havoc C2 Server        (Debian 12 - internal only, no public IP)
 ├── guac         - Guacamole Server       (Debian 12 - Elastic IP, public facing)
-└── WIN-OPERATOR - Windows Workstation    (internal only - RDP via Guacamole)
+└── WIN-OPERATOR - Windows Workstation    (Windows Server 2022 - internal only, RDP via Guacamole)
 
 VPC B - Redirector Infrastructure (10.60.0.0/16)
 └── redirector   - Apache Redirector      (Debian 12 - Elastic IP, public facing)
@@ -731,7 +731,7 @@ Requests must include the correct `X-Request-ID` header. Without it, Apache serv
 terraform output deployment_info | grep "C2 Header"
 ```
 
-**Layer 3: URI Prefix Routing**
+### Layer 3: URI Prefix Routing
 
 | URI Prefix | Backend | Example |
 | ---------- | ------- | ------- |
