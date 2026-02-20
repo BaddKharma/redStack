@@ -32,7 +32,7 @@ resource "random_password" "lab" {
   length           = 16
   special          = true
   min_special      = 2
-  override_special = "-_.~+!@"
+  override_special = "-_.~!@"
 }
 
 # Random token for C2 header validation (auto-generated if not user-specified)
