@@ -203,10 +203,11 @@ MAX_RETRIES=30
 RETRY_COUNT=0
 TOKEN=""
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    TOKEN=$(curl -s -X POST "http://localhost:8080/guacamole/api/tokens" \
+    RESPONSE=$(curl -s -X POST "http://localhost:8080/guacamole/api/tokens" \
         -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "username=guacadmin&password=guacadmin" 2>/dev/null | jq -r '.authToken' 2>/dev/null)
-    if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+        -d "username=guacadmin&password=guacadmin" 2>/dev/null) || true
+    TOKEN=$(printf '%s' "$RESPONSE" | jq -r '.authToken // empty' 2>/dev/null) || TOKEN=""
+    if [ -n "$TOKEN" ]; then
         echo "[+] Guacamole API ready after $((RETRY_COUNT * 10)) seconds"
         break
     fi
@@ -220,17 +221,29 @@ echo "[*] Changing default Guacamole admin password..."
 IMDS_TOKEN_V2=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 PUBLIC_IP=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN_V2" http://169.254.169.254/latest/meta-data/public-ipv4)
 
-if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
-    # Update password
-    curl -s -X PUT "http://localhost:8080/guacamole/api/session/data/postgresql/users/guacadmin/password?token=$TOKEN" \
+if [ -n "$TOKEN" ]; then
+    # Update password and log the response for debugging
+    PW_RESP=$(curl -s -X PUT "http://localhost:8080/guacamole/api/session/data/postgresql/users/guacadmin/password?token=$TOKEN" \
         -H "Content-Type: application/json" \
-        -d "{\"oldPassword\":\"guacadmin\",\"newPassword\":\"$GUAC_ADMIN_PASSWORD\"}"
+        -d "{\"oldPassword\":\"guacadmin\",\"newPassword\":\"$GUAC_ADMIN_PASSWORD\"}") || true
+    echo "[*] Password change response: $PW_RESP"
 
     # Get new token with updated password
-    TOKEN=$(curl -s -X POST "http://localhost:8080/guacamole/api/tokens" \
+    RESPONSE=$(curl -s -X POST "http://localhost:8080/guacamole/api/tokens" \
         -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "username=guacadmin&password=$GUAC_ADMIN_PASSWORD" | jq -r '.authToken')
+        -d "username=guacadmin&password=$GUAC_ADMIN_PASSWORD" 2>/dev/null) || true
+    TOKEN=$(printf '%s' "$RESPONSE" | jq -r '.authToken // empty' 2>/dev/null) || TOKEN=""
 
+    # If new password token failed, password may already have been set on a prior run
+    if [ -z "$TOKEN" ]; then
+        echo "[!] Auth with new password failed — password may already be set, continuing with existing token"
+        RESPONSE=$(curl -s -X POST "http://localhost:8080/guacamole/api/tokens" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=guacadmin&password=guacadmin" 2>/dev/null) || true
+        TOKEN=$(printf '%s' "$RESPONSE" | jq -r '.authToken // empty' 2>/dev/null) || TOKEN=""
+    fi
+
+    if [ -n "$TOKEN" ]; then
     # Create RDP connection to Windows client (use jq to safely escape password in JSON)
     echo "[*] Creating RDP connection to Windows client..."
     RDP_JSON=$(jq -n \
@@ -369,6 +382,9 @@ if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
                 \"max-connections-per-user\": \"1\"
             }
         }"
+    else
+        echo "[!] Could not obtain valid token after password change. Skipping connection creation."
+    fi
 else
     echo "[!] Warning: Could not automatically configure Guacamole. Manual setup required."
 fi
