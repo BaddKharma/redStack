@@ -699,7 +699,7 @@ Each VirtualHost uses three security layers before proxying traffic:
 
 ### Step 3.2: Security Layer Details
 
-**Layer 1: redirect.rules (Automated Scanner Blocking)**
+#### Layer 1: redirect.rules (Automated Scanner Blocking)
 
 The file `/etc/apache2/redirect.rules` is downloaded at boot from the [redStack GitHub repo](https://github.com/BaddKharma/redStack), which maintains an adapted version of [curi0usJack's redirect rules](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10):
 
@@ -722,7 +722,7 @@ curl -sL "https://raw.githubusercontent.com/BaddKharma/redStack/main/setup_scrip
 sudo systemctl reload apache2
 ```
 
-**Layer 2: Header Validation**
+### Layer 2: Header Validation
 
 Requests must include the correct `X-Request-ID` header. Without it, Apache serves the CloudEdge CDN decoy page instead of proxying to C2 backends.
 
