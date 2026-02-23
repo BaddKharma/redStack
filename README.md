@@ -964,36 +964,36 @@ If it shows **Stopped**, click **"Start Profile"**.
 
 **Navigate:** Click **Create Payload** in the left sidebar
 
-The payload wizard walks through these steps in order:
+The wizard has 5 steps:
 
-**1. Select OS:** Windows
+**Step 1 — Select Target OS:** Windows
 
-**2. Select agent type:** Apollo — set build parameters:
+**Step 2 — Configure Payload:** Select **Apollo** — set build parameters:
 
 | Build Parameter | Value |
 | --------------- | ----- |
 | Output Format | `WinExe` (Windows Executable) |
 
-**3. Select commands:** Select all, or at minimum: `shell`, `download`, `upload`, `screenshot`
+**Step 3 — Select Commands:** Select all, or at minimum: `shell`, `download`, `upload`, `screenshot`
 
-**4. Configure C2 profile:** Toggle **HTTP** on — set the following parameters:
+**Step 4 — Select C2 Profiles:**
 
-| C2 Parameter | Value |
-| ------------ | ----- |
-| Callback Host | `https://yourdomain.tld` (your redirector domain) |
-| Callback Port | `443` |
-| Callback Interval | `10` |
-| Callback Jitter | `20` |
-| User-Agent | `Mozilla/5.0 (Windows NT 10.0; Win64; x64)` |
-| GET URI | `/cdn/media/stream/status` |
-| POST URI | `/cdn/media/stream/update` |
-| Headers | `X-Request-ID: <token from terraform output deployment_info>` |
+1. In the dropdown, select **http** and click **+ INCLUDE PROFILE**
+2. The profile expands below — configure the following fields:
 
-**5. Name & describe:** Give the payload a name (e.g. `apollo-training`)
+| Field | Value |
+| ----- | ----- |
+| `callback_host` | `https://yourdomain.tld` (full URL to your redirector domain) |
+| `callback_port` | `443` |
+| `callback_interval` | `10` |
+| `callback_jitter` | `20` |
+| `post_uri` | `cdn/media/stream/update` (no leading `/`) |
+| `headers` | Add a row — KEY: `X-Request-ID` VALUE: `<token from terraform output deployment_info>` |
+| `encrypted_exchange_check` | Leave enabled (default) |
 
-**6. Click:** "Create Payload"
+**Step 5 — Build:** Click **Next**, give the payload a name (e.g. `apollo-training`), then click **Create Payload**
 
-**Wait:** 30-60 seconds — a popup will notify you when the build completes. Then go to **Payloads** and click the green download icon.
+**Wait:** 30-60 seconds — a popup notifies you when done. Go to **Payloads** in the sidebar and click the green download icon.
 
 **Checkpoint:** ✅ Agent `.exe` downloaded
 
