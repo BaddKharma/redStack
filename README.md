@@ -415,7 +415,7 @@ Verify all six components are operational and accessible.
 > | `mythic` | Mythic private IP | `https://mythic:7443` — Login: `mythic_admin` |
 > | `sliver` | Sliver private IP | SSH / gRPC port 31337 |
 > | `havoc` | Havoc private IP | Havoc client — `havoc:40056` — Login: `operator` / `Training123!` |
-> | `guac` | Guacamole private IP | `https://guac/guacamole` — Login: `guacadmin` |
+> | `guac` | Guacamole private IP | Internal ping/SSH only — access Guacamole via its public EIP |
 > | `redirector` | Redirector private IP | SSH / Apache proxy |
 > | `win-operator` | Windows private IP | RDP via Guacamole |
 >
