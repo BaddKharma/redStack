@@ -715,19 +715,26 @@ The wizard has 5 steps:
 
 ### Step 4.3: Deploy Agent
 
-**Transfer the agent to the Windows workstation via Guacamole file share:**
+The Mythic UI runs in the **Windows workstation browser**, so `apollo.exe` is already on the Windows workstation after the download in the previous step. It will be in `C:\Users\Administrator\Downloads\`.
 
-1. Open the Guacamole UI and connect to **Windows Operator Workstation**
-2. Press `Ctrl+Alt+Shift` to open the Guacamole sidebar → click **Devices**
-3. You will see the **GuacShare** drive. Click **Upload Files** and select your `apollo.exe`
-
-The drive maps to the Guacamole server's `/drive` directory. Files uploaded from the sidebar land in `\\tsclient\GuacShare\Download\` on the Windows side. To download files back to your host, place them anywhere inside `\\tsclient\GuacShare\` from Windows, then use the Guacamole sidebar (Ctrl+Alt+Shift → Devices → GuacShare) to browse and click-download them.
-
-**Execute Agent (from the shared drive):**
+**Execute the agent (PowerShell on Windows workstation):**
 
 ```powershell
-\\tsclient\GuacShare\Download\apollo.exe
+& "$env:USERPROFILE\Downloads\apollo.exe"
 ```
+
+**Extracting the agent to your host machine:**
+
+Apollo (and all agents built in this lab) are unobfuscated by default. To get the binary to your host, zip it on the Windows workstation and copy it into the `GuacShare on Guacamole RDP\Download\` folder (visible in Windows Explorer under **This PC**). The Guacamole HTML5 sidebar will then show the file as a clickable download, which triggers a browser download to your host machine.
+
+> **Warning:** Windows Defender and most AV solutions will flag unobfuscated C2 agents on download or execution. Before downloading `apollo.zip` to your host, disable real-time protection or add your download folder as an exclusion. Any victim VM or target environment you run the agent in will also need AV disabled or exempted, unless you are specifically practicing AV evasion techniques.
+
+**Zip and place in GuacShare (Windows Explorer):**
+
+1. Navigate to `C:\Users\Administrator\Downloads\`, right-click `apollo.exe`, and select **Compress to ZIP file** (or **Send to → Compressed (zipped) folder**)
+2. Open **This PC → GuacShare on Guacamole RDP → Download** and copy `apollo.zip` into it
+
+Then press `Ctrl+Alt+Shift` in Guacamole, click **Devices**, and click `apollo.zip` to download it to your host machine. From there, transfer it to your victim environment or lab VM as needed.
 
 **Watch Mythic UI:**
 
