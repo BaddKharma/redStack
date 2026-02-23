@@ -327,7 +327,7 @@ After deployment, you need to point your domain's DNS to the redirector's Elasti
 terraform output deployment_info
 ```
 
-Look for the **APACHE REDIRECTOR** section — the `Public IP` field is what you need.
+Look for the **APACHE REDIRECTOR** section. The `Public IP` field is what you need.
 
 **Create a DNS A Record:**
 
@@ -408,7 +408,7 @@ https://<GUAC_PUBLIC_IP>/guacamole
 
 After logging in you should see **6 pre-configured connections**:
 
-1. **Windows Operator Workstation** (RDP) — auto-connects with Administrator credentials
+1. **Windows Operator Workstation** (RDP): auto-connects with Administrator credentials
 2. **Mythic C2 Server (SSH)**
 3. **Guacamole Server (SSH)**
 4. **Apache Redirector (SSH)**
@@ -422,11 +422,11 @@ All SSH connections use password auth (no keys needed) pre-configured with the a
 ### Step 2.2: Access Windows Workstation
 
 1. Click **"Windows Operator Workstation"**
-2. RDP connects automatically — wait 10–30 seconds for the desktop to load
+2. RDP connects automatically. Wait 10–30 seconds for the desktop to load.
 3. Verify the following are installed: Chromium, VS Code, MobaXterm, 7-Zip
-4. Open MobaXterm — the **redStack Lab** folder in the sidebar should contain pre-configured SSH sessions for all lab machines
+4. Open MobaXterm. The **redStack Lab** folder in the sidebar should contain pre-configured SSH sessions for all lab machines.
 
-**If the connection fails:** Wait 5 more minutes — Windows is the slowest component to initialize.
+**If the connection fails:** Wait 5 more minutes. Windows is the slowest component to initialize.
 
 **Checkpoint:** ✅ Windows desktop accessible, tools present, MobaXterm sessions visible
 
@@ -450,7 +450,7 @@ ping guac
 
 Once DNS has propagated (Step 1.6), SSH to the redirector and run Certbot.
 
-**Three ways to get a shell on the redirector — pick one:**
+**Three ways to get a shell on the redirector (pick one):**
 
 | Method | How |
 | ------ | --- |
@@ -522,9 +522,9 @@ sudo cat /etc/apache2/sites-available/redirector-https.conf
 
 Each VirtualHost uses three security layers before proxying traffic:
 
-1. **redirect.rules** — Blocks known AV vendors, cloud sandboxes, security scanners, and TOR exit nodes (returns 403)
-2. **Header validation** — Requires `X-Request-ID` header with a specific token value
-3. **URI prefix routing** — Only matching URI prefixes are proxied to C2 backends
+1. **redirect.rules**: Blocks known AV vendors, cloud sandboxes, security scanners, and TOR exit nodes (returns 403)
+2. **Header validation**: Requires `X-Request-ID` header with a specific token value
+3. **URI prefix routing**: Only matching URI prefixes are proxied to C2 backends
 
 **Checkpoint:** ✅ Understand the three-layer security model
 
@@ -624,7 +624,7 @@ sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 
 ### Objective: Mythic Proof-of-Function
 
-The goal here is not to learn Mythic — it's to confirm the environment works end-to-end by getting a Windows `.exe` beacon to call back through the redirector. Once you have a callback, the lab is proven functional.
+The goal here is not to learn Mythic. It's to confirm the environment works end-to-end by getting a Windows `.exe` beacon to call back through the redirector. Once you have a callback, the lab is proven functional.
 
 For full documentation on Mythic's capabilities, refer to the [official Mythic docs](https://docs.mythic-c2.net).
 
@@ -637,7 +637,7 @@ cd /opt/Mythic
 sudo ./mythic-cli status
 ```
 
-Look for `apollo` and `http` under **Installed Services** — both should show `running`.
+Look for `apollo` and `http` under **Installed Services**. Both should show `running`.
 
 **If either is missing, install manually:**
 
@@ -682,20 +682,20 @@ If it shows **Stopped**, click **"Start Profile"**.
 
 The wizard has 5 steps:
 
-**Step 1 — Select Target OS:** Windows
+**Step 1: Select Target OS:** Windows
 
-**Step 2 — Configure Payload:** Select **Apollo** — set build parameters:
+**Step 2: Configure Payload:** Select **Apollo** and set build parameters:
 
 | Build Parameter | Value |
 | --------------- | ----- |
 | Output Format | `WinExe` (Windows Executable) |
 
-**Step 3 — Select Commands:** Select all, or at minimum: `shell`, `download`, `upload`, `screenshot`
+**Step 3: Select Commands:** Select all, or at minimum: `shell`, `download`, `upload`, `screenshot`
 
-**Step 4 — Select C2 Profiles:**
+**Step 4: Select C2 Profiles:**
 
 1. In the dropdown, select **http** and click **+ INCLUDE PROFILE**
-2. The profile expands below — configure the following fields:
+2. The profile expands below. Configure the following fields:
 
 | Field | Value |
 | ----- | ----- |
@@ -704,12 +704,12 @@ The wizard has 5 steps:
 | `callback_interval` | `10` |
 | `callback_jitter` | `20` |
 | `post_uri` | `cdn/media/stream/update` (no leading `/`) |
-| `headers` | Add a row — KEY: `X-Request-ID` VALUE: `<token from terraform output deployment_info>` |
+| `headers` | Add a row. KEY: `X-Request-ID`, VALUE: `<token from terraform output deployment_info>` |
 | `encrypted_exchange_check` | Leave enabled (default) |
 
-**Step 5 — Build:** Click **Next**, give the payload a name (e.g. `apollo-training`), then click **Create Payload**
+**Step 5: Build:** Click **Next**, give the payload a name (e.g. `apollo-training`), then click **Create Payload**
 
-**Wait:** 30-60 seconds — a popup notifies you when done. Go to **Payloads** in the sidebar and click the green download icon.
+**Wait:** 30-60 seconds. A popup notifies you when done. Go to **Payloads** in the sidebar and click the green download icon.
 
 **Checkpoint:** ✅ Agent `.exe` downloaded
 
@@ -719,7 +719,7 @@ The wizard has 5 steps:
 
 1. Open the Guacamole UI and connect to **Windows Operator Workstation**
 2. Press `Ctrl+Alt+Shift` to open the Guacamole sidebar → click **Devices**
-3. You will see the **GuacShare** drive — click **Upload Files** and select your `apollo.exe`
+3. You will see the **GuacShare** drive. Click **Upload Files** and select your `apollo.exe`
 
 The drive maps to the Guacamole server's `/drive` directory. Files uploaded from the sidebar land in `\\tsclient\GuacShare\Download\` on the Windows side. To download files back to your host, place them anywhere inside `\\tsclient\GuacShare\` from Windows, then use the Guacamole sidebar (Ctrl+Alt+Shift → Devices → GuacShare) to browse and click-download them.
 
@@ -764,7 +764,7 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 
 ### Objective: Sliver Proof-of-Function
 
-Same goal as Part 4 — get a Windows `.exe` implant calling back through the redirector to confirm Sliver is working. This is a proof-of-function run, not a Sliver deep-dive.
+Same goal as Part 4: get a Windows `.exe` implant calling back through the redirector to confirm Sliver is working. This is a proof-of-function run, not a Sliver deep-dive.
 
 For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/sliver/wiki).
 
@@ -785,7 +785,7 @@ ssh -i rs-rsa-key.pem -J admin@<REDIR_PUBLIC_IP> admin@sliver
 sudo /root/generate_operator_config.sh operator1
 ```
 
-This creates `/root/operator1.cfg` — transfer this file to your machine to connect using the Sliver client.
+This creates `/root/operator1.cfg`. Transfer this file to your machine to connect using the Sliver client.
 
 **Checkpoint:** ✅ Operator config generated
 
@@ -846,7 +846,7 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 
 ### Objective: Havoc Proof-of-Function
 
-Same goal — get a Windows `.exe` demon calling back through the redirector to confirm Havoc is working. Not a Havoc tutorial.
+Same goal: get a Windows `.exe` demon calling back through the redirector to confirm Havoc is working. Not a Havoc tutorial.
 
 For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
 
@@ -930,7 +930,7 @@ curl -I -m 5 -A "$UA" http://sliver/
 curl -I -m 5 -A "$UA" http://havoc/
 ```
 
-**Expected:** `curl: (7) Failed to connect` (no listener running yet) — this is correct. Verify ping works to confirm VPC peering:
+**Expected:** `curl: (7) Failed to connect` (no listener running yet). This is correct. Verify ping works to confirm VPC peering:
 
 ```bash
 ping -c 3 mythic
@@ -1046,7 +1046,7 @@ SSH to Guacamole, then check Docker containers:
 docker ps
 ```
 
-**Expected:** 3 containers — `guacamole/guacamole`, `postgres:15`, `guacamole/guacd` — all up.
+**Expected:** 3 containers, all up: `guacamole/guacamole`, `postgres:15`, and `guacamole/guacd`.
 
 #### Apache Redirector
 
@@ -1064,7 +1064,7 @@ This checks Apache status, VirtualHost config, connectivity to all three C2 back
 grep -c 'RewriteCond' /etc/apache2/redirect.rules
 ```
 
-**Test security layers manually** (must use a browser User-Agent — `curl` is blocked by redirect.rules):
+**Test security layers manually** (must use a browser User-Agent; `curl` is blocked by redirect.rules):
 
 ```bash
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -1146,7 +1146,7 @@ head -3 /etc/apache2/redirect.rules
 # Will show: "404: Not Found"
 ```
 
-**Fix — Copy the file manually from your local machine:**
+**Fix: Copy the file manually from your local machine:**
 
 **Windows (PowerShell):**
 
@@ -1183,7 +1183,7 @@ sudo apache2ctl configtest && sudo systemctl reload apache2
 
 **Root Cause:** Mythic's `mythic-cli start` generates SSL certificates, but the setup script was previously running it as the `admin` user which cannot write to `/etc/ssl/private/` (root-owned). This is fixed in current versions of the setup script.
 
-**Fix — Generate the cert manually:**
+**Fix: Generate the cert manually:**
 
 ```bash
 sudo openssl req -x509 -newkey rsa:4096 \
@@ -1262,7 +1262,7 @@ sudo ./mythic-cli restart
 - Docker still pulling images (wait 5 min)
 - Port conflicts (check: `sudo netstat -tlnp`)
 - Memory issues (upgrade to t3.large)
-- Missing SSL cert — see [Mythic nginx SSL Certificate Missing](#mythic-nginx-ssl-certificate-missing)
+- Missing SSL cert. See [Mythic nginx SSL Certificate Missing](#mythic-nginx-ssl-certificate-missing)
 
 ---
 
@@ -1573,7 +1573,7 @@ This kills the OpenVPN process and removes the iptables MASQUERADE rules. The `.
 
 - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only CTF target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
 - **Only the configured CIDRs are routed.** By default, only `10.10.0.0/16` is routed through the VPN. Traffic to other destinations (internet, VPC peers) is unaffected.
-- **The .ovpn file persists across reboots** in `~/vpn/external.ovpn`. However, the VPN tunnel itself does not auto-start — you must run `sudo ~/vpn.sh start` after a reboot.
+- **The .ovpn file persists across reboots** in `~/vpn/external.ovpn`. However, the VPN tunnel itself does not auto-start. Run `sudo ~/vpn.sh start` after a reboot.
 - **All internal machines can reach CTF targets.** The routing is configured at the VPC level, so the Windows workstation, all C2 servers, and the Guacamole server can all reach targets through the VPN tunnel.
 
 **Checkpoint:** Lab connected to external target environment, all internal machines can reach CTF targets
