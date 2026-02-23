@@ -999,22 +999,20 @@ The wizard has 5 steps:
 
 ### Step 4.3: Deploy Agent
 
-**Access Windows Workstation:**
+**Transfer the agent to the Windows workstation via Guacamole file share:**
 
-1. Open Guacamole UI
-2. Click "Windows Operator Workstation"
-3. Use file transfer to upload `apollo.exe`
+1. Open the Guacamole UI and connect to **Windows Operator Workstation**
+2. Press `Ctrl+Alt+Shift` to open the Guacamole sidebar → click **Devices**
+3. You will see the **GuacShare** drive — click **Upload Files** and select your `apollo.exe`
 
-**Or use Guacamole's file share:**
+The drive maps to the Guacamole server's `/drive` directory. Inside it is a `downloads/` subfolder — any files placed there from the Windows side (e.g. loot, tool output) can be downloaded directly to your host machine the same way via the Guacamole sidebar.
 
-- Left sidebar → Devices → Shared Drive
-- Copy agent to shared folder
+The drive appears in Windows as `\\tsclient\GuacShare` — you can browse it from File Explorer or run files directly from it.
 
 **Execute Agent:**
 
 ```powershell
-cd Downloads  # Or wherever you uploaded
-.\apollo.exe
+\\tsclient\GuacShare\apollo.exe
 ```
 
 **Watch Mythic UI:**
