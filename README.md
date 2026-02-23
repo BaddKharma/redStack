@@ -304,11 +304,13 @@ terraform output network_architecture
 > **Note:** There are two outputs: `deployment_info` (all IPs, credentials, SSH commands) and `network_architecture` (diagram with actual IPs). All connection details you need for the rest of this guide are in `deployment_info`. Save it to a file:
 >
 > **Windows (PowerShell):**
+>
 > ```powershell
 > terraform output deployment_info | Out-File -Encoding utf8 deployment_info.txt
 > ```
 >
 > **Linux/Mac (bash):**
+>
 > ```bash
 > terraform output deployment_info > deployment_info.txt
 > ```
@@ -388,12 +390,15 @@ dig +short yourdomain.tld
 Verify all six components are operational and accessible.
 
 > **Getting Connection Details:** All IPs and credentials for the steps below come from:
+>
 > ```bash
 > terraform output deployment_info
 > ```
+>
 > Run this from your project directory and note the IPs for each component. For subsequent SSH commands, substitute the actual IPs shown in the output.
 >
 > **Windows (PowerShell) — set variables for use in this session:**
+>
 > ```powershell
 > $GUAC_IP   = "x.x.x.x"   # GUACAMOLE Public IP from deployment_info
 > $REDIR_IP  = "x.x.x.x"   # APACHE REDIRECTOR Public IP from deployment_info
@@ -403,6 +408,7 @@ Verify all six components are operational and accessible.
 > ```
 >
 > **Linux/Mac (bash) — set variables for use in this session:**
+>
 > ```bash
 > GUAC_IP="x.x.x.x"    # GUACAMOLE Public IP from deployment_info
 > REDIR_IP="x.x.x.x"   # APACHE REDIRECTOR Public IP from deployment_info
@@ -930,20 +936,20 @@ sudo ./mythic-cli start
 
 **Checkpoint:** ✅ `apollo` and `http` both running under Installed Services
 
-### Step 4.1: Create HTTP Listener
+### Step 4.1: Start HTTP Listener
+
+The HTTP C2 profile is already installed (verified in Step 4.0). You just need to start a listener instance on it.
 
 **Access Mythic UI (from Windows workstation via Guacamole RDP):**
 
-```
+```text
 https://mythic:7443
 ```
 
 - Login: `mythic_admin`
 - Password: `sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD` (run on Mythic server)
 
-**Navigate:** C2 Profiles → HTTP
-
-**Click:** "New Listener"
+**Navigate:** C2 Profiles → HTTP → click the **Start** icon (or "New Instance" if no listener is running yet)
 
 **Configuration:**
 
@@ -1292,6 +1298,7 @@ cat ~/deployment_summary.txt
 ### redirect.rules Download Fails (Private Repo)
 
 **Symptoms:** Apache fails to start, `apache2ctl -S` shows:
+
 ```
 Invalid command '404:', perhaps misspelled or defined by a module not included
 ```
