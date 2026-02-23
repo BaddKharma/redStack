@@ -145,6 +145,12 @@ networks:
     driver: bridge
 EOF
 
+# Create guac drive share directory BEFORE docker-compose so Docker doesn't create it as root
+# guacd runs as a non-root user in the container and needs write access to /drive
+echo "[*] Creating guac drive share directories..."
+mkdir -p /drive/downloads
+chmod 777 /drive /drive/downloads
+
 # Start Guacamole containers
 echo "[*] Starting Guacamole containers..."
 docker-compose up -d
@@ -261,7 +267,7 @@ if [ -n "$TOKEN" ]; then
                 security: "any",
                 "ignore-cert": "true",
                 "enable-drive": "true",
-                "drive-name": "SharedDrive",
+                "drive-name": "GuacShare",
                 "drive-path": "/drive",
                 "create-drive-path": "true",
                 console: "true",
