@@ -111,9 +111,10 @@ Write-Host "[*] Pre-configuring MobaXterm SSH sessions..."
 $mobaDir = "C:\Users\Administrator\AppData\Roaming\MobaXterm"
 New-Item -ItemType Directory -Force -Path $mobaDir | Out-Null
 
-# Session format: Name=#109#ColorScheme%Host%Port%Username%...
-# Hostnames resolve via the pre-configured hosts file entries
-$mobaIni = @"
+# Session format derived from MobaXterm's own saved format (space before #109# is required)
+# [Bookmarks] must come before [Bookmarks_0] or the subfolder won't appear in the UI
+# Single-quoted here-string prevents PowerShell from interpreting % or # as special chars
+$mobaIni = @'
 [Bookmarks]
 SubRep=
 ImgNum=41
@@ -121,14 +122,16 @@ ImgNum=41
 [Bookmarks_0]
 SubRep=redStack Lab
 ImgNum=41
-Mythic C2 (SSH)=#109#0%mythic%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
-Sliver C2 (SSH)=#109#0%sliver%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
-Havoc C2 (SSH)=#109#0%havoc%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
-Apache Redirector (SSH)=#109#0%redirector%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
-Guacamole Server (SSH)=#109#0%guac%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
-"@
+Mythic C2 (SSH)= #109#0%mythic%22%admin%%-1%-1%%%%%0%-1%0%%%-1%-1%0%0%%1080%%0%0%1%%0%%%%0%-1%-1%0%%%0#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%0%#0# #-1
+Sliver C2 (SSH)= #109#0%sliver%22%admin%%-1%-1%%%%%0%-1%0%%%-1%-1%0%0%%1080%%0%0%1%%0%%%%0%-1%-1%0%%%0#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%0%#0# #-1
+Havoc C2 (SSH)= #109#0%havoc%22%admin%%-1%-1%%%%%0%-1%0%%%-1%-1%0%0%%1080%%0%0%1%%0%%%%0%-1%-1%0%%%0#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%0%#0# #-1
+Apache Redirector (SSH)= #109#0%redirector%22%admin%%-1%-1%%%%%0%-1%0%%%-1%-1%0%0%%1080%%0%0%1%%0%%%%0%-1%-1%0%%%0#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%0%#0# #-1
+Guacamole Server (SSH)= #109#0%guac%22%admin%%-1%-1%%%%%0%-1%0%%%-1%-1%0%0%%1080%%0%0%1%%0%%%%0%-1%-1%0%%%0#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%0%#0# #-1
+'@
 
-Set-Content -Path "$mobaDir\MobaXterm.ini" -Value $mobaIni -Encoding UTF8
+# Write without BOM — MobaXterm silently rejects UTF-8 BOM and recreates a blank config
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText("$mobaDir\MobaXterm.ini", $mobaIni, $utf8NoBom)
 Write-Host "[+] MobaXterm sessions written to $mobaDir\MobaXterm.ini"
 
 Write-Host "===== Windows Client Setup Completed $(Get-Date) ====="
