@@ -906,9 +906,11 @@ sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 
 ## Part 4: Mythic C2 Setup
 
-### Objective: Mythic Listener and Agent Generation
+### Objective: Mythic Proof-of-Function
 
-Configure Mythic HTTP listener and generate test agent.
+The goal here is not to learn Mythic — it's to confirm the environment works end-to-end by getting a Windows `.exe` beacon to call back through the redirector. Once you have a callback, the lab is proven functional.
+
+For full documentation on Mythic's capabilities, refer to the [official Mythic docs](https://docs.mythic-c2.net).
 
 ### Step 4.0: Verify Pre-Installed Profiles and Agents
 
@@ -1048,9 +1050,11 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 
 ## Part 5: Sliver C2 Setup
 
-### Objective: Sliver Operator and Listener Setup
+### Objective: Sliver Proof-of-Function
 
-Configure Sliver C2 server, generate an operator config, and create a listener.
+Same goal as Part 4 — get a Windows `.exe` implant calling back through the redirector to confirm Sliver is working. This is a proof-of-function run, not a Sliver deep-dive.
+
+For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/sliver/wiki).
 
 ### Step 5.1: Access Sliver Server
 
@@ -1128,9 +1132,11 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 
 ## Part 6: Havoc C2 Setup
 
-### Objective: Havoc Teamserver Configuration
+### Objective: Havoc Proof-of-Function
 
-Configure Havoc C2 teamserver and connect with the Havoc client.
+Same goal — get a Windows `.exe` demon calling back through the redirector to confirm Havoc is working. Not a Havoc tutorial.
+
+For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
 
 ### Step 6.1: Start Havoc Teamserver
 
