@@ -442,13 +442,24 @@ sudo ./mythic-cli status
 **Expected Output:**
 
 ```
-mythic_nginx     running   Up X minutes (healthy)
-mythic_postgres  running   Up X minutes (healthy)
-mythic_rabbitmq  running   Up X minutes (healthy)
-mythic_server    running   Up X minutes (healthy)
-...
-[Total: 8+ containers running]
+Mythic Main Services
+CONTAINER NAME        STATE    STATUS
+mythic_documentation  running  Up X minutes (healthy)
+mythic_graphql        running  Up X minutes (healthy)
+mythic_jupyter        running  Up X minutes (healthy)
+mythic_nginx          running  Up X minutes (healthy)
+mythic_postgres       running  Up X minutes (healthy)
+mythic_rabbitmq       running  Up X minutes (healthy)
+mythic_react          running  Up X minutes (healthy)
+mythic_server         running  Up X minutes (healthy)
+
+Installed Services
+CONTAINER NAME  STATE    STATUS
+apollo          running  Up X minutes
+http            running  Up X minutes
 ```
+
+All 8 core containers + apollo agent + http C2 profile = 10 total. The warnings about localhost binding are expected and not a problem — they only apply if running remote services on separate machines.
 
 **Get Admin Password:**
 
@@ -874,6 +885,32 @@ sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 ### Objective: Mythic Listener and Agent Generation
 
 Configure Mythic HTTP listener and generate test agent.
+
+### Step 4.0: Verify Pre-Installed Profiles and Agents
+
+The HTTP C2 profile and Apollo agent are installed automatically by the setup script. Verify they are present before proceeding:
+
+```bash
+cd /opt/Mythic
+sudo ./mythic-cli status
+```
+
+Look for `apollo` and `http` under **Installed Services** — both should show `running`.
+
+**If either is missing, install manually:**
+
+```bash
+cd /opt/Mythic
+sudo ./mythic-cli install github https://github.com/MythicC2Profiles/http
+sudo ./mythic-cli install github https://github.com/MythicAgents/apollo
+
+# Restart to load new components
+sudo ./mythic-cli stop
+sleep 10
+sudo ./mythic-cli start
+```
+
+**Checkpoint:** ✅ `apollo` and `http` both running under Installed Services
 
 ### Step 4.1: Create HTTP Listener
 
