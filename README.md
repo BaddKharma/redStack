@@ -936,9 +936,7 @@ sudo ./mythic-cli start
 
 **Checkpoint:** ✅ `apollo` and `http` both running under Installed Services
 
-### Step 4.1: Start HTTP Listener
-
-The HTTP C2 profile is already installed (verified in Step 4.0). You just need to start a listener instance on it.
+### Step 4.1: Verify HTTP C2 Profile is Running
 
 **Access Mythic UI (from Windows workstation via Guacamole RDP):**
 
@@ -949,13 +947,30 @@ https://mythic:7443
 - Login: `mythic_admin`
 - Password: `sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD` (run on Mythic server)
 
-**Navigate:** C2 Profiles → HTTP → click the **Start** icon (or "New Instance" if no listener is running yet)
+**Navigate:** Installed Services → **C2** tab
 
-**Configuration:**
+The `http` profile should already show:
 
-| Setting | Value |
-| ------- | ----- |
-| Callback Host | Your redirector's domain or public IP |
+- **Container Status:** Online
+- **C2 Server Status:** Accepting Connections
+
+If it shows **Stopped**, click **"Start Profile"**.
+
+**Checkpoint:** ✅ C2 Server Status shows "Accepting Connections"
+
+### Step 4.2: Generate Agent
+
+**Navigate:** Payloads → **Create Payload**
+
+**Select OS:** Windows
+
+**Select payload type:** Apollo
+
+**Select C2 profile:** HTTP — configure the following parameters:
+
+| C2 Parameter | Value |
+| ------------ | ----- |
+| Callback Host | `https://yourdomain.tld` (your redirector domain) |
 | Callback Port | `443` |
 | Callback Interval | `10` |
 | Callback Jitter | `20` |
@@ -964,29 +979,13 @@ https://mythic:7443
 | POST URI | `/cdn/media/stream/update` |
 | Headers | `X-Request-ID: <token from terraform output deployment_info>` |
 
-**Click:** "Submit" then "Start"
+**Select commands:** `shell`, `download`, `upload`, `screenshot`
 
-**Checkpoint:** ✅ Listener shows "Running"
+**Output format:** Windows Executable (.exe)
 
-### Step 4.2: Generate Agent
+**Click:** "Create Payload" / "Generate"
 
-**Navigate:** Payloads → Generate New
-
-**Configuration:**
-
-| Setting | Value |
-| ------- | ----- |
-| Agent | `Apollo` |
-| C2 Profile | Select your HTTP listener |
-| Commands | Select: `shell`, `download`, `upload`, `screenshot` |
-| Operating System | `Windows` |
-| Output Format | `Windows Executable (.exe)` |
-
-**Click:** "Generate"
-
-**Wait:** 30-60 seconds
-
-**Download:** Click "Download" button
+**Wait:** 30-60 seconds, then download the resulting `.exe`
 
 **Checkpoint:** ✅ Agent downloaded (filename like `apollo.exe`)
 
@@ -1027,7 +1026,7 @@ IP: 172.31.X.X
 
 ### Step 4.4: Test C2 Session
 
-**In Mythic, click the callback**
+#### In Mythic, click the callback
 
 **Test Commands:**
 
