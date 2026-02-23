@@ -28,7 +28,7 @@
 
 ## Architecture Overview
 
-```
+```text
 +---------------------------------------------------------------------+
 |                     NETWORK ARCHITECTURE                            |
 +---------------------------------------------------------------------+
@@ -250,7 +250,7 @@ terraform init
 
 **Expected Output:**
 
-```
+```text
 Initializing the backend...
 Initializing provider plugins...
 - Finding hashicorp/aws versions matching "~> 5.0"...
@@ -288,7 +288,7 @@ Type `yes` when prompted.
 
 **Expected Output:**
 
-```
+```text
 Apply complete! Resources: 50+ added, 0 changed, 0 destroyed.
 ```
 
@@ -463,7 +463,7 @@ sudo ./mythic-cli status
 
 **Expected Output:**
 
-```
+```text
 Mythic Main Services
 CONTAINER NAME        STATE    STATUS
 mythic_documentation  running  Up X minutes (healthy)
@@ -495,7 +495,7 @@ sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
 
 The Mythic Web UI is only accessible from within the C2 VPC (VPC A). Use the Windows operator workstation (via Guacamole RDP) to open a browser and navigate to:
 
-```
+```text
 https://mythic:7443
 ```
 
@@ -530,7 +530,7 @@ docker ps
 
 **Expected Output:**
 
-```
+```text
 CONTAINER ID   IMAGE                   STATUS
 xxxxx          guacamole/guacamole     Up X minutes
 xxxxx          postgres:15             Up X minutes
@@ -547,7 +547,7 @@ exit  # Exit SSH
 
 Open in your browser:
 
-```
+```text
 https://<GUAC_PUBLIC_IP>/guacamole
 ```
 
@@ -1017,7 +1017,7 @@ cd Downloads  # Or wherever you uploaded
 
 **Expected:**
 
-```
+```text
 Hostname: WIN-OPERATOR
 User: Administrator
 IP: 172.31.X.X
@@ -1031,7 +1031,7 @@ IP: 172.31.X.X
 
 **Test Commands:**
 
-```
+```text
 Task: shell
 Command: whoami
 ```
@@ -1085,7 +1085,7 @@ sliver-server
 
 **In the Sliver console:**
 
-```
+```text
 sliver > http --lhost 0.0.0.0 --lport 80
 ```
 
@@ -1097,7 +1097,7 @@ This starts an HTTP listener on port 80. The redirector forwards traffic from th
 
 **In the Sliver console:**
 
-```
+```text
 sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --save /tmp/implant.exe
 ```
 
@@ -1111,7 +1111,7 @@ Transfer the implant to the Windows workstation and execute it. You should see a
 
 ### Step 5.5: Test Sliver Session
 
-```
+```text
 sliver > sessions
 
 sliver > use [SESSION_ID]
@@ -1299,7 +1299,7 @@ cat ~/deployment_summary.txt
 
 **Symptoms:** Apache fails to start, `apache2ctl -S` shows:
 
-```
+```text
 Invalid command '404:', perhaps misspelled or defined by a module not included
 ```
 
@@ -1343,7 +1343,7 @@ sudo apache2ctl configtest && sudo systemctl reload apache2
 
 **Symptoms:** `mythic_nginx` container keeps restarting. Logs show:
 
-```
+```text
 [emerg] cannot load certificate "/etc/ssl/private/mythic-cert.crt": No such file or directory
 ```
 
@@ -1607,7 +1607,7 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 
 ### How It Works
 
-```
+```text
 +---------------------------------------------------------------------+
 |                     VPN ROUTING ARCHITECTURE                        |
 +---------------------------------------------------------------------+
