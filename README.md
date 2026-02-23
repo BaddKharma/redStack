@@ -426,7 +426,7 @@ Verify all six components are operational and accessible.
 
 ### Step 2.1: Verify Mythic Team Server
 
-Mythic is internal only (no public IP). Access it via Guacamole SSH or from another instance in the VPC.
+Mythic is internal only (no public IP). Access it via Guacamole SSH or from another instance in the Team Server VPC (VPC A).
 
 **Access via Guacamole:**
 
@@ -487,7 +487,7 @@ sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
 
 **Access Web UI (via Windows workstation or Guacamole):**
 
-The Mythic Web UI is only accessible from within the VPC. Use the Windows operator workstation (via Guacamole RDP) to open a browser and navigate to:
+The Mythic Web UI is only accessible from within the Team Server VPC (VPC A). Use the Windows operator workstation (via Guacamole RDP) to open a browser and navigate to:
 
 ```
 https://mythic:7443
@@ -693,7 +693,7 @@ exit  # Exit SSH
 
 **Or via direct SSH (from your machine):**
 
-> **Note:** Sliver and other internal servers have no public IP. SSH to them directly only works if you're in the VPC, or via the redirector as a jump host.
+> **Note:** Sliver and other internal servers have no public IP. SSH to them directly only works if you're in the Team Server VPC (VPC A), or via the redirector as a jump host.
 
 **Verify Sliver is installed:**
 
@@ -752,11 +752,11 @@ sudo systemctl status havoc
 All Linux servers (Debian 12, SSH user: `admin`) are configured with dual SSH authentication:
 
 - **From Public IPs:** SSH keys REQUIRED (password authentication disabled)
-- **From VPC IPs (10.50.0.0/16, 172.31.0.0/16):** Password authentication ALLOWED
+- **From Team Server VPC IPs (10.50.0.0/16, 172.31.0.0/16):** Password authentication ALLOWED
 
 This means:
 
-- ✅ Guacamole can SSH with passwords (it's in the VPC)
+- ✅ Guacamole can SSH with passwords (it's in the Team Server VPC)
 - ✅ Your SSH key still works from your public IP
 - ❌ Random internet users cannot brute-force SSH passwords
 
@@ -1584,7 +1584,7 @@ At the end of this deployment, you should have:
 - ✅ Can execute commands through all C2 paths
 - ✅ All 6 Guacamole connections auto-created (1 RDP, 5 SSH)
 - ✅ Guacamole providing web-based access to all infrastructure components
-- ✅ SSH password authentication working from VPC, keys required from public IPs
+- ✅ SSH password authentication working from Team Server VPC, keys required from public IPs
 - ✅ Windows workstation with Chromium, VS Code, MobaXterm, and 7-Zip installed
 - ✅ Windows Administrator accessible via Guacamole (AWS-generated password auto-configured)
 
