@@ -1005,14 +1005,12 @@ The wizard has 5 steps:
 2. Press `Ctrl+Alt+Shift` to open the Guacamole sidebar → click **Devices**
 3. You will see the **GuacShare** drive — click **Upload Files** and select your `apollo.exe`
 
-The drive maps to the Guacamole server's `/drive` directory. Inside it is a `downloads/` subfolder — any files placed there from the Windows side (e.g. loot, tool output) can be downloaded directly to your host machine the same way via the Guacamole sidebar.
+The drive maps to the Guacamole server's `/drive` directory. Files uploaded from the sidebar land in `\\tsclient\GuacShare\Download\` on the Windows side. To download files back to your host, place them anywhere inside `\\tsclient\GuacShare\` from Windows, then use the Guacamole sidebar (Ctrl+Alt+Shift → Devices → GuacShare) to browse and click-download them.
 
-The drive appears in Windows as `\\tsclient\GuacShare` — you can browse it from File Explorer or run files directly from it.
-
-**Execute Agent:**
+**Execute Agent (from the shared drive):**
 
 ```powershell
-\\tsclient\GuacShare\apollo.exe
+\\tsclient\GuacShare\Download\apollo.exe
 ```
 
 **Watch Mythic UI:**

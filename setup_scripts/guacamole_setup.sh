@@ -147,9 +147,9 @@ EOF
 
 # Create guac drive share directory BEFORE docker-compose so Docker doesn't create it as root
 # guacd runs as a non-root user in the container and needs write access to /drive
-echo "[*] Creating guac drive share directories..."
-mkdir -p /drive/downloads
-chmod 777 /drive /drive/downloads
+echo "[*] Creating guac drive share directory..."
+mkdir -p /drive
+chmod 777 /drive
 
 # Start Guacamole containers
 echo "[*] Starting Guacamole containers..."
