@@ -102,6 +102,35 @@ Write-Host "[*] Installing MobaXterm..."
 Write-Host "[*] Installing 7-Zip..."
 & "$env:ProgramData\chocolatey\bin\choco.exe" install 7zip -y --no-progress
 
+# ============================================================================
+# PRE-CONFIGURE MOBAXTERM SESSIONS
+# ============================================================================
+
+Write-Host "[*] Pre-configuring MobaXterm SSH sessions..."
+
+$mobaDir = "C:\Users\Administrator\AppData\Roaming\MobaXterm"
+New-Item -ItemType Directory -Force -Path $mobaDir | Out-Null
+
+# Session format: Name=#109#ColorScheme%Host%Port%Username%...
+# Hostnames resolve via the pre-configured hosts file entries
+$mobaIni = @"
+[Bookmarks]
+SubRep=
+ImgNum=41
+
+[Bookmarks_0]
+SubRep=redStack Lab
+ImgNum=41
+Mythic C2 (SSH)=#109#0%mythic%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
+Sliver C2 (SSH)=#109#0%sliver%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
+Havoc C2 (SSH)=#109#0%havoc%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
+Apache Redirector (SSH)=#109#0%redirector%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
+Guacamole Server (SSH)=#109#0%guac%22%admin%-1%-1%%%%%0%-1%-1%0%0%0%%0%0%0%0%0%0%0%0%0%
+"@
+
+Set-Content -Path "$mobaDir\MobaXterm.ini" -Value $mobaIni -Encoding UTF8
+Write-Host "[+] MobaXterm sessions written to $mobaDir\MobaXterm.ini"
+
 Write-Host "===== Windows Client Setup Completed $(Get-Date) ====="
 Write-Host "===== Use 'aws ec2 get-password-data' to retrieve Administrator password ====="
 
