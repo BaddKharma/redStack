@@ -960,13 +960,21 @@ If it shows **Stopped**, click **"Start Profile"**.
 
 ### Step 4.2: Generate Agent
 
-**Navigate:** Payloads → **Create Payload**
+**Navigate:** Click **Create Payload** in the left sidebar
 
-**Select OS:** Windows
+The payload wizard walks through these steps in order:
 
-**Select payload type:** Apollo
+**1. Select OS:** Windows
 
-**Select C2 profile:** HTTP — configure the following parameters:
+**2. Select agent type:** Apollo — set build parameters:
+
+| Build Parameter | Value |
+| --------------- | ----- |
+| Output Format | `WinExe` (Windows Executable) |
+
+**3. Select commands:** Select all, or at minimum: `shell`, `download`, `upload`, `screenshot`
+
+**4. Configure C2 profile:** Toggle **HTTP** on — set the following parameters:
 
 | C2 Parameter | Value |
 | ------------ | ----- |
@@ -979,15 +987,13 @@ If it shows **Stopped**, click **"Start Profile"**.
 | POST URI | `/cdn/media/stream/update` |
 | Headers | `X-Request-ID: <token from terraform output deployment_info>` |
 
-**Select commands:** `shell`, `download`, `upload`, `screenshot`
+**5. Name & describe:** Give the payload a name (e.g. `apollo-training`)
 
-**Output format:** Windows Executable (.exe)
+**6. Click:** "Create Payload"
 
-**Click:** "Create Payload" / "Generate"
+**Wait:** 30-60 seconds — a popup will notify you when the build completes. Then go to **Payloads** and click the green download icon.
 
-**Wait:** 30-60 seconds, then download the resulting `.exe`
-
-**Checkpoint:** ✅ Agent downloaded (filename like `apollo.exe`)
+**Checkpoint:** ✅ Agent `.exe` downloaded
 
 ### Step 4.3: Deploy Agent
 
@@ -1011,31 +1017,22 @@ cd Downloads  # Or wherever you uploaded
 
 **Watch Mythic UI:**
 
-- Navigate to: Active Callbacks
-- Should see new callback appear within ~10 seconds
+- Click the **phone icon** (top nav) to open **Active Callbacks**
+- A new row should appear within ~10 seconds showing `WIN-OPERATOR`, the administrator user, and the private IP
 
-**Expected:**
-
-```text
-Hostname: WIN-OPERATOR
-User: Administrator
-IP: 172.31.X.X
-```
-
-**Checkpoint:** ✅ Agent callback received
+**Checkpoint:** ✅ Callback row appears in Active Callbacks
 
 ### Step 4.4: Test C2 Session
 
-#### In Mythic, click the callback
+**In the Active Callbacks table**, click the callback's **ID button** (blue = low integrity, red = high) to open the tasking pane below.
 
-**Test Commands:**
+**Issue a test command** by typing in the task input box:
 
-```text
-Task: shell
-Command: whoami
+```bash
+shell whoami
 ```
 
-**Expected Output:** `win-operator\administrator`
+**Expected output:** `win-operator\administrator`
 
 **Verify Redirector Traffic (on redirector via SSH):**
 
