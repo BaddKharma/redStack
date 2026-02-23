@@ -41,19 +41,20 @@ echo ""
 echo "[*] Active VirtualHosts:"
 apache2ctl -S 2>/dev/null
 echo ""
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 echo "[*] Testing direct backend connectivity:"
-curl -I -m 5 http://MYTHIC_IP_PLACEHOLDER/ 2>/dev/null && echo "  Mythic: OK" || echo "  Mythic: FAILED"
-curl -I -m 5 http://SLIVER_IP_PLACEHOLDER/ 2>/dev/null && echo "  Sliver: OK" || echo "  Sliver: FAILED"
-curl -I -m 5 http://HAVOC_IP_PLACEHOLDER/ 2>/dev/null && echo "  Havoc:  OK" || echo "  Havoc:  FAILED"
+curl -I -m 5 -A "$UA" http://MYTHIC_IP_PLACEHOLDER/ 2>/dev/null && echo "  Mythic: OK" || echo "  Mythic: FAILED"
+curl -I -m 5 -A "$UA" http://SLIVER_IP_PLACEHOLDER/ 2>/dev/null && echo "  Sliver: OK" || echo "  Sliver: FAILED"
+curl -I -m 5 -A "$UA" http://HAVOC_IP_PLACEHOLDER/ 2>/dev/null && echo "  Havoc:  OK" || echo "  Havoc:  FAILED"
 echo ""
 echo "[*] Testing decoy page (no header - should get CloudEdge CDN page):"
-curl -s http://localhost/ | head -5
+curl -s -A "$UA" http://localhost/ | head -5
 echo ""
 echo "[*] Testing C2 routing WITH correct header:"
-curl -v -H "HEADER_NAME_PLACEHOLDER: HEADER_VALUE_PLACEHOLDER" http://localhost/MYTHIC_PREFIX_PLACEHOLDER/ 2>&1 | head -15
+curl -v -A "$UA" -H "HEADER_NAME_PLACEHOLDER: HEADER_VALUE_PLACEHOLDER" http://localhost/MYTHIC_PREFIX_PLACEHOLDER/ 2>&1 | head -15
 echo ""
 echo "[*] Testing C2 routing WITHOUT header (should get decoy):"
-curl -v http://localhost/MYTHIC_PREFIX_PLACEHOLDER/ 2>&1 | head -15
+curl -v -A "$UA" http://localhost/MYTHIC_PREFIX_PLACEHOLDER/ 2>&1 | head -15
 echo ""
 echo "[*] UFW status:"
 ufw status verbose
