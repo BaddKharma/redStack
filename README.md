@@ -230,7 +230,7 @@ notepad terraform.tfvars  # Windows
 localPub_ip              = "YOUR_IP/32"           # Replace with your IP + /32
 ssh_key_name             = "rs-rsa-key"            # Must match your AWS key pair name
 ssh_private_key_path     = "./rs-rsa-key.pem"      # Path to your .pem file (for Windows password decryption)
-redirector_domain        = "c2.yourdomain.com"    # Your domain for the redirector
+redirector_domain        = "yourdomain.com"        # Your domain — apex (yourdomain.com) or subdomain (c2.yourdomain.com)
 enable_external_vpn      = false                   # Set to true for HTB/THM/ProvingGrounds access (see Part 8)
 ```
 
@@ -331,25 +331,28 @@ Look for the **APACHE REDIRECTOR** section — the `Public IP` field is what you
 
 1. Log into your domain registrar or DNS provider (e.g., Namecheap, Cloudflare, Route53)
 2. Navigate to DNS settings for your domain
-3. Create an **A record**:
-   - **Host/Name:** The subdomain portion (e.g., `c2` if your domain is `c2.yourdomain.com`)
-   - **Value/Points to:** The redirector's Elastic IP from the command above
-   - **TTL:** 300 (5 minutes) or lowest available
+3. Create an **A record** pointing to the redirector's Elastic IP:
 
-**Verify DNS Propagation:**
+| Domain type | Host/Name field | Example |
+| ----------- | --------------- | ------- |
+| Apex domain | `@` | `yourdomain.com` → redirector IP |
+| Subdomain | subdomain only (e.g., `c2`) | `c2.yourdomain.com` → redirector IP |
+
+- **Value/Points to:** The redirector's Elastic IP from the command above
+- **TTL:** 300 (5 minutes) or lowest available
+
+**Verify DNS Propagation** (substitute your actual `redirector_domain` value from `terraform.tfvars`):
 
 **Windows (PowerShell):**
 
 ```powershell
-Resolve-DnsName c2.yourdomain.com
+Resolve-DnsName yourdomain.com
 ```
 
 **Linux/Mac (bash):**
 
 ```bash
-dig +short c2.yourdomain.com
-# or
-nslookup c2.yourdomain.com
+dig +short yourdomain.com
 ```
 
 **Expected:** The IP returned should match your redirector's Elastic IP.
@@ -357,7 +360,7 @@ nslookup c2.yourdomain.com
 > **Note:** DNS propagation can vary. After DNS resolves correctly, run Certbot on the redirector (see Step 2.4):
 >
 > ```bash
-> sudo certbot --apache -d c2.yourdomain.com
+> sudo certbot --apache -d yourdomain.com
 > ```
 
 **Checkpoint:** ✅ Domain pointed to redirector IP, DNS verified
@@ -671,7 +674,7 @@ The redirect.rules file blocks known security scanners, AV vendor IPs, and TOR e
 **Obtain SSL Certificate (after DNS is pointed):**
 
 ```bash
-sudo certbot --apache -d c2.yourdomain.com
+sudo certbot --apache -d yourdomain.com
 ```
 
 Follow the prompts. Certbot will automatically update the Apache HTTPS config and add an HTTP→HTTPS redirect. Auto-renewal is configured by Certbot.
