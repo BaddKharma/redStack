@@ -385,165 +385,17 @@ dig +short yourdomain.tld
 
 ## Part 2: Verification
 
-### Objective: Component Verification
+### Objective: Confirm Lab is Operational
 
-Verify all six components are operational and accessible.
-
-> **Getting Connection Details:** All IPs and credentials for the steps below come from:
->
-> ```bash
-> terraform output deployment_info
-> ```
->
-> Run this from your project directory and note the IPs for each component. For subsequent SSH commands, substitute the actual IPs shown in the output.
->
-> **Windows (PowerShell) — set variables for use in this session:**
->
-> ```powershell
-> $GUAC_IP   = "x.x.x.x"   # GUACAMOLE Public IP from deployment_info
-> $REDIR_IP  = "x.x.x.x"   # APACHE REDIRECTOR Public IP from deployment_info
-> $MYTHIC_IP = "x.x.x.x"   # MYTHIC Private IP from deployment_info
-> $SLIVER_IP = "x.x.x.x"   # SLIVER Private IP from deployment_info
-> $HAVOC_IP  = "x.x.x.x"   # HAVOC Private IP from deployment_info
-> ```
->
-> **Linux/Mac (bash) — set variables for use in this session:**
->
-> ```bash
-> GUAC_IP="x.x.x.x"    # GUACAMOLE Public IP from deployment_info
-> REDIR_IP="x.x.x.x"   # APACHE REDIRECTOR Public IP from deployment_info
-> MYTHIC_IP="x.x.x.x"  # MYTHIC Private IP from deployment_info
-> SLIVER_IP="x.x.x.x"  # SLIVER Private IP from deployment_info
-> HAVOC_IP="x.x.x.x"   # HAVOC Private IP from deployment_info
-> ```
->
-> **Pre-configured hostnames (usable from any machine inside the lab):**
->
-> | Hostname | Resolves To | Access |
-> | -------- | ----------- | ------ |
-> | `mythic` | Mythic private IP | `https://mythic:7443` — Login: `mythic_admin` |
-> | `sliver` | Sliver private IP | SSH / gRPC port 31337 |
-> | `havoc` | Havoc private IP | Havoc client — `havoc:40056` — Login: `operator` / `Training123!` |
-> | `guac` | Guacamole private IP | Internal ping/SSH only — access Guacamole via its public EIP |
-> | `redirector` | Redirector private IP | SSH / Apache proxy |
-> | `win-operator` | Windows private IP | RDP via Guacamole |
->
-> These entries are pre-written to `/etc/hosts` on all Linux machines and `C:\Windows\System32\drivers\etc\hosts` on the Windows workstation during deployment. Use hostnames instead of IPs for all internal web panels and connections.
-
-### Step 2.1: Verify Mythic Team Server
-
-Mythic is internal only (no public IP). Access it via Guacamole SSH or from another instance in the C2 VPC (VPC A).
-
-**Access via Guacamole:**
-
-1. Open Guacamole UI
-2. Click **"Mythic C2 Server (SSH)"**
-3. Should connect automatically
-
-**Or via direct SSH (instructor only, from your machine):**
-
-**Windows (PowerShell):**
-
-```powershell
-ssh -i ".\rs-rsa-key.pem" admin@$MYTHIC_IP
-```
-
-**Linux/Mac (bash):**
+Verify all components are accessible before moving to C2 setup. All credentials and IPs come from:
 
 ```bash
-ssh -i rs-rsa-key.pem admin@$MYTHIC_IP
+terraform output deployment_info
 ```
 
-**Check Mythic Status:**
+> **Pre-configured hostnames** are written to `/etc/hosts` on every Linux machine and `C:\Windows\System32\drivers\etc\hosts` on Windows during deployment. Use hostnames (`mythic`, `sliver`, `havoc`, `guac`, `redirector`, `win-operator`) instead of IPs from anywhere inside the lab.
 
-```bash
-cd /opt/Mythic
-sudo ./mythic-cli status
-```
-
-**Expected Output:**
-
-```text
-Mythic Main Services
-CONTAINER NAME        STATE    STATUS
-mythic_documentation  running  Up X minutes (healthy)
-mythic_graphql        running  Up X minutes (healthy)
-mythic_jupyter        running  Up X minutes (healthy)
-mythic_nginx          running  Up X minutes (healthy)
-mythic_postgres       running  Up X minutes (healthy)
-mythic_rabbitmq       running  Up X minutes (healthy)
-mythic_react          running  Up X minutes (healthy)
-mythic_server         running  Up X minutes (healthy)
-
-Installed Services
-CONTAINER NAME  STATE    STATUS
-apollo          running  Up X minutes
-http            running  Up X minutes
-```
-
-All 8 core containers + apollo agent + http C2 profile = 10 total. The warnings about localhost binding are expected and not a problem — they only apply if running remote services on separate machines.
-
-**Get Admin Password:**
-
-```bash
-sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
-```
-
-**Checkpoint:** ✅ 8+ containers running, password obtained
-
-**Access Web UI (via Windows workstation or Guacamole):**
-
-The Mythic Web UI is only accessible from within the C2 VPC (VPC A). Use the Windows operator workstation (via Guacamole RDP) to open a browser and navigate to:
-
-```text
-https://mythic:7443
-```
-
-> **Tip:** All lab machines have pre-configured `/etc/hosts` (Linux) and `C:\Windows\System32\drivers\etc\hosts` (Windows) entries for every other machine. You can use hostnames (`mythic`, `sliver`, `havoc`, `guac`, `redirector`, `win-operator`) instead of private IPs from any machine in the lab.
-
-- Login: `mythic_admin`
-- Password: from command above
-
-**Checkpoint:** ✅ Mythic UI accessible, can login
-
-### Step 2.2: Verify Guacamole Access Portal
-
-**SSH to Guacamole:**
-
-**Windows (PowerShell):**
-
-```powershell
-ssh -i ".\rs-rsa-key.pem" admin@$GUAC_IP
-```
-
-**Linux/Mac (bash):**
-
-```bash
-ssh -i rs-rsa-key.pem admin@$GUAC_IP
-```
-
-**Check Docker Containers:**
-
-```bash
-docker ps
-```
-
-**Expected Output:**
-
-```text
-CONTAINER ID   IMAGE                   STATUS
-xxxxx          guacamole/guacamole     Up X minutes
-xxxxx          postgres:15             Up X minutes
-xxxxx          guacamole/guacd         Up X minutes
-```
-
-**Checkpoint:** ✅ 3 containers running
-
-```bash
-exit  # Exit SSH
-```
-
-**Access Guacamole UI:**
+### Step 2.1: Access Guacamole Portal
 
 Open in your browser:
 
@@ -551,222 +403,76 @@ Open in your browser:
 https://<GUAC_PUBLIC_IP>/guacamole
 ```
 
-**Login Credentials:**
-
 - Username: `guacadmin`
-- Password: from `terraform output deployment_info` (look for the Guacamole section)
+- Password: from `terraform output deployment_info`
 
-**Checkpoint:** ✅ Guacamole UI accessible, can login
+After logging in you should see **6 pre-configured connections**:
 
-**Verify Auto-Created Connections:**
+1. **Windows Operator Workstation** (RDP) — auto-connects with Administrator credentials
+2. **Mythic C2 Server (SSH)**
+3. **Guacamole Server (SSH)**
+4. **Apache Redirector (SSH)**
+5. **Sliver C2 Server (SSH)**
+6. **Havoc C2 Server (SSH)**
 
-After logging in, you should see **6 pre-configured connections**:
+All SSH connections use password auth (no keys needed) pre-configured with the auto-generated lab password.
 
-1. **Windows Operator Workstation** (RDP) - auto-connects with Administrator credentials
-2. **Mythic C2 Server (SSH)** - green-black terminal theme
-3. **Guacamole Server (SSH)** - green-black terminal theme
-4. **Apache Redirector (SSH)** - green-black terminal theme
-5. **Sliver C2 Server (SSH)** - green-black terminal theme
-6. **Havoc C2 Server (SSH)** - green-black terminal theme
+**Checkpoint:** ✅ Guacamole accessible, 6 connections visible
 
-All SSH connections use password authentication (no SSH keys needed) and are pre-configured with the auto-generated lab password. The Windows RDP connection uses the default AWS `Administrator` account with an auto-decrypted password (no manual entry needed).
+### Step 2.2: Access Windows Workstation
 
-**Checkpoint:** ✅ All 6 connections visible in Guacamole UI
+1. Click **"Windows Operator Workstation"**
+2. RDP connects automatically — wait 10–30 seconds for the desktop to load
+3. Verify the following are installed: Chromium, VS Code, MobaXterm, 7-Zip
+4. Open MobaXterm — the **redStack Lab** folder in the sidebar should contain pre-configured SSH sessions for all lab machines
 
-### Step 2.3: Verify Windows Operator Workstation
+**If the connection fails:** Wait 5 more minutes — Windows is the slowest component to initialize.
 
-The Windows instance uses the default AWS `Administrator` account. The password is automatically generated by AWS, decrypted by Terraform using your SSH private key, and passed to the Guacamole RDP connection.
+**Checkpoint:** ✅ Windows desktop accessible, tools present, MobaXterm sessions visible
 
-**Access via Guacamole:**
+### Step 2.3: Verify Internal Connectivity
 
-1. Open Guacamole UI
-2. Click **"Windows Operator Workstation"**
-3. RDP connects automatically (credentials are pre-configured)
-4. Wait 10-30 seconds for RDP connection
+From the Windows workstation open **PowerShell** and ping the lab machines to confirm hostname resolution and network connectivity:
 
-**Expected:**
+```powershell
+ping mythic
+ping sliver
+ping havoc
+ping redirector
+ping guac
+```
 
-- Windows desktop loads
-- Logged in as `Administrator` (local admin)
-- Chromium, VS Code, MobaXterm, and 7-Zip installed
+**Expected:** All hostnames resolve and respond.
 
-**Checkpoint:** ✅ Can RDP into Windows via Guacamole, tools available
+**Checkpoint:** ✅ All lab machines reachable by hostname from Windows
 
-**If Connection Fails:**
+### Step 2.4: Obtain SSL Certificate
 
-- Wait 5 more minutes (Windows setup is slowest)
-- Check instance state in AWS Console → EC2 → Instances → WIN-OPERATOR → should show `running`
-
-### Step 2.4: Verify Apache Redirector
-
-The redirector is **fully automated** — Apache, header validation, URI routing, redirect.rules, the decoy page, and SSL are all configured during deployment. No manual setup is needed beyond SSL certificate issuance (below).
-
-**SSH to Redirector:**
+Once DNS has propagated (Step 1.6), SSH to the redirector and run Certbot:
 
 **Windows (PowerShell):**
 
 ```powershell
-ssh -i ".\rs-rsa-key.pem" admin@$REDIR_IP
+ssh -i ".\rs-rsa-key.pem" admin@<REDIR_PUBLIC_IP>
 ```
 
 **Linux/Mac (bash):**
 
 ```bash
-ssh -i rs-rsa-key.pem admin@$REDIR_IP
+ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 ```
-
-**What's Pre-Configured:**
-
-- Apache2 with modules: rewrite, ssl, proxy, proxy_http, headers, deflate
-- Header validation (`X-Request-ID` + auto-generated token) — requests without the correct header get a decoy page
-- URI prefix routing to each C2 server (CDN/cloud-style paths)
-- [redirect.rules](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10) (adapted) — blocks AV vendors, cloud sandboxes, TOR exit nodes (403 Forbidden)
-- CloudEdge CDN maintenance decoy page (served when header validation fails)
-- Self-signed SSL certificate (placeholder until Certbot is configured)
-- UFW firewall (ports 22, 80, 443)
-- Certbot installed and ready for Let's Encrypt
-
-**URI Routing (configured automatically, all on ports 80/443):**
-
-| URI Prefix | Backend C2 Server |
-| ---------- | ----------------- |
-| `/cdn/media/stream/` | Mythic |
-| `/cloud/storage/objects/` | Sliver |
-| `/edge/cache/assets/` | Havoc |
-
-**Header Validation:**
-
-All C2 traffic must include the correct header to pass through the redirector:
-
-```bash
-# Get the required header from terraform output (run from your local machine)
-terraform output deployment_info
-# Look for: C2 Header: X-Request-ID: <token>
-```
-
-Requests without the header (or with the wrong value) receive the decoy page instead of being proxied.
-
-> **Important — redirect.rules Download:** The redirector downloads `redirect.rules` at boot from the redStack GitHub repo. If the repo is **private**, this download will silently fail and Apache will fail to start. See [redirect.rules Download Fails](#redirectrules-download-fails-private-repo) in Troubleshooting for the fix.
-
-**Run Connectivity Test:**
-
-A test script is pre-installed on the redirector:
-
-```bash
-sudo /root/test_redirector.sh
-```
-
-This tests Apache status, VirtualHost configuration, connectivity to all three C2 backend servers, and the header/decoy page behavior.
-
-**Verify redirect.rules:**
-
-```bash
-# Check how many blocking rules are installed
-grep -c 'RewriteCond' /etc/apache2/redirect.rules
-```
-
-The redirect.rules file blocks known security scanners, AV vendor IPs, and TOR exit nodes with 403 Forbidden. Note: `curl` is in the blocked user-agent list, so manual testing must use a browser-like User-Agent (the test script handles this automatically).
-
-> **Note:** AWS and Azure cloud IP blocks are **commented out by default** in redirect.rules because this lab runs in AWS. Blocking cloud subnets would prevent C2 callbacks from reaching the redirector. If you deploy outside of cloud environments, you can re-enable them:
->
-> ```bash
-> sudo nano /etc/apache2/redirect.rules
-> # Uncomment: "Class A Exclusions", "AWS Fine Grained", "Azure", "Other VT hosts"
-> sudo systemctl reload apache2
-> ```
-
-**Checkpoint:** ✅ Apache running, header+URI validation active, redirect.rules blocking scanners
-
-**Obtain SSL Certificate (after DNS is pointed):**
 
 ```bash
 sudo certbot --apache -d yourdomain.tld
 ```
 
-Follow the prompts. Certbot will automatically update the Apache HTTPS config and add an HTTP→HTTPS redirect. Auto-renewal is configured by Certbot.
+Follow the prompts. Certbot automatically updates the Apache HTTPS config and configures auto-renewal.
 
 ```bash
-exit  # Exit SSH
+exit
 ```
 
-### Step 2.5: Verify Sliver C2 Server
-
-**Access via Guacamole:**
-
-1. Open Guacamole UI
-2. Click **"Sliver C2 Server (SSH)"**
-3. Should connect automatically
-
-**Or via direct SSH (from your machine):**
-
-> **Note:** Sliver and other internal servers have no public IP. SSH to them directly only works if you're in the C2 VPC (VPC A), or via the redirector as a jump host.
-
-**Verify Sliver is installed:**
-
-```bash
-which sliver-server
-```
-
-**Checkpoint:** ✅ Sliver C2 server installed, accessible via Guacamole
-
-### Step 2.6: Verify Havoc C2 Server
-
-**Access via Guacamole:**
-
-1. Open Guacamole UI
-2. Click **"Havoc C2 Server (SSH)"**
-3. Should connect automatically
-
-**Run Quick Start:**
-
-```bash
-sudo /root/havoc_quickstart.sh
-```
-
-**Start the Havoc Teamserver:**
-
-```bash
-sudo systemctl start havoc
-sudo systemctl status havoc
-```
-
-**Checkpoint:** ✅ Havoc C2 teamserver running, accessible via Guacamole
-
-### Step 2.7: Verify SSH Connections via Guacamole
-
-**Test SSH Access:**
-
-1. Open Guacamole UI
-2. Click **"Mythic C2 Server (SSH)"**
-3. Should connect without prompting for credentials
-4. Prompt should show `admin@mythic:~$`
-5. Run: `whoami` → Should show `admin`
-6. Run: `ping sliver` → Should resolve to Sliver's private IP (verifies /etc/hosts)
-7. Disconnect
-
-**Repeat for:**
-
-- **"Guacamole Server (SSH)"** → prompt: `admin@guac:~$`
-- **"Apache Redirector (SSH)"** → prompt: `admin@redirector:~$`
-- **"Sliver C2 Server (SSH)"** → prompt: `admin@sliver:~$`
-- **"Havoc C2 Server (SSH)"** → prompt: `admin@havoc:~$`
-
-**Checkpoint:** ✅ All SSH connections work via Guacamole
-
-**Verify SSH Security:**
-
-All Linux servers (Debian 12, SSH user: `admin`) are configured with dual SSH authentication:
-
-- **From Public IPs:** SSH keys REQUIRED (password authentication disabled)
-- **From C2 VPC IPs (10.50.0.0/16, 172.31.0.0/16):** Password authentication ALLOWED
-
-This means:
-
-- ✅ Guacamole can SSH with passwords (it's in the C2 VPC)
-- ✅ Your SSH key still works from your public IP
-- ❌ Random internet users cannot brute-force SSH passwords
-
-**Checkpoint:** ✅ Understand SSH security model
+**Checkpoint:** ✅ SSL certificate issued, HTTPS active on redirector
 
 ---
 
@@ -1292,6 +998,126 @@ cat ~/deployment_summary.txt
 ---
 
 ## Troubleshooting
+
+### Component Health Checks
+
+Use these checks if something isn't working as expected after deployment.
+
+#### Mythic C2 Server
+
+SSH to Mythic via Guacamole or jump host, then:
+
+```bash
+cd /opt/Mythic
+sudo ./mythic-cli status
+```
+
+**Expected:** 8 core containers + `apollo` + `http` all showing `running`. The warnings about localhost binding are expected and harmless.
+
+**Get admin password:**
+
+```bash
+sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
+```
+
+**Access web UI** (from Windows workstation or Guacamole RDP):
+
+```text
+https://mythic:7443
+```
+
+Login: `mythic_admin` / password from above.
+
+#### Guacamole Server
+
+SSH to Guacamole, then check Docker containers:
+
+```bash
+docker ps
+```
+
+**Expected:** 3 containers — `guacamole/guacamole`, `postgres:15`, `guacamole/guacd` — all up.
+
+#### Apache Redirector
+
+SSH to the redirector, then run the pre-installed test script:
+
+```bash
+sudo /root/test_redirector.sh
+```
+
+This checks Apache status, VirtualHost config, connectivity to all three C2 backends, and header/decoy page behavior.
+
+**Check redirect.rules is loaded:**
+
+```bash
+grep -c 'RewriteCond' /etc/apache2/redirect.rules
+```
+
+**Test security layers manually** (must use a browser User-Agent — `curl` is blocked by redirect.rules):
+
+```bash
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+HEADER_VALUE="<token from terraform output deployment_info>"
+
+# Should return DECOY PAGE (no header)
+curl -sk -A "$UA" https://<YOUR_DOMAIN>/
+
+# Should return DECOY PAGE (wrong header)
+curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://<YOUR_DOMAIN>/cdn/media/stream/test
+
+# Should proxy to Mythic (connection refused if no listener — expected)
+curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://<YOUR_DOMAIN>/cdn/media/stream/test
+```
+
+**View Apache logs:**
+
+```bash
+sudo tail -50 /var/log/apache2/redirector-ssl-access.log
+sudo tail -50 /var/log/apache2/redirector-ssl-error.log
+```
+
+> **Note:** AWS and Azure cloud IP blocks are **commented out by default** in redirect.rules because this lab runs in AWS. If you deploy outside cloud environments you can re-enable them:
+>
+> ```bash
+> sudo nano /etc/apache2/redirect.rules
+> # Uncomment: "Class A Exclusions", "AWS Fine Grained", "Azure", "Other VT hosts"
+> sudo systemctl reload apache2
+> ```
+
+#### Sliver C2 Server
+
+SSH to Sliver via Guacamole, then:
+
+```bash
+which sliver-server
+```
+
+If missing, see [Sliver Not Installed](#sliver-not-installed).
+
+#### Havoc C2 Server
+
+SSH to Havoc via Guacamole, then:
+
+```bash
+sudo systemctl status havoc
+```
+
+If not running: `sudo systemctl start havoc`. If the binary is missing, see [Havoc Build Failed](#havoc-build-failed).
+
+#### SSH Connections via Guacamole
+
+Each Guacamole SSH connection should connect without a password prompt and land at the correct hostname. Quick check:
+
+1. Click **"Mythic C2 Server (SSH)"** → prompt: `admin@mythic:~$` → run `ping sliver`
+2. Click **"Guacamole Server (SSH)"** → prompt: `admin@guac:~$`
+3. Click **"Apache Redirector (SSH)"** → prompt: `admin@redirector:~$`
+4. Click **"Sliver C2 Server (SSH)"** → prompt: `admin@sliver:~$`
+5. Click **"Havoc C2 Server (SSH)"** → prompt: `admin@havoc:~$`
+
+**SSH security model:** All Linux servers allow password auth from within the C2 VPC (10.50.0.0/16) but require SSH keys from public IPs. This lets Guacamole connect with passwords while keeping public SSH key-only.
+
+---
 
 ### redirect.rules Download Fails (Private Repo)
 
