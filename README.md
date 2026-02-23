@@ -336,7 +336,7 @@ Look for the **APACHE REDIRECTOR** section — the `Public IP` field is what you
 | Domain type | Host/Name field | Example |
 | ----------- | --------------- | ------- |
 | Apex domain | `@` | `yourdomain.tld` → redirector IP |
-| Subdomain | subdomain only (e.g., `c2`) | `c2.yourdomain.tld` → redirector IP |
+| Subdomain | subdomain only (e.g., `sub`) | `sub.yourdomain.tld` → redirector IP |
 
 - **Value/Points to:** The redirector's Elastic IP from the command above
 - **TTL:** 300 (5 minutes) or lowest available
