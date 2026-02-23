@@ -407,6 +407,19 @@ Verify all six components are operational and accessible.
 > SLIVER_IP="x.x.x.x"  # SLIVER Private IP from deployment_info
 > HAVOC_IP="x.x.x.x"   # HAVOC Private IP from deployment_info
 > ```
+>
+> **Pre-configured hostnames (usable from any machine inside the lab):**
+>
+> | Hostname | Resolves To | Access |
+> | -------- | ----------- | ------ |
+> | `mythic` | Mythic private IP | `https://mythic:7443` — Login: `mythic_admin` |
+> | `sliver` | Sliver private IP | SSH / gRPC port 31337 |
+> | `havoc` | Havoc private IP | Havoc client — `havoc:40056` — Login: `operator` / `Training123!` |
+> | `guac` | Guacamole private IP | `https://guac/guacamole` — Login: `guacadmin` |
+> | `redirector` | Redirector private IP | SSH / Apache proxy |
+> | `win-operator` | Windows private IP | RDP via Guacamole |
+>
+> These entries are pre-written to `/etc/hosts` on all Linux machines and `C:\Windows\System32\drivers\etc\hosts` on the Windows workstation during deployment. Use hostnames instead of IPs for all internal web panels and connections.
 
 ### Step 2.1: Verify Mythic Team Server
 
@@ -474,8 +487,10 @@ sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
 The Mythic Web UI is only accessible from within the VPC. Use the Windows operator workstation (via Guacamole RDP) to open a browser and navigate to:
 
 ```
-https://<MYTHIC_PRIVATE_IP>:7443
+https://mythic:7443
 ```
+
+> **Tip:** All lab machines have pre-configured `/etc/hosts` (Linux) and `C:\Windows\System32\drivers\etc\hosts` (Windows) entries for every other machine. You can use hostnames (`mythic`, `sliver`, `havoc`, `guac`, `redirector`, `win-operator`) instead of private IPs from any machine in the lab.
 
 - Login: `mythic_admin`
 - Password: from command above
@@ -917,8 +932,11 @@ sudo ./mythic-cli start
 **Access Mythic UI (from Windows workstation via Guacamole RDP):**
 
 ```
-https://<MYTHIC_PRIVATE_IP>:7443
+https://mythic:7443
 ```
+
+- Login: `mythic_admin`
+- Password: `sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD` (run on Mythic server)
 
 **Navigate:** C2 Profiles → HTTP
 
@@ -1037,7 +1055,7 @@ Configure Sliver C2 server, generate an operator config, and create a listener.
 
 ```bash
 # Sliver has no public IP — SSH via the redirector as a jump host
-ssh -i rs-rsa-key.pem -J admin@<REDIR_PUBLIC_IP> admin@<SLIVER_PRIVATE_IP>
+ssh -i rs-rsa-key.pem -J admin@<REDIR_PUBLIC_IP> admin@sliver
 ```
 
 ### Step 5.2: Generate Operator Config
@@ -1134,11 +1152,11 @@ The Havoc client is a Qt-based GUI application that runs on the Windows operator
 **From the Windows Operator Workstation:**
 
 1. Download the Havoc client from the [Havoc GitHub releases](https://github.com/HavocFramework/Havoc)
-2. Connect to the teamserver using the Havoc private IP from `terraform output deployment_info`:
-   - **Host:** `<HAVOC_PRIVATE_IP>`
-   - **Port:** 40056
-   - **Username:** operator
-   - **Password:** Training123!
+2. Connect to the teamserver:
+   - **Host:** `havoc`
+   - **Port:** `40056`
+   - **Username:** `operator`
+   - **Password:** `Training123!`
 
 **Checkpoint:** ✅ Havoc client connected to teamserver
 
@@ -1183,16 +1201,16 @@ All three C2 servers (Mythic, Sliver, Havoc) have no public IPs and are unreacha
 # Use a browser User-Agent — curl is blocked by redirect.rules
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
-# Test direct backend connectivity (substitute IPs from deployment_info)
-curl -I -m 5 -A "$UA" http://<MYTHIC_PRIVATE_IP>/
-curl -I -m 5 -A "$UA" http://<SLIVER_PRIVATE_IP>/
-curl -I -m 5 -A "$UA" http://<HAVOC_PRIVATE_IP>/
+# Test direct backend connectivity (hostnames resolve via /etc/hosts on the redirector)
+curl -I -m 5 -A "$UA" http://mythic/
+curl -I -m 5 -A "$UA" http://sliver/
+curl -I -m 5 -A "$UA" http://havoc/
 ```
 
 **Expected:** `curl: (7) Failed to connect` (no listener running yet) — this is correct. Verify ping works to confirm VPC peering:
 
 ```bash
-ping -c 3 <MYTHIC_PRIVATE_IP>
+ping -c 3 mythic
 ```
 
 **Checkpoint:** ✅ Redirector can ping all C2 servers via private IPs (VPC peering confirmed)
@@ -1386,8 +1404,9 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
 **Solution:**
 
 ```bash
-# Access via Guacamole SSH, or direct SSH with key from your machine
-ssh -i rs-rsa-key.pem admin@<MYTHIC_PRIVATE_IP>
+# Preferred: use Guacamole "Mythic C2 Server (SSH)" connection
+# Or jump via redirector from your machine:
+ssh -i rs-rsa-key.pem -J admin@<REDIR_PUBLIC_IP> admin@mythic
 
 cd /opt/Mythic
 sudo ./mythic-cli logs  # Check for errors
@@ -1453,8 +1472,8 @@ sudo -E /usr/local/go/bin/go build -o teamserver .
 ssh -i rs-rsa-key.pem admin@<GUAC_PUBLIC_IP>
 docker logs guacamole
 
-# Test RDP connectivity (substitute Windows private IP from deployment_info)
-nc -zv <WINDOWS_PRIVATE_IP> 3389
+# Test RDP connectivity (run from Guacamole server — hostname resolves via /etc/hosts)
+nc -zv win-operator 3389
 ```
 
 **Common Issues:**
