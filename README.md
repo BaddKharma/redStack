@@ -28,7 +28,7 @@
 
 ## Architecture Overview
 
-```bash
+```
 +---------------------------------------------------------------------+
 |                     NETWORK ARCHITECTURE                            |
 +---------------------------------------------------------------------+
@@ -117,6 +117,21 @@ You will be prompted for:
 
 ### Step 0.2: Verification Commands
 
+**Windows (PowerShell):**
+
+```powershell
+# Check AWS access
+aws sts get-caller-identity
+
+# Check Terraform
+terraform --version
+
+# Get your public IP
+(Invoke-WebRequest -Uri "https://ifconfig.me" -UseBasicParsing).Content.Trim()
+```
+
+**Linux/Mac (bash):**
+
 ```bash
 # Check AWS access
 aws sts get-caller-identity
@@ -125,7 +140,7 @@ aws sts get-caller-identity
 terraform --version
 
 # Get your public IP
-curl ifconfig.me
+curl -s ifconfig.me
 ```
 
 **Expected Results:**
@@ -146,20 +161,42 @@ curl ifconfig.me
 2. Click "Create key pair"
 3. Name: `rs-rsa-key` (or your preferred name)
 4. Key type: RSA
-5. File format: `.pem` (for Linux/Mac) or `.ppk` (for PuTTY)
+5. File format: `.pem` (for Linux/Mac/Windows OpenSSH)
 6. Click "Create key pair"
 7. **Save the downloaded .pem file** - you cannot download it again!
-8. Move to project folder: `mv ~/Downloads/rs-rsa-key.pem ./`
-9. Set permissions: `chmod 400 ./rs-rsa-key.pem`
+8. Move to project folder and set permissions:
+
+**Windows (PowerShell):**
+
+```powershell
+# Move key to project folder (adjust path as needed)
+Move-Item "$env:USERPROFILE\Downloads\rs-rsa-key.pem" "D:\redStack_project\redStack\rs-rsa-key.pem"
+
+# Fix permissions (required — OpenSSH rejects keys with open permissions)
+icacls "D:\redStack_project\redStack\rs-rsa-key.pem" /inheritance:r /grant:r "$($env:USERNAME):R"
+```
+
+**Linux/Mac (bash):**
+
+```bash
+mv ~/Downloads/rs-rsa-key.pem ./
+chmod 400 ./rs-rsa-key.pem
+```
 
 ### Option 2: AWS CLI
 
-```bash
-# Create key pair and save to project folder
-aws ec2 create-key-pair --key-name rs-rsa-key --query 'KeyMaterial' --output text > ./rs-rsa-key.pem
+**Linux/Mac (bash):**
 
-# Set correct permissions
+```bash
+aws ec2 create-key-pair --key-name rs-rsa-key --query 'KeyMaterial' --output text > ./rs-rsa-key.pem
 chmod 400 ./rs-rsa-key.pem
+```
+
+**Windows (PowerShell):**
+
+```powershell
+aws ec2 create-key-pair --key-name rs-rsa-key --query 'KeyMaterial' --output text | Out-File -Encoding ascii rs-rsa-key.pem
+icacls "rs-rsa-key.pem" /inheritance:r /grant:r "$($env:USERNAME):R"
 ```
 
 **Verify key pair exists:**
@@ -183,7 +220,8 @@ Deploy all AWS infrastructure using Terraform: VPCs, security groups, EC2 instan
 ```bash
 cd redstack_tf
 cp terraform.tfvars.example terraform.tfvars
-nano terraform.tfvars
+nano terraform.tfvars   # Linux/Mac
+notepad terraform.tfvars  # Windows
 ```
 
 **Required Changes:**
@@ -212,7 +250,7 @@ terraform init
 
 **Expected Output:**
 
-```bash
+```
 Initializing the backend...
 Initializing provider plugins...
 - Finding hashicorp/aws versions matching "~> 5.0"...
@@ -250,7 +288,7 @@ Type `yes` when prompted.
 
 **Expected Output:**
 
-```bash
+```
 Apply complete! Resources: 50+ added, 0 changed, 0 destroyed.
 ```
 
@@ -259,9 +297,21 @@ Apply complete! Resources: 50+ added, 0 changed, 0 destroyed.
 ### Step 1.5: Save Deployment Information
 
 ```bash
-terraform output > deployment_info.txt
+terraform output deployment_info
 terraform output network_architecture
 ```
+
+> **Note:** There are two outputs: `deployment_info` (all IPs, credentials, SSH commands) and `network_architecture` (diagram with actual IPs). All connection details you need for the rest of this guide are in `deployment_info`. Save it to a file:
+>
+> **Windows (PowerShell):**
+> ```powershell
+> terraform output deployment_info | Out-File -Encoding utf8 deployment_info.txt
+> ```
+>
+> **Linux/Mac (bash):**
+> ```bash
+> terraform output deployment_info > deployment_info.txt
+> ```
 
 **Checkpoint:** ✅ Output saved, network diagram displayed
 
@@ -272,8 +322,10 @@ After deployment, you need to point your domain's DNS to the redirector's Elasti
 **Get the Redirector IP:**
 
 ```bash
-terraform output -json vps_redirector | jq -r '.public_ip'
+terraform output deployment_info
 ```
+
+Look for the **APACHE REDIRECTOR** section — the `Public IP` field is what you need.
 
 **Create a DNS A Record:**
 
@@ -286,11 +338,18 @@ terraform output -json vps_redirector | jq -r '.public_ip'
 
 **Verify DNS Propagation:**
 
+**Windows (PowerShell):**
+
+```powershell
+Resolve-DnsName c2.yourdomain.com
+```
+
+**Linux/Mac (bash):**
+
 ```bash
-# Check if the domain resolves to the redirector IP
-nslookup c2.yourdomain.com
-# or
 dig +short c2.yourdomain.com
+# or
+nslookup c2.yourdomain.com
 ```
 
 **Expected:** The IP returned should match your redirector's Elastic IP.
@@ -325,6 +384,30 @@ dig +short c2.yourdomain.com
 
 Verify all six components are operational and accessible.
 
+> **Getting Connection Details:** All IPs and credentials for the steps below come from:
+> ```bash
+> terraform output deployment_info
+> ```
+> Run this from your project directory and note the IPs for each component. For subsequent SSH commands, substitute the actual IPs shown in the output.
+>
+> **Windows (PowerShell) — set variables for use in this session:**
+> ```powershell
+> $GUAC_IP   = "x.x.x.x"   # GUACAMOLE Public IP from deployment_info
+> $REDIR_IP  = "x.x.x.x"   # APACHE REDIRECTOR Public IP from deployment_info
+> $MYTHIC_IP = "x.x.x.x"   # MYTHIC Private IP from deployment_info
+> $SLIVER_IP = "x.x.x.x"   # SLIVER Private IP from deployment_info
+> $HAVOC_IP  = "x.x.x.x"   # HAVOC Private IP from deployment_info
+> ```
+>
+> **Linux/Mac (bash) — set variables for use in this session:**
+> ```bash
+> GUAC_IP="x.x.x.x"    # GUACAMOLE Public IP from deployment_info
+> REDIR_IP="x.x.x.x"   # APACHE REDIRECTOR Public IP from deployment_info
+> MYTHIC_IP="x.x.x.x"  # MYTHIC Private IP from deployment_info
+> SLIVER_IP="x.x.x.x"  # SLIVER Private IP from deployment_info
+> HAVOC_IP="x.x.x.x"   # HAVOC Private IP from deployment_info
+> ```
+
 ### Step 2.1: Verify Mythic Team Server
 
 Mythic is internal only (no public IP). Access it via Guacamole SSH or from another instance in the VPC.
@@ -335,11 +418,18 @@ Mythic is internal only (no public IP). Access it via Guacamole SSH or from anot
 2. Click **"Mythic C2 Server (SSH)"**
 3. Should connect automatically
 
-**Or via direct SSH (instructor only):**
+**Or via direct SSH (instructor only, from your machine):**
+
+**Windows (PowerShell):**
+
+```powershell
+ssh -i "D:\redStack_project\redStack\rs-rsa-key.pem" admin@$MYTHIC_IP
+```
+
+**Linux/Mac (bash):**
 
 ```bash
-MYTHIC_IP=$(terraform output -json mythic_server | jq -r '.private_ip')
-ssh -i your-key.pem admin@$MYTHIC_IP
+ssh -i rs-rsa-key.pem admin@$MYTHIC_IP
 ```
 
 **Check Mythic Status:**
@@ -351,48 +441,50 @@ sudo ./mythic-cli status
 
 **Expected Output:**
 
-```bash
-Mythic Main Server: Running (port 7443)
-Mythic Postgres: Running
-Mythic RabbitMQ: Running
-Mythic Documentation: Running
+```
+mythic_nginx     running   Up X minutes (healthy)
+mythic_postgres  running   Up X minutes (healthy)
+mythic_rabbitmq  running   Up X minutes (healthy)
+mythic_server    running   Up X minutes (healthy)
 ...
-[Total: 10-12 containers running]
+[Total: 8+ containers running]
 ```
 
 **Get Admin Password:**
 
 ```bash
-sudo cat .env | grep MYTHIC_ADMIN_PASSWORD
+sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
 ```
 
-**Checkpoint:** ✅ 10+ containers running, password obtained
+**Checkpoint:** ✅ 8+ containers running, password obtained
 
 **Access Web UI (via Windows workstation or Guacamole):**
 
-The Mythic Web UI at `https://<MYTHIC_PRIVATE_IP>:7443` is only accessible from within the VPC. Use the Windows operator workstation (via Guacamole RDP) to open a browser and navigate to:
+The Mythic Web UI is only accessible from within the VPC. Use the Windows operator workstation (via Guacamole RDP) to open a browser and navigate to:
 
-```text
+```
 https://<MYTHIC_PRIVATE_IP>:7443
 ```
 
 - Login: `mythic_admin`
-- Password: [from above command]
+- Password: from command above
 
 **Checkpoint:** ✅ Mythic UI accessible, can login
 
 ### Step 2.2: Verify Guacamole Access Portal
 
-**Get Connection Info:**
-
-```bash
-GUAC_IP=$(terraform output -json guacamole_server | jq -r '.public_ip')
-```
-
 **SSH to Guacamole:**
 
+**Windows (PowerShell):**
+
+```powershell
+ssh -i "D:\redStack_project\redStack\rs-rsa-key.pem" admin@$GUAC_IP
+```
+
+**Linux/Mac (bash):**
+
 ```bash
-ssh -i your-key.pem admin@$GUAC_IP
+ssh -i rs-rsa-key.pem admin@$GUAC_IP
 ```
 
 **Check Docker Containers:**
@@ -403,7 +495,7 @@ docker ps
 
 **Expected Output:**
 
-```bash
+```
 CONTAINER ID   IMAGE                   STATUS
 xxxxx          guacamole/guacamole     Up X minutes
 xxxxx          postgres:15             Up X minutes
@@ -418,15 +510,16 @@ exit  # Exit SSH
 
 **Access Guacamole UI:**
 
-```bash
-echo "https://$GUAC_IP/guacamole"
-# Open in browser
+Open in your browser:
+
+```
+https://<GUAC_PUBLIC_IP>/guacamole
 ```
 
 **Login Credentials:**
 
 - Username: `guacadmin`
-- Password: run `terraform output lab_password`
+- Password: from `terraform output deployment_info` (look for the Guacamole section)
 
 **Checkpoint:** ✅ Guacamole UI accessible, can login
 
@@ -467,23 +560,24 @@ The Windows instance uses the default AWS `Administrator` account. The password 
 **If Connection Fails:**
 
 - Wait 5 more minutes (Windows setup is slowest)
-- Check instance state: `aws ec2 describe-instances --instance-ids $(terraform output -json windows_client | jq -r '.instance_id') --query 'Reservations[0].Instances[0].State.Name'`
-- Should show `"running"`
+- Check instance state in AWS Console → EC2 → Instances → WIN-OPERATOR → should show `running`
 
 ### Step 2.4: Verify Apache Redirector
 
-The redirector is **fully automated** — Apache, header validation, URI routing, redirect.rules, the decoy page, and SSL are all configured during deployment. No manual setup is needed.
+The redirector is **fully automated** — Apache, header validation, URI routing, redirect.rules, the decoy page, and SSL are all configured during deployment. No manual setup is needed beyond SSL certificate issuance (below).
 
-**Get Connection Info:**
+**SSH to Redirector:**
 
-```bash
-REDIR_IP=$(terraform output -json vps_redirector | jq -r '.public_ip')
+**Windows (PowerShell):**
+
+```powershell
+ssh -i "D:\redStack_project\redStack\rs-rsa-key.pem" admin@$REDIR_IP
 ```
 
-**SSH to Redirector (via Guacamole or direct SSH):**
+**Linux/Mac (bash):**
 
 ```bash
-ssh -i your-key.pem admin@$REDIR_IP
+ssh -i rs-rsa-key.pem admin@$REDIR_IP
 ```
 
 **What's Pre-Configured:**
@@ -510,12 +604,14 @@ ssh -i your-key.pem admin@$REDIR_IP
 All C2 traffic must include the correct header to pass through the redirector:
 
 ```bash
-# Get the required header from terraform output
-terraform output deployment_info | grep "C2 Header"
-# Example: X-Request-ID: a1b2c3d4e5f6...
+# Get the required header from terraform output (run from your local machine)
+terraform output deployment_info
+# Look for: C2 Header: X-Request-ID: <token>
 ```
 
 Requests without the header (or with the wrong value) receive the decoy page instead of being proxied.
+
+> **Important — redirect.rules Download:** The redirector downloads `redirect.rules` at boot from the redStack GitHub repo. If the repo is **private**, this download will silently fail and Apache will fail to start. See [redirect.rules Download Fails](#redirectrules-download-fails-private-repo) in Troubleshooting for the fix.
 
 **Run Connectivity Test:**
 
@@ -525,7 +621,7 @@ A test script is pre-installed on the redirector:
 sudo /root/test_redirector.sh
 ```
 
-This tests Apache status, VirtualHost configuration, and connectivity to all three C2 backend servers.
+This tests Apache status, VirtualHost configuration, connectivity to all three C2 backend servers, and the header/decoy page behavior.
 
 **Verify redirect.rules:**
 
@@ -534,21 +630,13 @@ This tests Apache status, VirtualHost configuration, and connectivity to all thr
 grep -c 'RewriteCond' /etc/apache2/redirect.rules
 ```
 
-The redirect.rules file is downloaded at boot time from the redStack GitHub repo (adapted from [curi0usJack's gist](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10)) and returns 403 Forbidden for known security scanners, AV vendor IPs, and TOR exit nodes.
+The redirect.rules file blocks known security scanners, AV vendor IPs, and TOR exit nodes with 403 Forbidden. Note: `curl` is in the blocked user-agent list, so manual testing must use a browser-like User-Agent (the test script handles this automatically).
 
-> **Note:** AWS and Azure cloud IP blocks are **commented out by default** in redirect.rules because this lab runs in AWS. Blocking cloud subnets would prevent C2 callbacks from reaching the redirector. If you deploy outside of cloud environments, you can re-enable them by uncommenting the relevant sections in `/etc/apache2/redirect.rules`:
+> **Note:** AWS and Azure cloud IP blocks are **commented out by default** in redirect.rules because this lab runs in AWS. Blocking cloud subnets would prevent C2 callbacks from reaching the redirector. If you deploy outside of cloud environments, you can re-enable them:
 >
 > ```bash
-> # On the redirector, edit the rules file:
 > sudo nano /etc/apache2/redirect.rules
->
-> # Uncomment the following sections:
-> #   - "Class A Exclusions" (AWS/Azure /8 ranges)
-> #   - "AWS Fine Grained" (specific AWS subnets)
-> #   - "Azure" (Azure subnets)
-> #   - "Other VT hosts" (VirusTotal analysis hosts)
->
-> # Then reload Apache:
+> # Uncomment: "Class A Exclusions", "AWS Fine Grained", "Azure", "Other VT hosts"
 > sudo systemctl reload apache2
 > ```
 
@@ -559,6 +647,8 @@ The redirect.rules file is downloaded at boot time from the redStack GitHub repo
 ```bash
 sudo certbot --apache -d c2.yourdomain.com
 ```
+
+Follow the prompts. Certbot will automatically update the Apache HTTPS config and add an HTTP→HTTPS redirect. Auto-renewal is configured by Certbot.
 
 ```bash
 exit  # Exit SSH
@@ -572,19 +662,9 @@ exit  # Exit SSH
 2. Click **"Sliver C2 Server (SSH)"**
 3. Should connect automatically
 
-**Or via SSH from the redirector:**
+**Or via direct SSH (from your machine):**
 
-```bash
-ssh -i your-key.pem admin@$REDIR_IP
-SLIVER_IP=$(terraform output -json sliver_server | jq -r '.private_ip')
-ssh admin@$SLIVER_IP
-```
-
-**Run Quick Start:**
-
-```bash
-sudo /root/sliver_quickstart.sh
-```
+> **Note:** Sliver and other internal servers have no public IP. SSH to them directly only works if you're in the VPC, or via the redirector as a jump host.
 
 **Verify Sliver is installed:**
 
@@ -663,10 +743,10 @@ The redirector is pre-configured with multiple security layers. This section exp
 
 ### Step 3.1: Review Configuration
 
-**SSH to redirector:**
+**SSH to redirector** (substitute your actual redirector IP):
 
 ```bash
-ssh -i your-key.pem admin@$REDIR_IP
+ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 ```
 
 **View Active VirtualHosts:**
@@ -708,6 +788,8 @@ The file `/etc/apache2/redirect.rules` is downloaded at boot from the [redStack 
 - AWS/Azure/cloud IP blocks **commented out** (would block our own AWS-hosted C2 callbacks)
 - Included in both HTTP and HTTPS VirtualHosts via `Include /etc/apache2/redirect.rules`
 
+> **Note:** If the redStack repo is private, the download will silently fail and Apache will fail to start. See [redirect.rules Download Fails](#redirectrules-download-fails-private-repo) in Troubleshooting.
+
 ```bash
 # Check installed rules
 grep -c 'RewriteCond' /etc/apache2/redirect.rules
@@ -716,7 +798,7 @@ grep -c 'RewriteCond' /etc/apache2/redirect.rules
 To update redirect.rules manually:
 
 ```bash
-# Re-download from redStack repo
+# Re-download from redStack repo (only works if repo is public)
 curl -sL "https://raw.githubusercontent.com/BaddKharma/redStack/main/setup_scripts/redirect.rules" \
   -o /etc/apache2/redirect.rules
 sudo systemctl reload apache2
@@ -726,9 +808,11 @@ sudo systemctl reload apache2
 
 Requests must include the correct `X-Request-ID` header. Without it, Apache serves the CloudEdge CDN decoy page instead of proxying to C2 backends.
 
+Get the required header value from your local machine:
+
 ```bash
-# Get required header value
-terraform output deployment_info | grep "C2 Header"
+terraform output deployment_info
+# Look for: C2 Header: X-Request-ID: <token>
 ```
 
 ### Layer 3: URI Prefix Routing
@@ -745,30 +829,40 @@ The URI prefix is stripped before forwarding to the backend C2 server.
 
 ### Step 3.3: Test the Security Layers
 
+> **Important:** `curl` is blocked by redirect.rules (it's in the suspicious User-Agent list). All manual tests must use a browser-like User-Agent with `-A`.
+
 ```bash
+# Set a browser User-Agent for testing
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+HEADER_VALUE="<token from terraform output deployment_info>"
+
 # Should get DECOY PAGE (no header)
-curl -k https://$REDIR_IP/
+curl -sk -A "$UA" https://<YOUR_DOMAIN>/
 
 # Should get DECOY PAGE (wrong header value)
-curl -k -H "X-Request-ID: wrong-value" https://$REDIR_IP/cdn/media/stream/test
+curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://<YOUR_DOMAIN>/cdn/media/stream/test
 
-# Should be PROXIED (correct header + URI prefix)
-HEADER_VALUE=$(terraform output deployment_info | grep "C2 Header" | awk '{print $NF}')
-curl -k -H "X-Request-ID: $HEADER_VALUE" https://$REDIR_IP/cdn/media/stream/test
+# Should be PROXIED to Mythic (connection refused/timeout if no listener running yet — that's expected)
+curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://<YOUR_DOMAIN>/cdn/media/stream/test
 ```
 
 **Checkpoint:** ✅ Security layers verified
 
 ### Step 3.4: Review Logs
 
-All C2 traffic is logged to a single access/error log pair:
+All C2 traffic is logged to separate access/error log files:
 
 ```bash
-ssh -i your-key.pem admin@$REDIR_IP
+# SSH to redirector first
+ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 
-# Access log (differentiate C2 traffic by URI prefix in the request)
+# HTTP access log
 sudo tail -50 /var/log/apache2/redirector-access.log
 sudo tail -50 /var/log/apache2/redirector-error.log
+
+# HTTPS access log
+sudo tail -50 /var/log/apache2/redirector-ssl-access.log
+sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 ```
 
 **Checkpoint:** ✅ Redirector logging understood
@@ -785,7 +879,7 @@ Configure Mythic HTTP listener and generate test agent.
 
 **Access Mythic UI (from Windows workstation via Guacamole RDP):**
 
-```text
+```
 https://<MYTHIC_PRIVATE_IP>:7443
 ```
 
@@ -797,14 +891,14 @@ https://<MYTHIC_PRIVATE_IP>:7443
 
 | Setting | Value |
 | ------- | ----- |
-| Callback Host | `REDIR_IP` (your redirector public IP) |
-| Callback Port | `80` |
+| Callback Host | Your redirector's domain or public IP |
+| Callback Port | `443` |
 | Callback Interval | `10` |
 | Callback Jitter | `20` |
 | User-Agent | `Mozilla/5.0 (Windows NT 10.0; Win64; x64)` |
 | GET URI | `/cdn/media/stream/status` |
 | POST URI | `/cdn/media/stream/update` |
-| Headers | `X-Request-ID: <token from terraform output>` |
+| Headers | `X-Request-ID: <token from terraform output deployment_info>` |
 
 **Click:** "Submit" then "Start"
 
@@ -859,8 +953,8 @@ cd Downloads  # Or wherever you uploaded
 
 **Expected:**
 
-```bash
-Hostname: WIN-XXXXXXX
+```
+Hostname: WIN-OPERATOR
 User: Administrator
 IP: 172.31.X.X
 ```
@@ -869,22 +963,21 @@ IP: 172.31.X.X
 
 ### Step 4.4: Test C2 Session
 
-### In Mythic, click the callback
+**In Mythic, click the callback**
 
 **Test Commands:**
 
-```bash
+```
 Task: shell
 Command: whoami
 ```
 
 **Expected Output:** `win-operator\administrator`
 
-**Verify Redirector Traffic:**
+**Verify Redirector Traffic (on redirector via SSH):**
 
 ```bash
-ssh admin@$REDIR_IP
-sudo tail -f /var/log/apache2/redirector-access.log
+sudo tail -f /var/log/apache2/redirector-ssl-access.log
 ```
 
 **Look for:** Regular GET/POST requests to `/cdn/media/stream/status` and `/cdn/media/stream/update`
@@ -903,12 +996,11 @@ Configure Sliver C2 server, generate an operator config, and create a listener.
 
 **Via Guacamole:** Click **"Sliver C2 Server (SSH)"**
 
-**Or via SSH:**
+**Or via direct SSH from your machine** (substitute your actual Sliver private IP from `terraform output deployment_info`):
 
 ```bash
-SLIVER_IP=$(terraform output -json sliver_server | jq -r '.private_ip')
-ssh -i your-key.pem admin@$REDIR_IP  # Jump through redirector
-ssh admin@$SLIVER_IP
+# Sliver has no public IP — SSH via the redirector as a jump host
+ssh -i rs-rsa-key.pem -J admin@<REDIR_PUBLIC_IP> admin@<SLIVER_PRIVATE_IP>
 ```
 
 ### Step 5.2: Generate Operator Config
@@ -929,7 +1021,7 @@ sliver-server
 
 **In the Sliver console:**
 
-```bash
+```
 sliver > http --lhost 0.0.0.0 --lport 80
 ```
 
@@ -941,11 +1033,11 @@ This starts an HTTP listener on port 80. The redirector forwards traffic from th
 
 **In the Sliver console:**
 
-```bash
-sliver > generate --http https://REDIR_DOMAIN/cloud/storage/objects/ --os windows --arch amd64 --format exe --save /tmp/implant.exe
+```
+sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --save /tmp/implant.exe
 ```
 
-Replace `REDIR_DOMAIN` with your redirector's domain (e.g., `c2.yourdomain.com`). The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
+Replace `<YOUR_DOMAIN>` with your redirector's domain (e.g., `c2.yourdomain.com`). The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
 
 > **Note:** The implant must also send the `X-Request-ID` header with the correct token value. Configure this in the Sliver HTTP C2 profile or use Sliver's `--header` flag if available.
 
@@ -955,7 +1047,7 @@ Transfer the implant to the Windows workstation and execute it. You should see a
 
 ### Step 5.5: Test Sliver Session
 
-```bash
+```
 sliver > sessions
 
 sliver > use [SESSION_ID]
@@ -964,10 +1056,10 @@ sliver (SESSION) > whoami
 sliver (SESSION) > pwd
 ```
 
-**Verify Redirector Traffic:**
+**Verify Redirector Traffic (on redirector via SSH):**
 
 ```bash
-sudo tail -f /var/log/apache2/redirector-access.log
+sudo tail -f /var/log/apache2/redirector-ssl-access.log
 ```
 
 **Checkpoint:** ✅ Sliver C2 operational through redirector URI prefix /cloud/storage/objects/
@@ -1005,8 +1097,8 @@ The Havoc client is a Qt-based GUI application that runs on the Windows operator
 **From the Windows Operator Workstation:**
 
 1. Download the Havoc client from the [Havoc GitHub releases](https://github.com/HavocFramework/Havoc)
-2. Connect to the teamserver:
-   - **Host:** Havoc server private IP (from `terraform output -json havoc_server | jq -r '.private_ip'`)
+2. Connect to the teamserver using the Havoc private IP from `terraform output deployment_info`:
+   - **Host:** `<HAVOC_PRIVATE_IP>`
    - **Port:** 40056
    - **Username:** operator
    - **Password:** Training123!
@@ -1024,7 +1116,7 @@ The Havoc client is a Qt-based GUI application that runs on the Windows operator
 **Generate a Demon (Havoc implant):**
 
 1. Navigate to: Payloads → Generate
-2. Configure the callback host as `https://REDIR_DOMAIN/edge/cache/assets/` (your redirector domain)
+2. Configure the callback host as `https://<YOUR_DOMAIN>/edge/cache/assets/` (your redirector domain)
 3. Ensure the implant sends the `X-Request-ID` header with the correct token value (from `terraform output deployment_info`)
 4. Generate and transfer to the Windows workstation
 
@@ -1048,23 +1140,25 @@ All three C2 servers (Mythic, Sliver, Havoc) have no public IPs and are unreacha
 
 **Checkpoint:** ✅ C2 servers not directly accessible (GOOD!)
 
-**Verify Redirector CAN Reach All C2 Servers:**
+**Verify Redirector CAN Reach All C2 Servers (run on the redirector via SSH):**
 
 ```bash
-ssh admin@$REDIR_IP
+# Use a browser User-Agent — curl is blocked by redirect.rules
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
-MYTHIC_PRIVATE=$(terraform output -json mythic_server | jq -r '.private_ip')
-SLIVER_PRIVATE=$(terraform output -json sliver_server | jq -r '.private_ip')
-HAVOC_PRIVATE=$(terraform output -json havoc_server | jq -r '.private_ip')
-
-curl -I http://$MYTHIC_PRIVATE/
-curl -I http://$SLIVER_PRIVATE/
-curl -I http://$HAVOC_PRIVATE/
+# Test direct backend connectivity (substitute IPs from deployment_info)
+curl -I -m 5 -A "$UA" http://<MYTHIC_PRIVATE_IP>/
+curl -I -m 5 -A "$UA" http://<SLIVER_PRIVATE_IP>/
+curl -I -m 5 -A "$UA" http://<HAVOC_PRIVATE_IP>/
 ```
 
-**Expected:** HTTP response (200, 404, or connection refused if no listener is running yet)
+**Expected:** `curl: (7) Failed to connect` (no listener running yet) — this is correct. Verify ping works to confirm VPC peering:
 
-**Checkpoint:** ✅ Redirector can reach all C2 servers via private IPs
+```bash
+ping -c 3 <MYTHIC_PRIVATE_IP>
+```
+
+**Checkpoint:** ✅ Redirector can ping all C2 servers via private IPs (VPC peering confirmed)
 
 ### Step 7.2: Verify All Agent Callbacks
 
@@ -1078,16 +1172,22 @@ curl -I http://$HAVOC_PRIVATE/
 
 ### Step 7.3: Review Redirector Logs
 
-**All C2 traffic flows through the redirector with separate logs:**
+**All C2 traffic flows through the redirector:**
 
 ```bash
-ssh admin@$REDIR_IP
+# SSH to redirector
+ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 
-# Mythic traffic (port 80/443)
+# HTTPS traffic (C2 callbacks)
+sudo tail -20 /var/log/apache2/redirector-ssl-access.log
+
+# HTTP traffic
 sudo tail -20 /var/log/apache2/redirector-access.log
 
-# All C2 traffic is in the same log (differentiate by URI prefix)
-# /cdn/media/stream/ = Mythic, /cloud/storage/objects/ = Sliver, /edge/cache/assets/ = Havoc
+# Differentiate by URI prefix:
+# /cdn/media/stream/ = Mythic
+# /cloud/storage/objects/ = Sliver
+# /edge/cache/assets/ = Havoc
 ```
 
 **Checkpoint:** ✅ Redirector logging understood for all C2 servers
@@ -1095,7 +1195,8 @@ sudo tail -20 /var/log/apache2/redirector-access.log
 ### Step 7.4: Document Deployment
 
 ```bash
-cat > deployment_summary.txt <<EOF
+# Run on the redirector (SSH'd in)
+cat > ~/deployment_summary.txt <<EOF
 REDSTACK DEPLOYMENT COMPLETE
 ========================
 Deployment Date: $(date)
@@ -1104,26 +1205,24 @@ INFRASTRUCTURE (6 EC2 instances):
 - Mythic C2:    internal only (access via Guacamole)
 - Sliver C2:    internal only (access via Guacamole)
 - Havoc C2:     internal only (access via Guacamole)
-- Guacamole:    $GUAC_IP (public)
+- Guacamole:    <GUAC_PUBLIC_IP> (public)
 - Windows:      internal only (RDP via Guacamole)
-- Redirector:   $REDIR_IP (public)
+- Redirector:   <REDIR_PUBLIC_IP> (public)
 
 REDIRECTOR URI ROUTING (all on ports 80/443):
-- /cdn/media/stream/      -> Mythic
+- /cdn/media/stream/       -> Mythic
 - /cloud/storage/objects/  -> Sliver
 - /edge/cache/assets/      -> Havoc
 
 CREDENTIALS:
-- Lab Password: [run terraform output lab_password]
-- Mythic: mythic_admin / [check .env]
-- Guacamole: guacadmin / [lab password]
-- Windows: Administrator / [auto-decrypted, see terraform output deployment_info]
+- All credentials in: terraform output deployment_info
+- Mythic admin password: sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
 - Havoc: operator / Training123!
 
 STATUS: All systems operational
 EOF
 
-cat deployment_summary.txt
+cat ~/deployment_summary.txt
 ```
 
 **Checkpoint:** ✅ Deployment documented
@@ -1131,6 +1230,80 @@ cat deployment_summary.txt
 ---
 
 ## Troubleshooting
+
+### redirect.rules Download Fails (Private Repo)
+
+**Symptoms:** Apache fails to start, `apache2ctl -S` shows:
+```
+Invalid command '404:', perhaps misspelled or defined by a module not included
+```
+
+**Root Cause:** The redirector downloads `redirect.rules` from the GitHub repo at boot using `curl`. If the repo is private, GitHub returns a `404: Not Found` response body which gets saved as the file. Apache then fails to parse it.
+
+**Verify:**
+
+```bash
+head -3 /etc/apache2/redirect.rules
+# Will show: "404: Not Found"
+```
+
+**Fix — Copy the file manually from your local machine:**
+
+**Windows (PowerShell):**
+
+```powershell
+scp -i "D:\redStack_project\redStack\rs-rsa-key.pem" `
+    "D:\redStack_project\redStack\setup_scripts\redirect.rules" `
+    admin@<REDIR_PUBLIC_IP>:/tmp/redirect.rules
+```
+
+**Linux/Mac (bash):**
+
+```bash
+scp -i rs-rsa-key.pem setup_scripts/redirect.rules admin@<REDIR_PUBLIC_IP>:/tmp/redirect.rules
+```
+
+**Then on the redirector:**
+
+```bash
+sudo cp /tmp/redirect.rules /etc/apache2/redirect.rules
+sudo apache2ctl configtest && sudo systemctl reload apache2
+```
+
+**Permanent Fix:** Make the GitHub repo public, or the setup script will need updating to embed the file directly.
+
+---
+
+### Mythic nginx SSL Certificate Missing
+
+**Symptoms:** `mythic_nginx` container keeps restarting. Logs show:
+
+```
+[emerg] cannot load certificate "/etc/ssl/private/mythic-cert.crt": No such file or directory
+```
+
+**Root Cause:** Mythic's `mythic-cli start` generates SSL certificates, but the setup script was previously running it as the `admin` user which cannot write to `/etc/ssl/private/` (root-owned). This is fixed in current versions of the setup script.
+
+**Fix — Generate the cert manually:**
+
+```bash
+sudo openssl req -x509 -newkey rsa:4096 \
+  -keyout /etc/ssl/private/mythic-cert.key \
+  -out /etc/ssl/private/mythic-cert.crt \
+  -days 365 -nodes -subj "/CN=mythic"
+
+cd /opt/Mythic
+sudo ./mythic-cli restart
+```
+
+**Verify:**
+
+```bash
+sudo ./mythic-cli status
+# mythic_nginx should now show "running (healthy)"
+```
+
+---
 
 ### Guacamole Connections Not Auto-Created
 
@@ -1142,7 +1315,7 @@ cat deployment_summary.txt
 
 ```bash
 # SSH to Guacamole server
-ssh -i your-key.pem admin@$GUAC_IP
+ssh -i rs-rsa-key.pem admin@<GUAC_PUBLIC_IP>
 
 # Check if connections exist
 docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
@@ -1160,12 +1333,14 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
 
 - Name: `Sliver C2 Server (SSH)` or `Havoc C2 Server (SSH)`
 - Protocol: SSH
-- Hostname: [Private IP from terraform output]
+- Hostname: Private IP from `terraform output deployment_info`
 - Port: 22
 - Username: admin
-- Password: [run `terraform output lab_password`]
+- Password: from `terraform output deployment_info`
 
 **Fixed in Current Version:** The setup script correctly creates all 6 connections automatically
+
+---
 
 ### Mythic Not Starting
 
@@ -1174,9 +1349,8 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
 **Solution:**
 
 ```bash
-# Access via Guacamole SSH, or direct SSH with private IP:
-MYTHIC_IP=$(terraform output -json mythic_server | jq -r '.private_ip')
-ssh -i your-key.pem admin@$MYTHIC_IP
+# Access via Guacamole SSH, or direct SSH with key from your machine
+ssh -i rs-rsa-key.pem admin@<MYTHIC_PRIVATE_IP>
 
 cd /opt/Mythic
 sudo ./mythic-cli logs  # Check for errors
@@ -1188,6 +1362,9 @@ sudo ./mythic-cli restart
 - Docker still pulling images (wait 5 min)
 - Port conflicts (check: `sudo netstat -tlnp`)
 - Memory issues (upgrade to t3.large)
+- Missing SSL cert — see [Mythic nginx SSL Certificate Missing](#mythic-nginx-ssl-certificate-missing)
+
+---
 
 ### Sliver Not Installed
 
@@ -1202,6 +1379,8 @@ sudo cat /var/log/user-data.log
 # Re-run installation
 curl https://sliver.sh/install | sudo bash
 ```
+
+---
 
 ### Havoc Build Failed
 
@@ -1224,6 +1403,8 @@ sudo -E /usr/local/go/bin/go build -o teamserver .
 ./teamserver server --profile /opt/Havoc/profiles/default.yaotl
 ```
 
+---
+
 ### Guacamole RDP Fails
 
 **Symptoms:** Can't connect to Windows via Guacamole
@@ -1232,12 +1413,11 @@ sudo -E /usr/local/go/bin/go build -o teamserver .
 
 ```bash
 # Check Guacamole logs
-ssh admin@$GUAC_IP
+ssh -i rs-rsa-key.pem admin@<GUAC_PUBLIC_IP>
 docker logs guacamole
 
-# Test RDP connectivity
-WIN_IP=$(terraform output -json windows_client | jq -r '.private_ip')
-telnet $WIN_IP 3389
+# Test RDP connectivity (substitute Windows private IP from deployment_info)
+nc -zv <WINDOWS_PRIVATE_IP> 3389
 ```
 
 **Common Issues:**
@@ -1246,6 +1426,8 @@ telnet $WIN_IP 3389
 - Security group misconfiguration
 - Guacamole didn't auto-configure connection
 
+---
+
 ### Agent Won't Callback
 
 **Symptoms:** Agent executes but no callback in Mythic/Sliver/Havoc
@@ -1253,28 +1435,28 @@ telnet $WIN_IP 3389
 **Checklist:**
 
 - [ ] Listener is running on the C2 server
-- [ ] Callback Host and Port match the redirector's public IP and correct port
+- [ ] Callback Host and Port match the redirector's domain/IP and port 443
 - [ ] Agent sends the correct `X-Request-ID` header with the auto-generated token
 - [ ] Agent URI uses the correct prefix (`/cdn/media/stream/`, `/cloud/storage/objects/`, or `/edge/cache/assets/`)
 - [ ] Redirector Apache is running with all VirtualHosts enabled
-- [ ] Redirector can reach the C2 server's private IP
+- [ ] Redirector can reach the C2 server's private IP (test with ping)
 - [ ] Agent user-agent is not blocked by redirect.rules (check for known scanner/AV strings)
 
-**Debug:**
+**Debug (on redirector via SSH):**
 
 ```bash
-# Check Apache status and VirtualHosts
-ssh admin@$REDIR_IP
 sudo apache2ctl -S
 systemctl status apache2
 
-# Check logs (all C2 traffic in same log, differentiate by URI prefix)
-sudo tail -100 /var/log/apache2/redirector-access.log
-sudo tail -100 /var/log/apache2/redirector-error.log
+# Check logs (differentiate by URI prefix)
+sudo tail -100 /var/log/apache2/redirector-ssl-access.log
+sudo tail -100 /var/log/apache2/redirector-ssl-error.log
 
 # Run the pre-installed test script
 sudo /root/test_redirector.sh
 ```
+
+---
 
 ### Terraform Errors
 
@@ -1309,17 +1491,16 @@ aws ec2 describe-instances --filters "Name=tag:Project,Values=redstack"
 
 ### Cost Management
 
-**Stop instances when not in use:**
+**Stop instances when not in use via AWS Console:**
+
+1. AWS Console → EC2 → Instances
+2. Select all redStack instances
+3. Instance State → Stop
+
+**Or via AWS CLI** (get instance IDs from AWS Console or `aws ec2 describe-instances`):
 
 ```bash
-# Stop all
-aws ec2 stop-instances --instance-ids \
-  $(terraform output -json | jq -r '.mythic_server.value.instance_id') \
-  $(terraform output -json | jq -r '.sliver_server.value.instance_id') \
-  $(terraform output -json | jq -r '.havoc_server.value.instance_id') \
-  $(terraform output -json | jq -r '.guacamole_server.value.instance_id') \
-  $(terraform output -json | jq -r '.windows_client.value.instance_id') \
-  $(terraform output -json | jq -r '.vps_redirector.value.instance_id')
+aws ec2 stop-instances --instance-ids i-xxxxx i-yyyyy i-zzzzz
 ```
 
 ---
@@ -1360,7 +1541,7 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 
 ### How It Works
 
-```bash
+```
 +---------------------------------------------------------------------+
 |                     VPN ROUTING ARCHITECTURE                        |
 +---------------------------------------------------------------------+
@@ -1412,24 +1593,31 @@ external_vpn_cidrs  = ["10.10.0.0/16", "10.200.0.0/16"]
 
 ### Step 8.3: Upload the .ovpn File to the Redirector
 
-**From your local machine:**
+Get the redirector public IP from `terraform output deployment_info`, then:
+
+**Windows (PowerShell):**
+
+```powershell
+scp -i "D:\redStack_project\redStack\rs-rsa-key.pem" "C:\path\to\lab.ovpn" admin@<REDIR_PUBLIC_IP>:~/vpn/
+```
+
+**Linux/Mac (bash):**
 
 ```bash
-REDIR_IP=$(terraform output -json vps_redirector | jq -r '.public_ip')
-scp -i your-key.pem lab.ovpn admin@$REDIR_IP:~/vpn/
+scp -i rs-rsa-key.pem lab.ovpn admin@<REDIR_PUBLIC_IP>:~/vpn/
 ```
 
 **Or via Guacamole:**
 
 1. Open the **"Apache Redirector (SSH)"** connection in Guacamole
-2. Transfer the `.ovpn` file using Guacamole's file transfer feature or `scp` from another machine
+2. Transfer the `.ovpn` file using Guacamole's file transfer feature
 
 ### Step 8.4: Start the VPN Tunnel
 
 **SSH to the redirector:**
 
 ```bash
-ssh -i your-key.pem admin@$REDIR_IP
+ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 ```
 
 **Start the VPN:**

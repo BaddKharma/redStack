@@ -109,25 +109,25 @@ make
 
 # Start Mythic (first run generates configs)
 echo "[*] Starting Mythic (this will take 3-5 minutes)..."
-sudo -u admin ./mythic-cli start
+./mythic-cli start
 
 # Wait for Mythic to be fully operational
 echo "[*] Waiting for Mythic initialization..."
 sleep 180
 
 # Check status
-sudo -u admin ./mythic-cli status
+./mythic-cli status
 
 # Install default C2 profiles and agents
 echo "[*] Installing HTTP C2 profile and Apollo agent..."
-sudo -u admin ./mythic-cli install github https://github.com/MythicC2Profiles/http
-sudo -u admin ./mythic-cli install github https://github.com/MythicAgents/apollo
+./mythic-cli install github https://github.com/MythicC2Profiles/http
+./mythic-cli install github https://github.com/MythicAgents/apollo
 
 # Restart to apply new profiles
 echo "[*] Restarting Mythic to load new components..."
-sudo -u admin ./mythic-cli stop
+./mythic-cli stop
 sleep 10
-sudo -u admin ./mythic-cli start
+./mythic-cli start
 sleep 60
 
 # Extract admin password for logs
