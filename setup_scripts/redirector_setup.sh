@@ -283,19 +283,20 @@ cat > /etc/apache2/sites-available/redirector-https.conf << 'APACHECONF'
     Include /etc/apache2/redirect.rules
 
     # Mythic C2 - header validation + URI prefix routing
+    # SSL terminates at the redirector - backend C2 containers speak plain HTTP
     RewriteCond %%{HTTP:HEADER_NAME_PLACEHOLDER} ^HEADER_VALUE_PLACEHOLDER$
-    RewriteRule ^MYTHIC_PREFIX_PLACEHOLDER/(.*) https://MYTHIC_IP_PLACEHOLDER/$1 [P,L]
-    ProxyPassReverse MYTHIC_PREFIX_PLACEHOLDER/ https://MYTHIC_IP_PLACEHOLDER/
+    RewriteRule ^MYTHIC_PREFIX_PLACEHOLDER/(.*) http://MYTHIC_IP_PLACEHOLDER/$1 [P,L]
+    ProxyPassReverse MYTHIC_PREFIX_PLACEHOLDER/ http://MYTHIC_IP_PLACEHOLDER/
 
     # Sliver C2 - header validation + URI prefix routing
     RewriteCond %%{HTTP:HEADER_NAME_PLACEHOLDER} ^HEADER_VALUE_PLACEHOLDER$
-    RewriteRule ^SLIVER_PREFIX_PLACEHOLDER/(.*) https://SLIVER_IP_PLACEHOLDER/$1 [P,L]
-    ProxyPassReverse SLIVER_PREFIX_PLACEHOLDER/ https://SLIVER_IP_PLACEHOLDER/
+    RewriteRule ^SLIVER_PREFIX_PLACEHOLDER/(.*) http://SLIVER_IP_PLACEHOLDER/$1 [P,L]
+    ProxyPassReverse SLIVER_PREFIX_PLACEHOLDER/ http://SLIVER_IP_PLACEHOLDER/
 
     # Havoc C2 - header validation + URI prefix routing
     RewriteCond %%{HTTP:HEADER_NAME_PLACEHOLDER} ^HEADER_VALUE_PLACEHOLDER$
-    RewriteRule ^HAVOC_PREFIX_PLACEHOLDER/(.*) https://HAVOC_IP_PLACEHOLDER/$1 [P,L]
-    ProxyPassReverse HAVOC_PREFIX_PLACEHOLDER/ https://HAVOC_IP_PLACEHOLDER/
+    RewriteRule ^HAVOC_PREFIX_PLACEHOLDER/(.*) http://HAVOC_IP_PLACEHOLDER/$1 [P,L]
+    ProxyPassReverse HAVOC_PREFIX_PLACEHOLDER/ http://HAVOC_IP_PLACEHOLDER/
 
     # Default: serve decoy page (falls through to DocumentRoot)
 
