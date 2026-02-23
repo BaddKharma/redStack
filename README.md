@@ -170,10 +170,10 @@ curl -s ifconfig.me
 
 ```powershell
 # Move key to project folder (adjust path as needed)
-Move-Item "$env:USERPROFILE\Downloads\rs-rsa-key.pem" "D:\redStack_project\redStack\rs-rsa-key.pem"
+Move-Item "$env:USERPROFILE\Downloads\rs-rsa-key.pem" ".\rs-rsa-key.pem"
 
 # Fix permissions (required — OpenSSH rejects keys with open permissions)
-icacls "D:\redStack_project\redStack\rs-rsa-key.pem" /inheritance:r /grant:r "$($env:USERNAME):R"
+icacls ".\rs-rsa-key.pem" /inheritance:r /grant:r "$($env:USERNAME):R"
 ```
 
 **Linux/Mac (bash):**
@@ -423,7 +423,7 @@ Mythic is internal only (no public IP). Access it via Guacamole SSH or from anot
 **Windows (PowerShell):**
 
 ```powershell
-ssh -i "D:\redStack_project\redStack\rs-rsa-key.pem" admin@$MYTHIC_IP
+ssh -i ".\rs-rsa-key.pem" admin@$MYTHIC_IP
 ```
 
 **Linux/Mac (bash):**
@@ -478,7 +478,7 @@ https://<MYTHIC_PRIVATE_IP>:7443
 **Windows (PowerShell):**
 
 ```powershell
-ssh -i "D:\redStack_project\redStack\rs-rsa-key.pem" admin@$GUAC_IP
+ssh -i ".\rs-rsa-key.pem" admin@$GUAC_IP
 ```
 
 **Linux/Mac (bash):**
@@ -571,7 +571,7 @@ The redirector is **fully automated** — Apache, header validation, URI routing
 **Windows (PowerShell):**
 
 ```powershell
-ssh -i "D:\redStack_project\redStack\rs-rsa-key.pem" admin@$REDIR_IP
+ssh -i ".\rs-rsa-key.pem" admin@$REDIR_IP
 ```
 
 **Linux/Mac (bash):**
@@ -1252,8 +1252,8 @@ head -3 /etc/apache2/redirect.rules
 **Windows (PowerShell):**
 
 ```powershell
-scp -i "D:\redStack_project\redStack\rs-rsa-key.pem" `
-    "D:\redStack_project\redStack\setup_scripts\redirect.rules" `
+scp -i ".\rs-rsa-key.pem" `
+    ".\setup_scripts\redirect.rules" `
     admin@<REDIR_PUBLIC_IP>:/tmp/redirect.rules
 ```
 
@@ -1598,7 +1598,7 @@ Get the redirector public IP from `terraform output deployment_info`, then:
 **Windows (PowerShell):**
 
 ```powershell
-scp -i "D:\redStack_project\redStack\rs-rsa-key.pem" "C:\path\to\lab.ovpn" admin@<REDIR_PUBLIC_IP>:~/vpn/
+scp -i ".\rs-rsa-key.pem" "C:\path\to\lab.ovpn" admin@<REDIR_PUBLIC_IP>:~/vpn/
 ```
 
 **Linux/Mac (bash):**
