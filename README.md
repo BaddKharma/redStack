@@ -448,7 +448,17 @@ ping guac
 
 ### Step 2.4: Obtain SSL Certificate
 
-Once DNS has propagated (Step 1.6), SSH to the redirector and run Certbot:
+Once DNS has propagated (Step 1.6), SSH to the redirector and run Certbot.
+
+**Three ways to get a shell on the redirector — pick one:**
+
+| Method | How |
+| ------ | --- |
+| From your host workstation | `ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>` (use `.pem` key) |
+| Via Guacamole | Click **"Apache Redirector (SSH)"** in the Guacamole portal |
+| From Windows workstation | Open MobaXterm → **redStack Lab** → **Apache Redirector (SSH)** |
+
+**Host workstation (substitute your actual redirector IP):**
 
 **Windows (PowerShell):**
 
