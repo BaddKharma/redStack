@@ -792,8 +792,11 @@ Two ways to get a shell on Sliver (pick one):
 Since Sliver runs on its own dedicated machine and you are connected directly via Guacamole or MobaXterm, launch the interactive server console:
 
 ```bash
-sliver-server
+sudo /root/sliver-server
 ```
+
+> [!TIP]
+> Exiting the Sliver console stops the server and drops all active listeners. To keep it running while working in the shell, use a `tmux` or `screen` session and detach from it (`Ctrl+B D` for tmux, `Ctrl+A D` for screen). For a persistent setup that survives disconnects, advanced users can run Sliver as a systemd service with `sudo systemctl enable --now sliver` and connect using the Sliver client binary.
 
 **In the Sliver console:**
 
