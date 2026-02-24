@@ -803,9 +803,6 @@ sliver > http --lhost 0.0.0.0 --lport 80
 
 This starts an HTTP listener on port 80. The redirector forwards traffic from the `/cloud/storage/objects/` URI prefix to this listener.
 
-> [!NOTE]
-> If you want to connect to this Sliver server remotely from a separate Sliver client, generate an operator config with `sudo /root/generate_operator_config.sh operator1` and copy `/root/operator1.cfg` to the client machine. For this lab, connecting directly on the server is the standard workflow.
-
 **Checkpoint:** ✅ Sliver HTTP listener running
 
 ### Step 5.3: Generate Implant
