@@ -775,9 +775,15 @@ For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/
 
 ### Step 5.1: Access Sliver Server
 
-**Via Guacamole:** Click **"Sliver C2 Server (SSH)"**
+Three ways to get a shell on Sliver (pick one):
 
-**Or via direct SSH from your machine** (substitute your actual Sliver private IP from `terraform output deployment_info`):
+| Method | How |
+| ------ | --- |
+| Via Guacamole | Click **"Sliver C2 Server (SSH)"** in the Guacamole portal |
+| From Windows workstation | Open MobaXterm → **redStack Lab** → **Sliver C2 Server (SSH)** |
+| Host workstation (jump host) | SSH via the redirector as a jump host (see below) |
+
+**Host workstation (substitute your actual redirector IP):**
 
 ```bash
 # Sliver has no public IP — SSH via the redirector as a jump host
