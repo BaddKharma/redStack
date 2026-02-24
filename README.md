@@ -803,6 +803,9 @@ sliver > https --lhost 0.0.0.0 --lport 443
 
 This starts an HTTPS listener on port 443. The redirector terminates SSL and forwards traffic from the `/cloud/storage/objects/` URI prefix to this listener over plain HTTP internally.
 
+> [!TIP]
+> Because the Apache redirector handles SSL termination, Sliver receives plain HTTP traffic even though the implant connects over HTTPS. If the `https` listener reports issues receiving callbacks, try `http --lhost 0.0.0.0 --lport 443` instead — this tells Sliver to accept plain HTTP on 443, matching what the redirector actually forwards.
+
 **Checkpoint:** ✅ Sliver HTTPS listener running
 
 ### Step 5.3: Generate Implant
