@@ -816,7 +816,7 @@ This starts a plain HTTP listener on port 443. The implant connects over HTTPS t
 First, import the pre-built C2 profile. This profile has the `X-Request-ID` validation header baked in so every implant callback automatically passes the redirector's header check:
 
 ```text
-sliver > http-c2 import /root/redstack-c2-profile.yaml redstack
+sliver > c2profiles import --file /root/redstack-c2-profile.yaml --name redstack
 ```
 
 Then generate the implant using that profile:
