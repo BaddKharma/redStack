@@ -806,8 +806,8 @@ sliver > http --lhost 0.0.0.0 --lport 80
 
 This starts a plain HTTP listener on port 80. The implant connects over HTTPS to the redirector, which terminates SSL and forwards plain HTTP internally to Sliver on port 80.
 
-> [!TIP]
-> SSL is handled entirely by the Apache redirector — Sliver never sees TLS. The redirector proxies to Sliver on port 80 (standard HTTP) internally. The implant's callback URL is still `https://yourdomain/...` so from the target's perspective all traffic is encrypted.
+> [!WARNING]
+> SSL is handled entirely by the Apache redirector. Sliver never sees TLS. The redirector proxies to Sliver on port 80 (plain HTTP) internally. The implant's callback URL is still `https://yourdomain/...` so from the target's perspective all traffic is encrypted. If your redirector and team servers are not co-located or connected via private VPC peering, consider tunneling internal C2 traffic over SSH to protect it in transit. Plain HTTP between the redirector and Sliver could be intercepted if routed over untrusted infrastructure.
 
 **Checkpoint:** ✅ Sliver HTTP listener running on port 80
 
