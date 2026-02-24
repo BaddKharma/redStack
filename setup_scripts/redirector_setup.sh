@@ -166,7 +166,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 # ============================================================================
 
 echo "[*] Downloading redirect.rules from redStack repo..."
-REDIRECT_URL="https://raw.githubusercontent.com/BaddKharma/redStack/main/setup_scripts/redirect.rules"
+REDIRECT_URL="https://raw.githubusercontent.com/BaddKharma/redRules/main/redirect.rules"
 if curl -sL --max-time 30 "$REDIRECT_URL" -o /etc/apache2/redirect.rules; then
     echo "[+] Installed redirect.rules ($(grep -c 'RewriteCond' /etc/apache2/redirect.rules) total rules, cloud IPs commented out)"
 else
