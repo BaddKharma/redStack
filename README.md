@@ -785,17 +785,9 @@ Three ways to get a shell on Sliver (pick one):
 
 Get the Guacamole URL from `terraform output deployment_info` — look for the **GUACAMOLE** section.
 
-### Step 5.2: Generate Operator Config
+### Step 5.2: Start Sliver Console and Create Listener
 
-```bash
-sudo /root/generate_operator_config.sh operator1
-```
-
-This creates `/root/operator1.cfg`. Transfer this file to your machine to connect using the Sliver client.
-
-**Checkpoint:** ✅ Operator config generated
-
-### Step 5.3: Start Sliver Console and Create Listener
+Since Sliver runs on its own dedicated machine and you are connected directly via Guacamole or MobaXterm, launch the interactive server console:
 
 ```bash
 sliver-server
@@ -809,9 +801,12 @@ sliver > http --lhost 0.0.0.0 --lport 80
 
 This starts an HTTP listener on port 80. The redirector forwards traffic from the `/cloud/storage/objects/` URI prefix to this listener.
 
+> [!NOTE]
+> If you want to connect to this Sliver server remotely from a separate Sliver client, generate an operator config with `sudo /root/generate_operator_config.sh operator1` and copy `/root/operator1.cfg` to the client machine. For this lab, connecting directly on the server is the standard workflow.
+
 **Checkpoint:** ✅ Sliver HTTP listener running
 
-### Step 5.4: Generate Implant
+### Step 5.3: Generate Implant
 
 **In the Sliver console:**
 
@@ -828,7 +823,7 @@ Transfer the implant to the Windows workstation and execute it. You should see a
 
 **Checkpoint:** ✅ Sliver implant calling back through redirector
 
-### Step 5.5: Test Sliver Session
+### Step 5.4: Test Sliver Session
 
 ```text
 sliver > sessions
