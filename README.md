@@ -801,15 +801,15 @@ sudo /root/sliver-server
 **In the Sliver console:**
 
 ```text
-sliver > http --lhost 0.0.0.0 --lport 443
+sliver > http --lhost 0.0.0.0 --lport 80
 ```
 
-This starts a plain HTTP listener on port 443. The implant connects over HTTPS to the redirector, which terminates SSL and forwards plain HTTP internally to Sliver on port 443.
+This starts a plain HTTP listener on port 80. The implant connects over HTTPS to the redirector, which terminates SSL and forwards plain HTTP internally to Sliver on port 80.
 
 > [!TIP]
-> SSL is handled entirely by the Apache redirector, Sliver never sees TLS. Using `http --lport 443` (not `https`) is correct here because the redirector strips TLS before forwarding traffic into the VPC. The implant's callback URL is still `https://yourdomain/...` so from the target's perspective all traffic is encrypted.
+> SSL is handled entirely by the Apache redirector — Sliver never sees TLS. The redirector proxies to Sliver on port 80 (standard HTTP) internally. The implant's callback URL is still `https://yourdomain/...` so from the target's perspective all traffic is encrypted.
 
-**Checkpoint:** ✅ Sliver HTTP listener running on port 443
+**Checkpoint:** ✅ Sliver HTTP listener running on port 80
 
 ### Step 5.3: Generate Implant
 
