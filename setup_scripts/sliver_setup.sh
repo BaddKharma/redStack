@@ -11,6 +11,8 @@ echo "===== Sliver C2 Server Setup Started $(date) ====="
 
 SSH_PASSWORD="${ssh_password}"
 REDIRECTOR_VPC_CIDR="${redirector_vpc_cidr}"
+C2_HEADER_NAME="${c2_header_name}"
+C2_HEADER_VALUE="${c2_header_value}"
 
 # Set hostname
 echo "[*] Setting hostname..."
@@ -92,6 +94,33 @@ fi
 # Verify installation
 echo "[*] Verifying Sliver installation..."
 which sliver-server && echo "[+] Sliver server binary found at $(which sliver-server)" || echo "[!] WARNING: Sliver binary not in PATH"
+
+# Create HTTP C2 profile with the redirector validation header pre-configured
+echo "[*] Creating redstack HTTP C2 profile..."
+cat > /root/redstack-c2-profile.yaml << C2PROFILE
+implant_config:
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  chrome_base_headers:
+    - name: "$C2_HEADER_NAME"
+      value: "$C2_HEADER_VALUE"
+  max_files: 8
+  min_files: 2
+  max_paths: 8
+  min_paths: 2
+  max_file_length: 6
+  min_file_length: 2
+  max_path_length: 255
+  min_path_length: 10
+  stager_file_ext: ".woff"
+  start_session_file_ext: ".html"
+  close_file_ext: ".png"
+server_config:
+  random_version_headers: false
+  headers: []
+  cookies:
+    - "PHPSESSID"
+C2PROFILE
+echo "[+] C2 profile written to /root/redstack-c2-profile.yaml"
 
 # Create operator config generation script
 cat > /root/generate_operator_config.sh << 'OPSCRIPT'

