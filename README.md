@@ -798,12 +798,12 @@ sliver-server
 **In the Sliver console:**
 
 ```text
-sliver > http --lhost 0.0.0.0 --lport 80
+sliver > https --lhost 0.0.0.0 --lport 443
 ```
 
-This starts an HTTP listener on port 80. The redirector forwards traffic from the `/cloud/storage/objects/` URI prefix to this listener.
+This starts an HTTPS listener on port 443. The redirector terminates SSL and forwards traffic from the `/cloud/storage/objects/` URI prefix to this listener over plain HTTP internally.
 
-**Checkpoint:** ✅ Sliver HTTP listener running
+**Checkpoint:** ✅ Sliver HTTPS listener running
 
 ### Step 5.3: Generate Implant
 
