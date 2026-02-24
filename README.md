@@ -829,10 +829,16 @@ Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfva
 
 **Transfer the implant to the Windows workstation:**
 
-From PowerShell on the Windows operator machine, SCP the file directly from Sliver without interrupting the Sliver console:
+The implant is generated as root, so make it readable before transferring. In a second terminal on the Sliver machine (or via Guacamole):
+
+```bash
+sudo chmod 644 /tmp/implant.exe
+```
+
+Then from PowerShell on the Windows operator machine, SCP the file directly from Sliver without interrupting the Sliver console:
 
 ```powershell
-scp admin@sliver:/tmp/implant.exe C:\Users\operator\Desktop\implant.exe
+scp admin@sliver:/tmp/implant.exe C:\Users\Administrator\Desktop\implant.exe
 ```
 
 The `sliver` hostname resolves automatically via the hosts file. Authenticate with the lab SSH password when prompted.
