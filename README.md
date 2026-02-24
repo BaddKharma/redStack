@@ -625,7 +625,8 @@ sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 
 ## Part 4: Mythic C2 Setup
 
-Mythic is a collaborative C2 framework built by Cody Thomas with a modern web-based GUI accessible through a browser. It uses a modular architecture where agents (called "payloads") and communication profiles are installed separately as Docker containers, making it highly extensible. Mythic is GUI-driven and includes a built-in task manager, file browser, and credential storage, making it well suited for multi-operator engagements.
+> [!TIP]
+> Mythic is a collaborative C2 framework built by Cody Thomas with a modern web-based GUI accessible through a browser. It uses a modular architecture where agents (called "payloads") and communication profiles are installed separately as Docker containers, making it highly extensible. Mythic is GUI-driven and includes a built-in task manager, file browser, and credential storage, making it well suited for multi-operator engagements.
 
 ### Objective: Mythic Proof-of-Function
 
@@ -769,7 +770,8 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 
 ## Part 5: Sliver C2 Setup
 
-Sliver is an open-source C2 framework developed by BishopFox, designed as a modern alternative to Cobalt Strike for red team operations. It supports multiple communication protocols (HTTP/S, DNS, mTLS, WireGuard) and cross-compiles implants for Windows, Linux, and macOS. Sliver is primarily CLI-driven through an interactive console, with multiplayer support allowing multiple operators to connect to a shared server daemon simultaneously.
+> [!TIP]
+> Sliver is an open-source C2 framework developed by BishopFox, designed as a modern alternative to Cobalt Strike for red team operations. It supports multiple communication protocols (HTTP/S, DNS, mTLS, WireGuard) and cross-compiles implants for Windows, Linux, and macOS. Sliver is primarily CLI-driven through an interactive console, with multiplayer support allowing multiple operators to connect to a shared server daemon simultaneously.
 
 ### Objective: Sliver Proof-of-Function
 
@@ -867,7 +869,8 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 
 ## Part 6: Havoc C2 Setup
 
-Havoc is a modern open-source C2 framework developed by Paul Ungur (5pider) with a focus on evasion and advanced post-exploitation. It features a Qt-based GUI client (the "Katana" client) that operators run on their local machine to connect to a remote teamserver, similar in model to Cobalt Strike. Havoc's agents ("Demons") are written in C and include features like indirect syscalls and sleep obfuscation, making it a popular choice for practicing modern evasion techniques.
+> [!TIP]
+> Havoc is a modern open-source C2 framework developed by Paul Ungur (5pider) with a focus on evasion and advanced post-exploitation. It features a Qt-based GUI client (the "Katana" client) that operators run on their local machine to connect to a remote teamserver, similar in model to Cobalt Strike. Havoc's agents ("Demons") are written in C and include features like indirect syscalls and sleep obfuscation, making it a popular choice for practicing modern evasion techniques.
 
 ### Objective: Havoc Proof-of-Function
 
