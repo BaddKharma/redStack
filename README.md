@@ -536,15 +536,12 @@ Each VirtualHost uses three security layers before proxying traffic:
 
 #### Layer 1: redirect.rules (Automated Scanner Blocking)
 
-The file `/etc/apache2/redirect.rules` is downloaded at boot from the [redStack GitHub repo](https://github.com/BaddKharma/redStack), which maintains an adapted version of [curi0usJack's redirect rules](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10):
+The file `/etc/apache2/redirect.rules` is downloaded at boot from the public [redRules GitHub repo](https://github.com/BaddKharma/redRules), which maintains an adapted version of [curi0usJack's redirect rules](https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10):
 
 - All `302` redirects replaced with `403 Forbidden` responses
 - Setup directives stripped (`Define REDIR_TARGET`, `RewriteEngine On`, `RewriteOptions Inherit`)
 - AWS/Azure/cloud IP blocks **commented out** (would block our own AWS-hosted C2 callbacks)
 - Included in both HTTP and HTTPS VirtualHosts via `Include /etc/apache2/redirect.rules`
-
-> [!NOTE]
-> If the redStack repo is private, the download will silently fail and Apache will fail to start. See [redirect.rules Download Fails](#redirectrules-download-fails-private-repo) in Troubleshooting.
 
 ```bash
 # Check installed rules
@@ -554,8 +551,8 @@ grep -c 'RewriteCond' /etc/apache2/redirect.rules
 To update redirect.rules manually:
 
 ```bash
-# Re-download from redStack repo (only works if repo is public)
-curl -sL "https://raw.githubusercontent.com/BaddKharma/redStack/main/setup_scripts/redirect.rules" \
+# Re-download from redRules repo
+curl -sL "https://raw.githubusercontent.com/BaddKharma/redRules/main/redirect.rules" \
   -o /etc/apache2/redirect.rules
 sudo systemctl reload apache2
 ```
@@ -1139,7 +1136,7 @@ Each Guacamole SSH connection should connect without a password prompt and land 
 
 ---
 
-### redirect.rules Download Fails (Private Repo)
+### redirect.rules Download Fails
 
 **Symptoms:** Apache fails to start, `apache2ctl -S` shows:
 
@@ -1147,39 +1144,21 @@ Each Guacamole SSH connection should connect without a password prompt and land 
 Invalid command '404:', perhaps misspelled or defined by a module not included
 ```
 
-**Root Cause:** The redirector downloads `redirect.rules` from the GitHub repo at boot using `curl`. If the repo is private, GitHub returns a `404: Not Found` response body which gets saved as the file. Apache then fails to parse it.
+**Root Cause:** The redirector downloads `redirect.rules` from the public [redRules repo](https://github.com/BaddKharma/redRules) at boot. If the download failed (network issue, timeout), the file may be empty or contain an error response.
 
 **Verify:**
 
 ```bash
 head -3 /etc/apache2/redirect.rules
-# Will show: "404: Not Found"
 ```
 
-**Fix: Copy the file manually from your local machine:**
-
-**Windows (PowerShell):**
-
-```powershell
-scp -i ".\rs-rsa-key.pem" `
-    ".\setup_scripts\redirect.rules" `
-    admin@<REDIR_PUBLIC_IP>:/tmp/redirect.rules
-```
-
-**Linux/Mac (bash):**
+**Fix: Re-download manually on the redirector:**
 
 ```bash
-scp -i rs-rsa-key.pem setup_scripts/redirect.rules admin@<REDIR_PUBLIC_IP>:/tmp/redirect.rules
-```
-
-**Then on the redirector:**
-
-```bash
-sudo cp /tmp/redirect.rules /etc/apache2/redirect.rules
+curl -sL "https://raw.githubusercontent.com/BaddKharma/redRules/main/redirect.rules" \
+  -o /etc/apache2/redirect.rules
 sudo apache2ctl configtest && sudo systemctl reload apache2
 ```
-
-**Permanent Fix:** Make the GitHub repo public, or the setup script will need updating to embed the file directly.
 
 ---
 
