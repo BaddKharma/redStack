@@ -781,14 +781,9 @@ Three ways to get a shell on Sliver (pick one):
 | ------ | --- |
 | Via Guacamole | Click **"Sliver C2 Server (SSH)"** in the Guacamole portal |
 | From Windows workstation | Open MobaXterm → **redStack Lab** → **Sliver C2 Server (SSH)** |
-| Host workstation (jump host) | SSH via the redirector as a jump host (see below) |
+| From host machine | Open your browser → navigate to the Guacamole portal → click **"Sliver C2 Server (SSH)"** |
 
-**Host workstation (substitute your actual redirector IP):**
-
-```bash
-# Sliver has no public IP — SSH via the redirector as a jump host
-ssh -i rs-rsa-key.pem -J admin@<REDIR_PUBLIC_IP> admin@sliver
-```
+Get the Guacamole URL from `terraform output deployment_info` — look for the **GUACAMOLE** section.
 
 ### Step 5.2: Generate Operator Config
 
