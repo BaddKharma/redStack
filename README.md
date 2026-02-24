@@ -775,15 +775,17 @@ For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/
 
 ### Step 5.1: Access Sliver Server
 
-Three ways to get a shell on Sliver (pick one):
+Two ways to get a shell on Sliver (pick one):
 
 | Method | How |
 | ------ | --- |
 | Via Guacamole | Click **"Sliver C2 Server (SSH)"** in the Guacamole portal |
 | From Windows workstation | Open MobaXterm → **redStack Lab** → **Sliver C2 Server (SSH)** |
-| From host machine | Open your browser → navigate to the Guacamole portal → click **"Sliver C2 Server (SSH)"** |
 
-Get the Guacamole URL from `terraform output deployment_info` — look for the **GUACAMOLE** section.
+> [!NOTE]
+> For a CLI-only experience from your host machine, SSH into the Guacamole instance using your AWS key (it has a public EIP) and use it as a jumpbox:
+> `ssh -i rs-rsa-key.pem -J admin@<GUAC_PUBLIC_IP> admin@sliver`
+> Get the Guacamole IP from `terraform output deployment_info`.
 
 ### Step 5.2: Start Sliver Console and Create Listener
 
