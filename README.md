@@ -823,16 +823,13 @@ Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfva
 
 **Transfer the implant to the Windows workstation:**
 
-From MobaXterm on the Windows operator machine, SCP the file directly from Sliver without interrupting the Sliver console. Open a MobaXterm local terminal and run:
+From PowerShell on the Windows operator machine, SCP the file directly from Sliver without interrupting the Sliver console:
 
-```bash
+```powershell
 scp admin@sliver:/tmp/implant.exe C:\Users\operator\Desktop\implant.exe
 ```
 
-The `sliver` hostname resolves automatically via `/etc/hosts`. Authenticate with the lab SSH password when prompted.
-
-> [!TIP]
-> MobaXterm also has a built-in SFTP browser. In any open Sliver SSH session, click the file browser panel on the left, navigate to `/tmp`, and drag `implant.exe` to the Windows desktop.
+The `sliver` hostname resolves automatically via the hosts file. Authenticate with the lab SSH password when prompted.
 
 Execute the implant on the Windows workstation. You should see a new session appear in the Sliver console.
 
