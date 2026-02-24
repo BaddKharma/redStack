@@ -301,16 +301,20 @@ resource "aws_instance" "windows" {
   }
 
   user_data = replace(
-    file("${path.module}/setup_scripts/windows_setup.ps1"),
-    "__HOSTS_ENTRIES__",
-    join("\r\n", [
-      "# redStack lab hosts",
-      "${aws_network_interface.guacamole.private_ip}    guac",
-      "${aws_network_interface.mythic.private_ip}    mythic",
-      "${aws_network_interface.sliver.private_ip}    sliver",
-      "${aws_network_interface.havoc.private_ip}    havoc",
-      "${aws_network_interface.redirector.private_ip}    redirector",
-    ])
+    replace(
+      file("${path.module}/setup_scripts/windows_setup.ps1"),
+      "__HOSTS_ENTRIES__",
+      join("\r\n", [
+        "# redStack lab hosts",
+        "${aws_network_interface.guacamole.private_ip}    guac",
+        "${aws_network_interface.mythic.private_ip}    mythic",
+        "${aws_network_interface.sliver.private_ip}    sliver",
+        "${aws_network_interface.havoc.private_ip}    havoc",
+        "${aws_network_interface.redirector.private_ip}    redirector",
+      ])
+    ),
+    "__HAVOC_IP__",
+    aws_network_interface.havoc.private_ip
   )
 
   metadata_options {

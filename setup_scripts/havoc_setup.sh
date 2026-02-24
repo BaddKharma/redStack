@@ -97,9 +97,16 @@ export PATH=$PATH:/usr/local/go/bin
 # Verify Go installation
 go version
 
-# Clone Havoc C2 framework
-echo "[*] Cloning Havoc C2 framework..."
-git clone https://github.com/HavocFramework/Havoc.git /opt/Havoc
+# Clone Havoc C2 framework at latest release tag (must match Windows client)
+echo "[*] Fetching latest Havoc release tag..."
+HAVOC_TAG=$(curl -sL https://api.github.com/repos/HavocFramework/Havoc/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+if [ -z "$HAVOC_TAG" ]; then
+    echo "[!] Could not fetch latest tag, falling back to main"
+    HAVOC_TAG="main"
+fi
+echo "[+] Using Havoc release: $HAVOC_TAG"
+git clone --branch "$HAVOC_TAG" https://github.com/HavocFramework/Havoc.git /opt/Havoc
+echo "$HAVOC_TAG" > /opt/Havoc/.release_tag
 chown -R admin:admin /opt/Havoc
 
 # Build Havoc teamserver
