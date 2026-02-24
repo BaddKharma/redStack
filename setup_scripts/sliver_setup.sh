@@ -80,9 +80,18 @@ curl https://sliver.sh/install | sudo bash
 # Wait for installation to complete
 sleep 10
 
+# The Sliver install script places the server binary in /root — symlink it into PATH
+echo "[*] Symlinking sliver-server into /usr/local/bin..."
+if [ -f /root/sliver-server ]; then
+    ln -sf /root/sliver-server /usr/local/bin/sliver-server
+    echo "[+] sliver-server symlinked to /usr/local/bin/sliver-server"
+else
+    echo "[!] WARNING: /root/sliver-server not found — install may have failed"
+fi
+
 # Verify installation
 echo "[*] Verifying Sliver installation..."
-which sliver-server && echo "Sliver server binary found" || echo "WARNING: Sliver binary not found"
+which sliver-server && echo "[+] Sliver server binary found at $(which sliver-server)" || echo "[!] WARNING: Sliver binary not in PATH"
 
 # Create operator config generation script
 cat > /root/generate_operator_config.sh << 'OPSCRIPT'
