@@ -97,30 +97,35 @@ which sliver-server && echo "[+] Sliver server binary found at $(which sliver-se
 
 # Create HTTP C2 profile with the redirector validation header pre-configured
 echo "[*] Creating redstack HTTP C2 profile..."
-cat > /root/redstack-c2-profile.yaml << C2PROFILE
-implant_config:
-  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-  chrome_base_headers:
-    - name: "$C2_HEADER_NAME"
-      value: "$C2_HEADER_VALUE"
-  max_files: 8
-  min_files: 2
-  max_paths: 8
-  min_paths: 2
-  max_file_length: 6
-  min_file_length: 2
-  max_path_length: 255
-  min_path_length: 10
-  stager_file_ext: ".woff"
-  start_session_file_ext: ".html"
-  close_file_ext: ".png"
-server_config:
-  random_version_headers: false
-  headers: []
-  cookies:
-    - "PHPSESSID"
-C2PROFILE
-echo "[+] C2 profile written to /root/redstack-c2-profile.yaml"
+jq -n \
+  --arg header_name "$C2_HEADER_NAME" \
+  --arg header_value "$C2_HEADER_VALUE" \
+  '{
+    "implant_config": {
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "chrome_base_version": 120,
+      "nonce_query_args": "abcdefghijklmnopqrstuvwxyz",
+      "url_parameters": null,
+      "headers": [{"name": $header_name, "value": $header_value, "probability": 100}],
+      "nonce_query_length": 1,
+      "nonce_mode": "UrlParam",
+      "max_files": 4,
+      "min_files": 2,
+      "max_paths": 4,
+      "min_paths": 2,
+      "max_path_length": 4,
+      "min_path_length": 2,
+      "extensions": ["js", "", "php"],
+      "files": ["jquery.min", "bootstrap", "app", "main", "index", "script"],
+      "paths": ["js", "assets", "scripts", "static", "dist"]
+    },
+    "server_config": {
+      "random_version_headers": false,
+      "headers": [{"name": "Cache-Control", "value": "no-store, no-cache, must-revalidate", "probability": 100, "method": "GET"}],
+      "cookies": ["PHPSESSID"]
+    }
+  }' > /root/redstack-c2-profile.json
+echo "[+] C2 profile written to /root/redstack-c2-profile.json"
 
 # Create operator config generation script
 cat > /root/generate_operator_config.sh << 'OPSCRIPT'
