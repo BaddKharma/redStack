@@ -888,26 +888,40 @@ Same goal: get a Windows `.exe` demon calling back through the redirector to con
 
 For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
 
-### Step 6.1: Verify Havoc Teamserver
+### Step 6.1: Build Havoc (run once after deployment)
 
-**Via Guacamole:** Click **"Havoc C2 Server (SSH)"**
+Unlike other C2 servers in the lab, Havoc is **not pre-built** — the Go compiler, Havoc source, and Qt5 client are compiled on first use. SSH and VNC are available shortly after boot; the build runs as a manual step.
+
+**Via Guacamole:** Click **"Havoc C2 Server (SSH)"**, then run:
+
+```bash
+~/build_havoc.sh
+```
+
+The script logs everything to `~/havoc_build.log` and takes **15–25 minutes** to complete. It is safe to re-run if anything fails.
+
+When complete you will see:
+
+```text
+===== Havoc Build Complete ...
+```
+
+**Checkpoint:** ✅ Build script finished with no errors
+
+### Step 6.2: Verify Havoc Teamserver
+
+The build script starts the teamserver automatically. Confirm it is running:
 
 ```bash
 sudo systemctl status havoc
 ```
 
-The teamserver runs on port 40056 with the profile at `/opt/Havoc/profiles/default.yaotl`. It starts automatically on boot.
+The teamserver runs on port 40056 with the profile at `/opt/Havoc/profiles/default.yaotl`.
 
 **Operator Credentials** (same lab password as all other machines; see `terraform output deployment_info`):
 
 - Username: `operator`
 - Password: `<lab-password>`
-
-If the teamserver is not running, start it:
-
-```bash
-sudo systemctl start havoc
-```
 
 > [!CAUTION]
 > If the teamserver starts and immediately crashes, a stale database from a previous deployment may be the cause. Delete it and restart:
@@ -919,7 +933,7 @@ sudo systemctl start havoc
 
 **Checkpoint:** ✅ Havoc teamserver running on port 40056
 
-### Step 6.2: Open the Havoc Desktop and Connect the Client
+### Step 6.3: Open the Havoc Desktop and Connect the Client
 
 **Via Guacamole:** Click **"Havoc C2 Desktop (VNC)"**
 
@@ -941,7 +955,7 @@ havoc-client client
 
 **Checkpoint:** ✅ Havoc client connected to teamserver
 
-### Step 6.3: Create Listener and Generate Demon
+### Step 6.4: Create Listener and Generate Demon
 
 > [!IMPORTANT]
 > Retrieve your `X-Request-ID` token before creating the listener. It is required for the **Headers** field and gets baked into the demon at generation time. Run this on your local machine:

@@ -1,6 +1,7 @@
 #!/bin/bash
-# havoc_setup.sh - Havoc C2 server installation
-# Runs automatically via user_data on first boot
+# havoc_setup.sh - Havoc C2 server initial provisioning
+# Configures OS, SSH, firewall, VNC desktop, and drops build_havoc.sh
+# for manual execution after boot.
 
 set -e
 
@@ -34,8 +35,9 @@ echo "[*] Updating system packages..."
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 
-# Install build dependencies
-echo "[*] Installing build dependencies..."
+# Install all build deps and runtime deps up front so build_havoc.sh
+# does not need apt access and can focus solely on the build steps.
+echo "[*] Installing packages (build deps, Qt5, XFCE4, TigerVNC)..."
 apt-get install -y \
     git \
     build-essential \
@@ -43,6 +45,7 @@ apt-get install -y \
     nasm \
     mingw-w64 \
     curl \
+    wget \
     ufw \
     net-tools \
     jq \
@@ -100,77 +103,11 @@ ufw allow 40056/tcp comment 'Havoc teamserver'
 ufw allow from 10.0.0.0/8 to any port 5901 proto tcp comment 'VNC from internal VPC'
 ufw --force enable
 
-# Install Go (Havoc requires Go 1.21+)
-echo "[*] Installing Go..."
-GO_VERSION="1.22.5"
-wget -q "https://go.dev/dl/go$${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz
-rm -rf /usr/local/go
-tar -C /usr/local -xzf /tmp/go.tar.gz
-rm /tmp/go.tar.gz
-
-# Set Go environment for all users
-cat > /etc/profile.d/golang.sh << 'GOENV'
-export PATH=$PATH:/usr/local/go/bin
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
-GOENV
-chmod +x /etc/profile.d/golang.sh
-export PATH=$PATH:/usr/local/go/bin
-
-# Verify Go installation
-go version
-
-# Clone Havoc C2 framework at latest release tag
-echo "[*] Fetching latest Havoc release tag..."
-HAVOC_TAG=$(curl -sL https://api.github.com/repos/HavocFramework/Havoc/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
-if [ -z "$HAVOC_TAG" ]; then
-    echo "[!] Could not fetch latest tag, falling back to main"
-    HAVOC_TAG="main"
-fi
-echo "[+] Using Havoc release: $HAVOC_TAG"
-git clone --branch "$HAVOC_TAG" https://github.com/HavocFramework/Havoc.git /opt/Havoc
-echo "$HAVOC_TAG" > /opt/Havoc/.release_tag
-chown -R admin:admin /opt/Havoc
-
-# Build Havoc teamserver
-echo "[*] Building Havoc teamserver (this may take several minutes)..."
-cd /opt/Havoc/teamserver
-export HOME=/root
-export GOPATH=/root/go
-sudo -E /usr/local/go/bin/go build -buildvcs=false -o teamserver . 2>&1 || {
-    echo "[!] Teamserver build failed, attempting alternative build..."
-    cd /opt/Havoc
-    make teamserver 2>&1 || echo "[!] Build failed - may need manual build"
-}
-# Allow teamserver to bind privileged ports (80/443) as non-root user
-setcap 'cap_net_bind_service=+ep' /opt/Havoc/teamserver/teamserver
-
-# Build Havoc client (Qt5 GUI)
-echo "[*] Building Havoc client (this may take several minutes)..."
-cd /opt/Havoc
-git submodule update --init --recursive
-mkdir -p client/Build
-cd client/Build && cmake .. 2>&1
-cmake --build /opt/Havoc/client/Build -- -j 4 2>&1 && echo "[+] Havoc client built successfully" || \
-    echo "[!] Client build failed - may need manual build"
-
-# Create havoc-client wrapper script (cd to /opt/Havoc required for client config)
-if [ -f "/opt/Havoc/client/Havoc" ]; then
-    cat > /usr/local/bin/havoc-client << 'WRAPPER'
-#!/bin/bash
-cd /opt/Havoc
-exec /opt/Havoc/client/Havoc "$@"
-WRAPPER
-    chmod +x /usr/local/bin/havoc-client
-    echo "[+] Havoc client wrapper created at /usr/local/bin/havoc-client"
-else
-    echo "[!] Havoc client binary not found at /opt/Havoc/client/Havoc"
-fi
-
-# Create default Havoc profile
-echo "[*] Creating default Havoc profile..."
-mkdir -p /opt/Havoc/profiles
-cat > /opt/Havoc/profiles/default.yaotl << PROFILE
+# Create Havoc profile (contains SSH_PASSWORD — must be templated here)
+# build_havoc.sh copies this into /opt/Havoc/profiles/ after cloning.
+echo "[*] Creating Havoc profile template..."
+mkdir -p /home/admin/.havoc
+cat > /home/admin/.havoc/default.yaotl << PROFILE
 Teamserver {
     Host = "0.0.0.0"
     Port = 40056
@@ -194,13 +131,8 @@ Operators {
     }
 }
 PROFILE
-chown -R admin:admin /opt/Havoc
 
-# Create data directory required by teamserver (stores SQLite DB)
-mkdir -p /opt/Havoc/teamserver/data
-chown admin:admin /opt/Havoc/teamserver/data
-
-# Set up TigerVNC desktop for Havoc client access
+# TigerVNC desktop setup
 echo "[*] Configuring TigerVNC desktop..."
 mkdir -p /home/admin/.vnc
 printf '%s\n' "$SSH_PASSWORD" | vncpasswd -f > /home/admin/.vnc/passwd
@@ -215,6 +147,7 @@ XSTART
 chmod +x /home/admin/.vnc/xstartup
 
 # Autostart Havoc client when the XFCE session begins
+# (will fail silently until build_havoc.sh has been run)
 mkdir -p /home/admin/.config/autostart
 cat > /home/admin/.config/autostart/havoc-client.desktop << 'AUTOSTART'
 [Desktop Entry]
@@ -226,7 +159,6 @@ NoDisplay=false
 X-GNOME-Autostart-enabled=true
 AUTOSTART
 
-# Desktop shortcut for manual re-launch
 mkdir -p /home/admin/Desktop
 cat > /home/admin/Desktop/Havoc-Client.desktop << 'DESKICON'
 [Desktop Entry]
@@ -240,10 +172,7 @@ Categories=Network;
 DESKICON
 chmod +x /home/admin/Desktop/Havoc-Client.desktop
 
-chown -R admin:admin /home/admin/.vnc /home/admin/.config /home/admin/Desktop
-
-# Create systemd service for Havoc teamserver
-echo "[*] Creating Havoc systemd service..."
+# Systemd service: Havoc teamserver
 cat > /etc/systemd/system/havoc.service << 'SVCEOF'
 [Unit]
 Description=Havoc C2 Teamserver
@@ -263,11 +192,7 @@ StandardError=journal
 WantedBy=multi-user.target
 SVCEOF
 
-systemctl daemon-reload
-systemctl enable havoc.service
-
-# Create systemd service for TigerVNC (template unit)
-echo "[*] Creating TigerVNC systemd service..."
+# Systemd service: TigerVNC (template unit)
 cat > /etc/systemd/system/vncserver@.service << 'VNCSVC'
 [Unit]
 Description=TigerVNC Desktop :%i
@@ -287,34 +212,130 @@ RestartSec=10
 WantedBy=multi-user.target
 VNCSVC
 
-systemctl daemon-reload
-systemctl enable vncserver@1.service
-
-# Create quick-start helper script
-cat > /root/havoc_quickstart.sh << QUICKSTART
+# Drop the build script into admin's home directory.
+# Operators run this manually after connecting via SSH or VNC terminal.
+cat > /home/admin/build_havoc.sh << 'BUILDSCRIPT'
 #!/bin/bash
-echo "===== Havoc C2 Quick Start ====="
-echo ""
-echo "Access the Havoc GUI:"
-echo "  1. Open Guacamole in your browser"
-echo "  2. Connect to: Havoc C2 Desktop (VNC)"
-echo "  3. The Havoc client launches automatically on the desktop"
-echo ""
-echo "Havoc client connection details (enter in the GUI dialog):"
-echo "  Host:     localhost"
-echo "  Port:     40056"
-echo "  Username: operator"
-echo "  Password: $SSH_PASSWORD"
-echo ""
-echo "Teamserver status:"
-systemctl status havoc --no-pager 2>/dev/null || echo "Havoc service not active"
-echo ""
-echo "VNC status:"
-systemctl status vncserver@1 --no-pager 2>/dev/null || echo "VNC service not active"
-echo ""
-echo "Default profile: /opt/Havoc/profiles/default.yaotl"
-QUICKSTART
-chmod +x /root/havoc_quickstart.sh
+# build_havoc.sh - Build and install Havoc C2 framework
+# Run manually after initial boot: ~/build_havoc.sh
+# Logs output to ~/havoc_build.log
 
+set -e
+exec > >(tee /home/admin/havoc_build.log) 2>&1
+
+echo "===== Havoc Build Started $(date) ====="
+echo "[*] Estimated time: 15-25 minutes"
+echo ""
+
+# ── Go installation ──────────────────────────────────────────────────────────
+GO_VERSION="1.22.5"
+if /usr/local/go/bin/go version 2>/dev/null | grep -q "$GO_VERSION"; then
+    echo "[*] Go $GO_VERSION already installed, skipping"
+else
+    echo "[*] Installing Go $GO_VERSION..."
+    wget -q "https://go.dev/dl/go$${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+    rm /tmp/go.tar.gz
+    echo "[+] Go installed"
+fi
+
+export PATH=$PATH:/usr/local/go/bin
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+go version
+
+# ── Clone Havoc ──────────────────────────────────────────────────────────────
+if [ -d "/opt/Havoc/.git" ]; then
+    echo "[*] /opt/Havoc already cloned, skipping"
+else
+    echo "[*] Fetching latest Havoc release tag..."
+    HAVOC_TAG=$(curl -sL https://api.github.com/repos/HavocFramework/Havoc/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+    if [ -z "$HAVOC_TAG" ]; then
+        echo "[!] Could not fetch latest tag, using main"
+        HAVOC_TAG="main"
+    fi
+    echo "[+] Cloning Havoc $HAVOC_TAG..."
+    sudo git clone --branch "$HAVOC_TAG" https://github.com/HavocFramework/Havoc.git /opt/Havoc
+    sudo chown -R admin:admin /opt/Havoc
+fi
+
+# Copy profile and create data directory
+sudo mkdir -p /opt/Havoc/profiles /opt/Havoc/teamserver/data
+sudo cp /home/admin/.havoc/default.yaotl /opt/Havoc/profiles/default.yaotl
+sudo chown -R admin:admin /opt/Havoc
+
+# ── Build teamserver ─────────────────────────────────────────────────────────
+echo "[*] Building Havoc teamserver..."
+cd /opt/Havoc/teamserver
+/usr/local/go/bin/go build -buildvcs=false -o teamserver .
+sudo setcap 'cap_net_bind_service=+ep' /opt/Havoc/teamserver/teamserver
+echo "[+] Teamserver built"
+
+# ── Build client (Qt5) ───────────────────────────────────────────────────────
+echo "[*] Building Havoc client (Qt5 — this takes a while)..."
+cd /opt/Havoc
+git submodule update --init --recursive
+mkdir -p client/Build
+cd client/Build
+cmake ..
+cmake --build /opt/Havoc/client/Build -- -j$(nproc)
+echo "[+] Client built"
+
+# ── Wrapper script ───────────────────────────────────────────────────────────
+sudo tee /usr/local/bin/havoc-client > /dev/null << 'WRAPPER'
+#!/bin/bash
+cd /opt/Havoc
+exec /opt/Havoc/client/Havoc "$@"
+WRAPPER
+sudo chmod +x /usr/local/bin/havoc-client
+
+# ── Final ownership and service start ────────────────────────────────────────
+sudo chown -R admin:admin /opt/Havoc
+
+echo "[*] Starting Havoc teamserver..."
+sudo systemctl daemon-reload
+sudo systemctl enable havoc.service
+sudo systemctl start havoc.service
+
+echo ""
+echo "===== Havoc Build Complete $(date) ====="
+echo ""
+echo "  Teamserver:   sudo systemctl status havoc"
+echo "  Profile:      /opt/Havoc/profiles/default.yaotl"
+echo "  Client:       havoc-client client"
+echo "  VNC:          Reconnect via Guacamole — client autostarts on desktop"
+echo ""
+echo "  To connect the Havoc client:"
+echo "    Host:     localhost    Port: 40056"
+echo "    User:     operator     Pass: (see /opt/Havoc/profiles/default.yaotl)"
+BUILDSCRIPT
+chmod +x /home/admin/build_havoc.sh
+
+# MOTD — operators see this on first SSH login
+cat > /etc/motd << 'MOTD'
+╔═══════════════════════════════════════════════════╗
+║           Havoc C2 — Build Required               ║
+╠═══════════════════════════════════════════════════╣
+║  Run to build Havoc (~15-25 min):                 ║
+║                                                   ║
+║      ~/build_havoc.sh                             ║
+║                                                   ║
+║  Log: ~/havoc_build.log                           ║
+╚═══════════════════════════════════════════════════╝
+MOTD
+
+# Set ownership on everything in admin home
+chown -R admin:admin /home/admin
+
+# Enable and start services
+systemctl daemon-reload
+systemctl enable havoc.service
+systemctl enable vncserver@1.service
+systemctl start vncserver@1.service || echo "[!] VNC start failed — run 'sudo systemctl start vncserver@1' manually after boot"
+
+echo ""
 echo "===== Havoc C2 Server Setup Completed $(date) ====="
-echo "===== Run /root/havoc_quickstart.sh for usage instructions ====="
+echo "[+] SSH available with password auth from VPC"
+echo "[+] VNC desktop running on port 5901"
+echo "[+] Run ~/build_havoc.sh to build Havoc (15-25 min)"
