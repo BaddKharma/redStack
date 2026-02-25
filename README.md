@@ -21,7 +21,7 @@
 - [Part 5: Sliver C2 Setup](#part-5-sliver-c2-setup)
 - [Part 6: Havoc C2 Setup](#part-6-havoc-c2-setup)
 - [Part 7: Final Validation](#part-7-final-validation)
-- [Part 8: External Target Environments (HTB/THM/ProvingGrounds)](#part-8-external-target-environments-htbthmprovinggrounds)
+- [External Target Environments (HTB/THM/ProvingGrounds)](#external-target-environments-htbthmprovinggrounds)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -1484,13 +1484,13 @@ At the end of this deployment, you should have:
 
 ---
 
-## Part 8: External Target Environments (HTB/THM/ProvingGrounds)
+# External Target Environments (HTB/THM/ProvingGrounds)
 
-### Objective: Connect Lab to External CTF Platforms
+## Objective: Connect Lab to External CTF Platforms
 
 Route traffic from your internal lab machines (Windows workstation, C2 servers) to external target environments like HackTheBox, TryHackMe, or Proving Grounds through the Apache redirector's OpenVPN tunnel.
 
-### How It Works
+## How It Works
 
 ```text
 +---------------------------------------------------------------------+
@@ -1508,7 +1508,7 @@ to CTF target IPs, which gets routed through VPC peering to the
 redirector, then masqueraded out the VPN tunnel.
 ```
 
-### Step 8.1: Enable VPN Routing Before Deployment
+## Step 8.1: Enable VPN Routing Before Deployment
 
 **This must be configured before running `terraform apply`.**
 
@@ -1538,12 +1538,12 @@ external_vpn_cidrs  = ["10.10.0.0/16", "10.200.0.0/16"]
 > [!NOTE]
 > If you already deployed without `enable_external_vpn = true`, you can enable it and run `terraform apply` again. Terraform will add the required routes, security group rules, and update the redirector instance.
 
-### Step 8.2: Deploy and Obtain Your .ovpn File
+## Step 8.2: Deploy and Obtain Your .ovpn File
 
 1. Deploy the infrastructure with `terraform apply`
 2. Download your `.ovpn` file from your CTF platform (HTB, THM, or Proving Grounds)
 
-### Step 8.3: Upload the .ovpn File to the Redirector
+## Step 8.3: Upload the .ovpn File to the Redirector
 
 Get the redirector public IP from `terraform output deployment_info`, then:
 
@@ -1564,7 +1564,7 @@ scp -i rs-rsa-key.pem lab.ovpn admin@<REDIR_PUBLIC_IP>:~/vpn/
 1. Open the **"Apache Redirector (SSH)"** connection in Guacamole
 2. Transfer the `.ovpn` file using Guacamole's file transfer feature
 
-### Step 8.4: Start the VPN Tunnel
+## Step 8.4: Start the VPN Tunnel
 
 **SSH to the redirector:**
 
@@ -1593,7 +1593,7 @@ sudo ~/vpn.sh status
 
 This shows the tunnel state, VPN IP, and active NAT rules.
 
-### Step 8.5: Verify Connectivity from Internal Machines
+## Step 8.5: Verify Connectivity from Internal Machines
 
 **From the Windows operator workstation (via Guacamole RDP):**
 
@@ -1613,7 +1613,7 @@ ping 10.10.10.2
 
 Traffic from any internal machine destined for the CTF target CIDRs is automatically routed through the redirector's VPN tunnel.
 
-### Step 8.6: Stop the VPN
+## Step 8.6: Stop the VPN
 
 ```bash
 sudo ~/vpn.sh stop
@@ -1621,7 +1621,7 @@ sudo ~/vpn.sh stop
 
 This kills the OpenVPN process and removes the iptables MASQUERADE rules. The `.ovpn` config file is preserved at `~/vpn/external.ovpn` so you can restart without re-uploading.
 
-### Important Notes
+## Important Notes
 
 - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only CTF target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
 - **Only the configured CIDRs are routed.** By default, only `10.10.0.0/16` is routed through the VPN. Traffic to other destinations (internet, VPC peers) is unaffected.
