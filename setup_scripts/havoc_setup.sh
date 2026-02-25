@@ -161,7 +161,7 @@ fi
 # Create default Havoc profile
 echo "[*] Creating default Havoc profile..."
 mkdir -p /opt/Havoc/profiles
-cat > /opt/Havoc/profiles/default.yaotl << 'PROFILE'
+cat > /opt/Havoc/profiles/default.yaotl << PROFILE
 Teamserver {
     Host = "0.0.0.0"
     Port = 40056
@@ -175,7 +175,7 @@ Teamserver {
 
 Operators {
     user "operator" {
-        Password = "Training123!"
+        Password = "$SSH_PASSWORD"
     }
 }
 
@@ -288,7 +288,7 @@ systemctl daemon-reload
 systemctl enable vncserver@1.service
 
 # Create quick-start helper script
-cat > /root/havoc_quickstart.sh << 'QUICKSTART'
+cat > /root/havoc_quickstart.sh << QUICKSTART
 #!/bin/bash
 echo "===== Havoc C2 Quick Start ====="
 echo ""
@@ -301,7 +301,7 @@ echo "Havoc client connection details (enter in the GUI dialog):"
 echo "  Host:     localhost"
 echo "  Port:     40056"
 echo "  Username: operator"
-echo "  Password: Training123!"
+echo "  Password: $SSH_PASSWORD"
 echo ""
 echo "Teamserver status:"
 systemctl status havoc --no-pager 2>/dev/null || echo "Havoc service not active"

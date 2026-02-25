@@ -43,8 +43,9 @@ output "deployment_info" {
     Username:     admin
     Password:     ${nonsensitive(random_password.lab.result)}
     SSH (int):    ssh admin@${aws_network_interface.havoc.private_ip}
-    Operator:     Port 40056 (teamserver UI)
-    Guacamole:    Havoc C2 Server (SSH)
+    Op User:      operator
+    Op Password:  ${nonsensitive(random_password.lab.result)}
+    Guacamole:    Havoc C2 Desktop (VNC) | Havoc C2 Server (SSH)
 
   +---------------------------------------------------------------------+
   | 5. APACHE REDIRECTOR                                                |
