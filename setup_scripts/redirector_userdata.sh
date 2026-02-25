@@ -35,6 +35,9 @@ DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 # Public IP access still requires SSH keys, only VPC IPs can use passwords
 echo "[*] Configuring SSH authentication (keys for public, passwords from VPC)..."
 echo "admin:$SSH_PASSWORD" | chpasswd
+mkdir -p /home/admin
+chown admin:admin /home/admin
+usermod -d /home/admin -s /bin/bash admin
 
 # Configure SSH: default requires keys, main VPC IPs can use passwords (via VPC peering)
 cat >> /etc/ssh/sshd_config << 'SSHCONF'

@@ -71,6 +71,9 @@ apt-get install -y \
 # Configure SSH password authentication for Guacamole access
 echo "[*] Configuring SSH authentication..."
 echo "admin:$SSH_PASSWORD" | chpasswd
+mkdir -p /home/admin
+chown admin:admin /home/admin
+usermod -d /home/admin -s /bin/bash admin
 
 cat >> /etc/ssh/sshd_config << 'SSHCONF'
 

@@ -59,6 +59,9 @@ usermod -aG docker admin
 # Public IP access still requires SSH keys, only VPC IPs can use passwords
 echo "[*] Configuring SSH authentication (keys for public, passwords for VPC)..."
 echo "admin:$SSH_PASSWORD" | chpasswd
+mkdir -p /home/admin
+chown admin:admin /home/admin
+usermod -d /home/admin -s /bin/bash admin
 
 # Configure SSH: default requires keys, VPC IPs can use passwords
 cat >> /etc/ssh/sshd_config << 'SSHCONF'
