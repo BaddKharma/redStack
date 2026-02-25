@@ -251,7 +251,7 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/Havoc/teamserver
+WorkingDirectory=/opt/Havoc
 ExecStart=/opt/Havoc/teamserver/teamserver server --profile /opt/Havoc/profiles/default.yaotl
 User=admin
 Restart=on-failure

