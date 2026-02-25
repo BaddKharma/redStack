@@ -30,6 +30,27 @@ ${redirector_private_ip} redirector
 ${windows_private_ip}    win-operator
 HOSTS
 
+# ── SSH first — ensures recovery access even if later steps fail ─────────────
+echo "[*] Configuring SSH authentication..."
+echo "admin:$SSH_PASSWORD" | chpasswd
+mkdir -p /home/admin
+chown admin:admin /home/admin
+usermod -d /home/admin -s /bin/bash admin
+
+cat >> /etc/ssh/sshd_config << 'SSHCONF'
+
+# Default: require SSH keys
+PasswordAuthentication no
+PubkeyAuthentication yes
+
+# Allow password auth from private networks (for Guacamole access via VPC)
+Match Address 172.16.0.0/12,10.0.0.0/8
+    PasswordAuthentication yes
+SSHCONF
+
+systemctl restart sshd
+echo "[+] SSH password auth active — recovery access available"
+
 # Update system
 echo "[*] Updating system packages..."
 apt-get update
@@ -70,26 +91,6 @@ apt-get install -y \
     libgtest-dev \
     libspdlog-dev \
     libboost-all-dev
-
-# Configure SSH password authentication for Guacamole access
-echo "[*] Configuring SSH authentication..."
-echo "admin:$SSH_PASSWORD" | chpasswd
-mkdir -p /home/admin
-chown admin:admin /home/admin
-usermod -d /home/admin -s /bin/bash admin
-
-cat >> /etc/ssh/sshd_config << 'SSHCONF'
-
-# Default: require SSH keys
-PasswordAuthentication no
-PubkeyAuthentication yes
-
-# Allow password auth from private networks (for Guacamole access via VPC)
-Match Address 172.16.0.0/12,10.0.0.0/8
-    PasswordAuthentication yes
-SSHCONF
-
-systemctl restart sshd
 
 # Configure UFW firewall
 echo "[*] Configuring firewall rules..."
