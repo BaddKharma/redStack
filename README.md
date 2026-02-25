@@ -1048,41 +1048,6 @@ sudo tail -20 /var/log/apache2/redirector-access.log
 
 **Checkpoint:** ✅ Redirector logging understood for all C2 servers
 
-### Step 7.4: Document Deployment
-
-```bash
-# Run on the redirector (SSH'd in)
-cat > ~/deployment_summary.txt <<EOF
-REDSTACK DEPLOYMENT COMPLETE
-========================
-Deployment Date: $(date)
-
-INFRASTRUCTURE (6 EC2 instances):
-- Mythic C2:    internal only (access via Guacamole)
-- Sliver C2:    internal only (access via Guacamole)
-- Havoc C2:     internal only (access via Guacamole)
-- Guacamole:    <GUAC_PUBLIC_IP> (public)
-- Windows:      internal only (RDP via Guacamole)
-- Redirector:   <REDIR_PUBLIC_IP> (public)
-
-REDIRECTOR URI ROUTING (all on ports 80/443):
-- /cdn/media/stream/       -> Mythic
-- /cloud/storage/objects/  -> Sliver
-- /edge/cache/assets/      -> Havoc
-
-CREDENTIALS:
-- All credentials in: terraform output deployment_info
-- Mythic admin password: sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
-- Havoc: operator / <lab-password> (same as all machines)
-
-STATUS: All systems operational
-EOF
-
-cat ~/deployment_summary.txt
-```
-
-**Checkpoint:** ✅ Deployment documented
-
 ---
 
 ## Troubleshooting
