@@ -410,7 +410,7 @@ https://<GUAC_PUBLIC_IP>/guacamole
 - Username: `guacadmin`
 - Password: from `terraform output deployment_info`
 
-After logging in you should see **6 pre-configured connections**:
+After logging in you should see **7 pre-configured connections**:
 
 1. **Windows Operator Workstation** (RDP): auto-connects with Administrator credentials
 2. **Mythic C2 Server (SSH)**
@@ -418,10 +418,11 @@ After logging in you should see **6 pre-configured connections**:
 4. **Apache Redirector (SSH)**
 5. **Sliver C2 Server (SSH)**
 6. **Havoc C2 Server (SSH)**
+7. **Havoc C2 Desktop (VNC)**: XFCE4 desktop with the Havoc GUI client
 
 All SSH connections use password auth (no keys needed) pre-configured with the auto-generated lab password.
 
-**Checkpoint:** ✅ Guacamole accessible, 6 connections visible
+**Checkpoint:** ✅ Guacamole accessible, 7 connections visible
 
 ### Step 2.2: Access Windows Workstation
 
@@ -570,13 +571,13 @@ terraform output deployment_info
 
 ### Layer 3: URI Prefix Routing
 
-| URI Prefix | Backend | Example |
-| ---------- | ------- | ------- |
-| `/cdn/media/stream/` | Mythic | `/cdn/media/stream/callback` → Mythic `/callback` |
-| `/cloud/storage/objects/` | Sliver | `/cloud/storage/objects/session` → Sliver `/session` |
-| `/edge/cache/assets/` | Havoc | `/edge/cache/assets/beacon` → Havoc `/beacon` |
+| URI Prefix | Backend | Forwarded as |
+| ---------- | ------- | ------------ |
+| `/cdn/media/stream/` | Mythic | Prefix stripped → Mythic receives `/callback` |
+| `/cloud/storage/objects/` | Sliver | Prefix stripped → Sliver receives `/session` |
+| `/edge/cache/assets/` | Havoc | Full path preserved → Havoc receives `/edge/cache/assets/update` |
 
-The URI prefix is stripped before forwarding to the backend C2 server.
+Mythic and Sliver have the URI prefix stripped before forwarding. Havoc receives the full path including the prefix — this is required because Havoc's listener validates URIs against the same paths embedded in the demon.
 
 **Checkpoint:** ✅ Understand header validation, URI routing, and scanner blocking
 
@@ -946,7 +947,7 @@ terraform output deployment_info
 | **Uris** | `/edge/cache/assets/update` — click **Add** (add more if desired, all must start with `/edge/cache/assets/`) |
 | **Headers** | `X-Request-ID: <token>` — click **Add** (no quotes around token) |
 
-> The **Hosts** field is the callback address baked into the demon. The **Uris** and **Headers** are embedded in the demon so it sends them on every check-in. The redirector validates the URI prefix and header, strips the prefix, then forwards plain HTTP to Havoc on port 80.
+> The **Hosts** field is the callback address baked into the demon. The **Uris** and **Headers** are embedded in the demon so it sends them on every check-in. The redirector validates the URI prefix and header, then forwards the full path (prefix intact) as plain HTTP to Havoc on port 80.
 
 1. Click **Save**
 
@@ -1232,7 +1233,7 @@ sudo ./mythic-cli status
 
 ### Guacamole Connections Not Auto-Created
 
-**Symptoms:** Some or all of the 6 connections don't appear in Guacamole UI after deployment
+**Symptoms:** Some or all of the 7 connections don't appear in Guacamole UI after deployment
 
 **Root Cause:** Previous versions had a bug where the setup script used incorrect database backend ('mysql' instead of 'postgresql')
 
@@ -1247,7 +1248,7 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
   -c "SELECT connection_id, connection_name, protocol FROM guacamole_connection;"
 ```
 
-**Expected:** Should show 6 connections (1 RDP, 5 SSH)
+**Expected:** Should show 7 connections (1 RDP, 5 SSH, 1 VNC)
 
 **If Missing, Manually Create via Guacamole UI:**
 
@@ -1263,7 +1264,7 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
 - Username: admin
 - Password: from `terraform output deployment_info`
 
-**Fixed in Current Version:** The setup script correctly creates all 6 connections automatically
+**Fixed in Current Version:** The setup script correctly creates all 7 connections automatically
 
 ---
 
@@ -1449,7 +1450,7 @@ At the end of this deployment, you should have:
 - ✅ Decoy page served for requests without valid C2 header
 - ✅ At least 1 active agent callback per C2 framework
 - ✅ Can execute commands through all C2 paths
-- ✅ All 6 Guacamole connections auto-created (1 RDP, 5 SSH)
+- ✅ All 7 Guacamole connections auto-created (1 RDP, 5 SSH, 1 VNC)
 - ✅ Guacamole providing web-based access to all infrastructure components
 - ✅ SSH password authentication working from C2 VPC, keys required from public IPs
 - ✅ Windows workstation with Chromium, VS Code, MobaXterm, and 7-Zip installed
