@@ -1073,15 +1073,15 @@ sudo tail -20 /var/log/apache2/redirector-access.log
 
 ---
 
-# Troubleshooting
+## Troubleshooting
 
 Reference this section if any component is not behaving as expected after deployment. Each subsection targets a specific failure mode with symptoms, root cause, and fix.
 
-## Component Health Checks
+### Component Health Checks
 
 Use these checks if something isn't working as expected after deployment.
 
-### Mythic C2 Server
+#### Mythic C2 Server
 
 SSH to Mythic via Guacamole or jump host, then:
 
@@ -1106,7 +1106,7 @@ https://mythic:7443
 
 Login: `mythic_admin` / password from above.
 
-### Guacamole Server
+#### Guacamole Server
 
 SSH to Guacamole, then check Docker containers:
 
@@ -1116,7 +1116,7 @@ docker ps
 
 **Expected:** 3 containers, all up: `guacamole/guacamole`, `postgres:15`, and `guacamole/guacd`.
 
-### Apache Redirector
+#### Apache Redirector
 
 SSH to the redirector, then run the pre-installed test script:
 
@@ -1164,7 +1164,7 @@ sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 > sudo systemctl reload apache2
 > ```
 
-### Sliver C2 Server
+#### Sliver C2 Server
 
 SSH to Sliver via Guacamole, then:
 
@@ -1174,7 +1174,7 @@ which sliver-server
 
 If missing, see [Sliver Not Installed](#sliver-not-installed).
 
-### Havoc C2 Server
+#### Havoc C2 Server
 
 SSH to Havoc via Guacamole, then:
 
@@ -1184,7 +1184,7 @@ sudo systemctl status havoc
 
 If not running: `sudo systemctl start havoc`. If the binary is missing, see [Havoc Build Failed](#havoc-build-failed).
 
-### SSH Connections via Guacamole
+#### SSH Connections via Guacamole
 
 Each Guacamole SSH connection should connect without a password prompt and land at the correct hostname. Quick check:
 
@@ -1198,7 +1198,7 @@ Each Guacamole SSH connection should connect without a password prompt and land 
 
 ---
 
-## redirect.rules Download Fails
+### redirect.rules Download Fails
 
 **Symptoms:** Apache fails to start, `apache2ctl -S` shows:
 
@@ -1224,7 +1224,7 @@ sudo apache2ctl configtest && sudo systemctl reload apache2
 
 ---
 
-## Mythic nginx SSL Certificate Missing
+### Mythic nginx SSL Certificate Missing
 
 **Symptoms:** `mythic_nginx` container keeps restarting. Logs show:
 
@@ -1255,7 +1255,7 @@ sudo ./mythic-cli status
 
 ---
 
-## Guacamole Connections Not Auto-Created
+### Guacamole Connections Not Auto-Created
 
 **Symptoms:** Some or all of the 7 connections don't appear in Guacamole UI after deployment
 
@@ -1292,7 +1292,7 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
 
 ---
 
-## Mythic Not Starting
+### Mythic Not Starting
 
 **Symptoms:** mythic-cli status shows containers not running
 
@@ -1317,7 +1317,7 @@ sudo ./mythic-cli restart
 
 ---
 
-## Sliver Not Installed
+### Sliver Not Installed
 
 **Symptoms:** `sliver-server` command not found
 
@@ -1333,7 +1333,7 @@ curl https://sliver.sh/install | sudo bash
 
 ---
 
-## Havoc Build Failed
+### Havoc Build Failed
 
 **Symptoms:** Havoc teamserver binary not found or service fails to start
 
@@ -1356,7 +1356,7 @@ sudo -E /usr/local/go/bin/go build -o teamserver .
 
 ---
 
-## Guacamole RDP Fails
+### Guacamole RDP Fails
 
 **Symptoms:** Can't connect to Windows via Guacamole
 
@@ -1379,7 +1379,7 @@ nc -zv win-operator 3389
 
 ---
 
-## Agent Won't Callback
+### Agent Won't Callback
 
 **Symptoms:** Agent executes but no callback in Mythic/Sliver/Havoc
 
@@ -1409,7 +1409,7 @@ sudo /root/test_redirector.sh
 
 ---
 
-## Terraform Errors
+### Terraform Errors
 
 **Error:** `InvalidKeyPair.NotFound`
 
@@ -1484,13 +1484,13 @@ At the end of this deployment, you should have:
 
 ---
 
-# External Target Environments (HTB/THM/ProvingGrounds)
+## External Target Environments (HTB/THM/ProvingGrounds)
 
-## Objective: Connect Lab to External CTF Platforms
+### Objective: Connect Lab to External CTF Platforms
 
 Route traffic from your internal lab machines (Windows workstation, C2 servers) to external target environments like HackTheBox, TryHackMe, or Proving Grounds through the Apache redirector's OpenVPN tunnel.
 
-## How It Works
+### How It Works
 
 ```text
 +---------------------------------------------------------------------+
@@ -1508,7 +1508,7 @@ to CTF target IPs, which gets routed through VPC peering to the
 redirector, then masqueraded out the VPN tunnel.
 ```
 
-## Step 8.1: Enable VPN Routing Before Deployment
+### Step 8.1: Enable VPN Routing Before Deployment
 
 **This must be configured before running `terraform apply`.**
 
@@ -1538,12 +1538,12 @@ external_vpn_cidrs  = ["10.10.0.0/16", "10.200.0.0/16"]
 > [!NOTE]
 > If you already deployed without `enable_external_vpn = true`, you can enable it and run `terraform apply` again. Terraform will add the required routes, security group rules, and update the redirector instance.
 
-## Step 8.2: Deploy and Obtain Your .ovpn File
+### Step 8.2: Deploy and Obtain Your .ovpn File
 
 1. Deploy the infrastructure with `terraform apply`
 2. Download your `.ovpn` file from your CTF platform (HTB, THM, or Proving Grounds)
 
-## Step 8.3: Upload the .ovpn File to the Redirector
+### Step 8.3: Upload the .ovpn File to the Redirector
 
 Get the redirector public IP from `terraform output deployment_info`, then:
 
@@ -1564,7 +1564,7 @@ scp -i rs-rsa-key.pem lab.ovpn admin@<REDIR_PUBLIC_IP>:~/vpn/
 1. Open the **"Apache Redirector (SSH)"** connection in Guacamole
 2. Transfer the `.ovpn` file using Guacamole's file transfer feature
 
-## Step 8.4: Start the VPN Tunnel
+### Step 8.4: Start the VPN Tunnel
 
 **SSH to the redirector:**
 
@@ -1593,7 +1593,7 @@ sudo ~/vpn.sh status
 
 This shows the tunnel state, VPN IP, and active NAT rules.
 
-## Step 8.5: Verify Connectivity from Internal Machines
+### Step 8.5: Verify Connectivity from Internal Machines
 
 **From the Windows operator workstation (via Guacamole RDP):**
 
@@ -1613,7 +1613,7 @@ ping 10.10.10.2
 
 Traffic from any internal machine destined for the CTF target CIDRs is automatically routed through the redirector's VPN tunnel.
 
-## Step 8.6: Stop the VPN
+### Step 8.6: Stop the VPN
 
 ```bash
 sudo ~/vpn.sh stop
@@ -1621,7 +1621,7 @@ sudo ~/vpn.sh stop
 
 This kills the OpenVPN process and removes the iptables MASQUERADE rules. The `.ovpn` config file is preserved at `~/vpn/external.ovpn` so you can restart without re-uploading.
 
-## Important Notes
+### Important Notes
 
 - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only CTF target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
 - **Only the configured CIDRs are routed.** By default, only `10.10.0.0/16` is routed through the VPN. Traffic to other destinations (internet, VPC peers) is unaffected.
