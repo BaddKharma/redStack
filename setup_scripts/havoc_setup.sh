@@ -47,7 +47,26 @@ apt-get install -y \
     net-tools \
     jq \
     python3 \
-    python3-pip
+    python3-pip \
+    python3-dev \
+    libssl-dev \
+    xfce4 \
+    xfce4-terminal \
+    tigervnc-standalone-server \
+    dbus-x11 \
+    libqt5websockets5 \
+    libqt5websockets5-dev \
+    qtbase5-dev \
+    qtchooser \
+    qt5-qmake \
+    qtbase5-dev-tools \
+    qtdeclarative5-dev \
+    libqt5svg5-dev \
+    libfontconfig1-dev \
+    libglu1-mesa-dev \
+    libgtest-dev \
+    libspdlog-dev \
+    libboost-all-dev
 
 # Configure SSH password authentication for Guacamole access
 echo "[*] Configuring SSH authentication..."
@@ -114,11 +133,27 @@ echo "[*] Building Havoc teamserver (this may take several minutes)..."
 cd /opt/Havoc/teamserver
 export HOME=/root
 export GOPATH=/root/go
-sudo -E /usr/local/go/bin/go build -o teamserver . 2>&1 || {
+sudo -E /usr/local/go/bin/go build -buildvcs=false -o teamserver . 2>&1 || {
     echo "[!] Teamserver build failed, attempting alternative build..."
     cd /opt/Havoc
     make teamserver 2>&1 || echo "[!] Build failed - may need manual build"
 }
+
+# Build Havoc client (Qt5 GUI)
+echo "[*] Building Havoc client (this may take several minutes)..."
+cd /opt/Havoc
+{ make client-build 2>&1 && echo "[+] Havoc client built successfully"; } || \
+    echo "[!] Client build failed - may need manual build"
+
+# Locate and symlink client binary to a stable path
+HAVOC_CLIENT=$(find /opt/Havoc -maxdepth 4 -name "havoc" -type f -executable 2>/dev/null \
+    | grep -v "teamserver" | head -1)
+if [ -n "$HAVOC_CLIENT" ]; then
+    ln -sf "$HAVOC_CLIENT" /usr/local/bin/havoc-client
+    echo "[+] Havoc client binary: $HAVOC_CLIENT"
+else
+    echo "[!] Havoc client binary not found after build"
+fi
 
 # Create default Havoc profile
 echo "[*] Creating default Havoc profile..."
@@ -155,6 +190,52 @@ Listeners {
 PROFILE
 chown -R admin:admin /opt/Havoc
 
+# Create data directory required by teamserver (stores SQLite DB)
+mkdir -p /opt/Havoc/teamserver/data
+chown admin:admin /opt/Havoc/teamserver/data
+
+# Set up TigerVNC desktop for Havoc client access
+echo "[*] Configuring TigerVNC desktop..."
+mkdir -p /home/admin/.vnc
+printf '%s\n' "$SSH_PASSWORD" | vncpasswd -f > /home/admin/.vnc/passwd
+chmod 600 /home/admin/.vnc/passwd
+
+cat > /home/admin/.vnc/xstartup << 'XSTART'
+#!/bin/bash
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+exec startxfce4
+XSTART
+chmod +x /home/admin/.vnc/xstartup
+
+# Autostart Havoc client when the XFCE session begins
+mkdir -p /home/admin/.config/autostart
+cat > /home/admin/.config/autostart/havoc-client.desktop << 'AUTOSTART'
+[Desktop Entry]
+Type=Application
+Name=Havoc C2 Client
+Exec=havoc-client client
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+AUTOSTART
+
+# Desktop shortcut for manual re-launch
+mkdir -p /home/admin/Desktop
+cat > /home/admin/Desktop/Havoc-Client.desktop << 'DESKICON'
+[Desktop Entry]
+Type=Application
+Name=Havoc C2 Client
+Comment=Connect to Havoc Teamserver
+Exec=havoc-client client
+Icon=utilities-terminal
+Terminal=false
+Categories=Network;
+DESKICON
+chmod +x /home/admin/Desktop/Havoc-Client.desktop
+
+chown -R admin:admin /home/admin/.vnc /home/admin/.config /home/admin/Desktop
+
 # Create systemd service for Havoc teamserver
 echo "[*] Creating Havoc systemd service..."
 cat > /etc/systemd/system/havoc.service << 'SVCEOF'
@@ -179,31 +260,53 @@ SVCEOF
 systemctl daemon-reload
 systemctl enable havoc.service
 
+# Create systemd service for TigerVNC (template unit)
+echo "[*] Creating TigerVNC systemd service..."
+cat > /etc/systemd/system/vncserver@.service << 'VNCSVC'
+[Unit]
+Description=TigerVNC Desktop :%i
+After=network.target
+
+[Service]
+Type=forking
+User=admin
+WorkingDirectory=/home/admin
+ExecStartPre=-/usr/bin/vncserver -kill :%i > /dev/null 2>&1
+ExecStart=/usr/bin/vncserver :%i -geometry 1280x800 -depth 24 -localhost no
+ExecStop=/usr/bin/vncserver -kill :%i
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+VNCSVC
+
+systemctl daemon-reload
+systemctl enable vncserver@1.service
+
 # Create quick-start helper script
 cat > /root/havoc_quickstart.sh << 'QUICKSTART'
 #!/bin/bash
 echo "===== Havoc C2 Quick Start ====="
 echo ""
-echo "1. Start the Havoc teamserver:"
-echo "   sudo systemctl start havoc"
-echo "   OR manually:"
-echo "   cd /opt/Havoc/teamserver && ./teamserver server --profile /opt/Havoc/profiles/default.yaotl"
+echo "Access the Havoc GUI:"
+echo "  1. Open Guacamole in your browser"
+echo "  2. Connect to: Havoc C2 Desktop (VNC)"
+echo "  3. The Havoc client launches automatically on the desktop"
 echo ""
-echo "2. Connect from Havoc client (on Windows workstation):"
-echo "   - Teamserver IP: $(hostname -I | awk '{print $1}')"
-echo "   - Port: 40056"
-echo "   - Username: operator"
-echo "   - Password: Training123!"
+echo "Havoc client connection details (enter in the GUI dialog):"
+echo "  Host:     localhost"
+echo "  Port:     40056"
+echo "  Username: operator"
+echo "  Password: Training123!"
 echo ""
-echo "3. Configure HTTP listener through redirector:"
-echo "   - The default profile already has an HTTP listener on port 80"
-echo "   - Redirector forwards /api/ URI prefix -> this server port 80"
-echo ""
-echo "Current status:"
+echo "Teamserver status:"
 systemctl status havoc --no-pager 2>/dev/null || echo "Havoc service not active"
 echo ""
+echo "VNC status:"
+systemctl status vncserver@1 --no-pager 2>/dev/null || echo "VNC service not active"
+echo ""
 echo "Default profile: /opt/Havoc/profiles/default.yaotl"
-echo "Teamserver port: 40056"
 QUICKSTART
 chmod +x /root/havoc_quickstart.sh
 

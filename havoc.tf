@@ -69,6 +69,17 @@ resource "aws_security_group_rule" "havoc_teamserver_from_windows" {
   security_group_id        = aws_security_group.havoc.id
 }
 
+# VNC from Guacamole (desktop access for Havoc client GUI)
+resource "aws_security_group_rule" "havoc_vnc_from_guacamole" {
+  type                     = "ingress"
+  from_port                = 5901
+  to_port                  = 5901
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.guacamole.id
+  description              = "VNC from Guacamole for Havoc client desktop"
+  security_group_id        = aws_security_group.havoc.id
+}
+
 # Havoc teamserver from Guacamole (operator access via web)
 resource "aws_security_group_rule" "havoc_teamserver_from_guacamole" {
   type                     = "ingress"
@@ -137,7 +148,7 @@ resource "aws_instance" "havoc" {
   }
 
   root_block_device {
-    volume_size           = 25
+    volume_size           = 30
     volume_type           = "gp3"
     delete_on_termination = true
     encrypted             = true

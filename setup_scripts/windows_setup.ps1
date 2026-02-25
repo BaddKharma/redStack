@@ -198,36 +198,6 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText("$mobaDir\MobaXterm.ini", $mobaIni, $utf8NoBom)
 Write-Host "[+] MobaXterm sessions written to $mobaDir\MobaXterm.ini"
 
-# ============================================================================
-# DOWNLOAD HAVOC CLIENT
-# ============================================================================
-
-Write-Host "[*] Downloading Havoc C2 client (matched to server release)..."
-try {
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/HavocFramework/Havoc/releases/latest" -UseBasicParsing
-    $asset = $release.assets | Where-Object { $_.name -match "(?i)windows|win.*\.exe|havoc.*\.exe" } | Select-Object -First 1
-    if ($asset) {
-        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "C:\Users\Administrator\Desktop\Havoc.exe" -UseBasicParsing
-        Write-Host "[+] Havoc client downloaded: $($asset.name) ($($release.tag_name))"
-    } else {
-        Write-Host "[!] No Windows binary in latest release - see https://github.com/HavocFramework/Havoc/releases"
-    }
-} catch {
-    Write-Host "[!] Havoc client download failed: $_"
-}
-
-# Write connection details to Desktop
-$havocInfo = @"
-Havoc C2 Connection Details
-============================
-Teamserver IP : __HAVOC_IP__
-Port          : 40056
-Username      : operator
-Password      : Training123!
-"@
-$havocInfo | Out-File -FilePath "C:\Users\Administrator\Desktop\Havoc-Connection.txt" -Encoding utf8
-Write-Host "[+] Havoc connection details written to Desktop"
-
 Write-Host "===== Windows Client Setup Completed $(Get-Date) ====="
 Write-Host "===== Use 'aws ec2 get-password-data' to retrieve Administrator password ====="
 

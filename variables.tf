@@ -64,7 +64,7 @@ variable "sliver_instance_type" {
 variable "havoc_instance_type" {
   description = "EC2 instance type for Havoc C2 server"
   type        = string
-  default     = "t3.small"
+  default     = "t3.medium"
 }
 
 variable "use_default_vpc" {

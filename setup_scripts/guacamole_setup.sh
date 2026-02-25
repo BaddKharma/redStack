@@ -388,6 +388,25 @@ if [ -n "$TOKEN" ]; then
                 \"max-connections-per-user\": \"1\"
             }
         }"
+
+    # Create VNC connection to Havoc C2 Desktop (GUI client)
+    echo "[*] Creating VNC connection to Havoc C2 Desktop..."
+    curl -s -X POST "http://localhost:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"name\": \"Havoc C2 Desktop (VNC)\",
+            \"protocol\": \"vnc\",
+            \"parameters\": {
+                \"hostname\": \"$HAVOC_PRIVATE_IP\",
+                \"port\": \"5901\",
+                \"password\": \"$SSH_PASSWORD\",
+                \"color-depth\": \"24\"
+            },
+            \"attributes\": {
+                \"max-connections\": \"2\",
+                \"max-connections-per-user\": \"1\"
+            }
+        }"
     else
         echo "[!] Could not obtain valid token after password change. Skipping connection creation."
     fi
