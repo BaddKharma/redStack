@@ -97,6 +97,7 @@ ufw allow 22/tcp
 ufw allow from $REDIRECTOR_VPC_CIDR to any port 80 proto tcp comment 'HTTP C2 from redirector'
 ufw allow from $REDIRECTOR_VPC_CIDR to any port 443 proto tcp comment 'HTTPS C2 from redirector'
 ufw allow 40056/tcp comment 'Havoc teamserver'
+ufw allow from 10.0.0.0/8 to any port 5901 proto tcp comment 'VNC from internal VPC'
 ufw --force enable
 
 # Install Go (Havoc requires Go 1.21+)
@@ -119,7 +120,7 @@ export PATH=$PATH:/usr/local/go/bin
 # Verify Go installation
 go version
 
-# Clone Havoc C2 framework at latest release tag (must match Windows client)
+# Clone Havoc C2 framework at latest release tag
 echo "[*] Fetching latest Havoc release tag..."
 HAVOC_TAG=$(curl -sL https://api.github.com/repos/HavocFramework/Havoc/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
 if [ -z "$HAVOC_TAG" ]; then
@@ -145,17 +146,23 @@ sudo -E /usr/local/go/bin/go build -buildvcs=false -o teamserver . 2>&1 || {
 # Build Havoc client (Qt5 GUI)
 echo "[*] Building Havoc client (this may take several minutes)..."
 cd /opt/Havoc
-{ make client-build 2>&1 && echo "[+] Havoc client built successfully"; } || \
+git submodule update --init --recursive
+mkdir -p client/Build
+cd client/Build && cmake .. 2>&1
+cmake --build /opt/Havoc/client/Build -- -j 4 2>&1 && echo "[+] Havoc client built successfully" || \
     echo "[!] Client build failed - may need manual build"
 
-# Locate and symlink client binary to a stable path
-HAVOC_CLIENT=$(find /opt/Havoc -maxdepth 4 -name "havoc" -type f -executable 2>/dev/null \
-    | grep -v "teamserver" | head -1)
-if [ -n "$HAVOC_CLIENT" ]; then
-    ln -sf "$HAVOC_CLIENT" /usr/local/bin/havoc-client
-    echo "[+] Havoc client binary: $HAVOC_CLIENT"
+# Create havoc-client wrapper script (cd to /opt/Havoc required for client config)
+if [ -f "/opt/Havoc/client/Havoc" ]; then
+    cat > /usr/local/bin/havoc-client << 'WRAPPER'
+#!/bin/bash
+cd /opt/Havoc
+exec /opt/Havoc/client/Havoc "$@"
+WRAPPER
+    chmod +x /usr/local/bin/havoc-client
+    echo "[+] Havoc client wrapper created at /usr/local/bin/havoc-client"
 else
-    echo "[!] Havoc client binary not found after build"
+    echo "[!] Havoc client binary not found at /opt/Havoc/client/Havoc"
 fi
 
 # Create default Havoc profile
@@ -173,21 +180,15 @@ Teamserver {
     }
 }
 
+Demon {
+    Sleep    = 2
+    Jitter   = 0
+    TrustXForwardedFor = false
+}
+
 Operators {
     user "operator" {
         Password = "$SSH_PASSWORD"
-    }
-}
-
-Listeners {
-    Http {
-        Name         = "HTTP Listener"
-        Hosts        = ["0.0.0.0"]
-        HostBind     = "0.0.0.0"
-        HostRotation = "round-robin"
-        PortBind     = 80
-        Secure       = false
-        UserAgent    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
 }
 PROFILE

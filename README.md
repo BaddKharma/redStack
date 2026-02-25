@@ -870,7 +870,9 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 ## Part 6: Havoc C2 Setup
 
 > [!IMPORTANT]
-> Havoc is a modern open-source C2 framework developed by Paul Ungur (5pider) with a focus on evasion and advanced post-exploitation. It features a Qt-based GUI client (the "Katana" client) that operators run on their local machine to connect to a remote teamserver, similar in model to Cobalt Strike. Havoc's agents ("Demons") are written in C and include features like indirect syscalls and sleep obfuscation, making it a popular choice for practicing modern evasion techniques.
+> Havoc is a modern open-source C2 framework developed by Paul Ungur (5pider) with a focus on evasion and advanced post-exploitation. It features a Qt-based GUI client (the "Katana" client) that connects to a remote teamserver, similar in model to Cobalt Strike. Havoc's agents ("Demons") are written in C and include features like indirect syscalls and sleep obfuscation, making it a popular choice for practicing modern evasion techniques.
+>
+> **Access model:** The Havoc client GUI runs directly on the Havoc server inside an XFCE4 desktop. Operators access it through Guacamole via VNC — no local client install required.
 
 ### Objective: Havoc Proof-of-Function
 
@@ -878,36 +880,45 @@ Same goal: get a Windows `.exe` demon calling back through the redirector to con
 
 For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
 
-### Step 6.1: Start Havoc Teamserver
+### Step 6.1: Verify Havoc Teamserver
 
 **Via Guacamole:** Click **"Havoc C2 Server (SSH)"**
 
 ```bash
-sudo systemctl start havoc
 sudo systemctl status havoc
 ```
 
-The teamserver starts on port 40056 with the default profile at `/opt/Havoc/profiles/default.yaotl`.
+The teamserver runs on port 40056 with the profile at `/opt/Havoc/profiles/default.yaotl`. It starts automatically on boot.
 
-**Default Operator Credentials:**
+**Operator Credentials** (same lab password as all other machines — see `terraform output deployment_info`):
 
 - Username: `operator`
-- Password: `Training123!`
+- Password: `<lab-password>`
+
+If the teamserver is not running, start it:
+
+```bash
+sudo systemctl start havoc
+```
 
 **Checkpoint:** ✅ Havoc teamserver running on port 40056
 
-### Step 6.2: Connect Havoc Client
+### Step 6.2: Open the Havoc Desktop and Connect the Client
 
-The Havoc client is a Qt-based GUI application that runs on the Windows operator workstation.
+**Via Guacamole:** Click **"Havoc C2 Desktop (VNC)"**
 
-**From the Windows Operator Workstation:**
+An XFCE4 desktop loads. The Havoc GUI client launches automatically. When the login dialog appears, enter:
 
-1. Download the Havoc client from the [Havoc GitHub releases](https://github.com/HavocFramework/Havoc)
-2. Connect to the teamserver:
-   - **Host:** `havoc`
-   - **Port:** `40056`
-   - **Username:** `operator`
-   - **Password:** `Training123!`
+- **Host:** `localhost`
+- **Port:** `40056`
+- **Username:** `operator`
+- **Password:** `<lab-password>`
+
+If the client does not autostart, open a terminal on the desktop and run:
+
+```bash
+havoc-client client
+```
 
 **Checkpoint:** ✅ Havoc client connected to teamserver
 
@@ -915,16 +926,16 @@ The Havoc client is a Qt-based GUI application that runs on the Windows operator
 
 **In the Havoc client:**
 
-1. Navigate to: Listeners → Add
-2. The default profile already includes an HTTP listener on port 80
-3. The redirector forwards traffic from the `/edge/cache/assets/` URI prefix to this listener
+1. Navigate to: **View → Listeners → Add**
+2. Set protocol to **HTTP**, bind port **80**, host **0.0.0.0**
+3. The redirector forwards `/edge/cache/assets/` URI traffic to the Havoc listener on port 80
 
 **Generate a Demon (Havoc implant):**
 
-1. Navigate to: Payloads → Generate
-2. Configure the callback host as `https://<YOUR_DOMAIN>/edge/cache/assets/` (your redirector domain)
+1. Navigate to: **Attack → Payloads**
+2. Configure the callback host as `https://<YOUR_REDIRECTOR_DOMAIN>/edge/cache/assets/`
 3. Ensure the implant sends the `X-Request-ID` header with the correct token value (from `terraform output deployment_info`)
-4. Generate and transfer to the Windows workstation
+4. Generate and transfer the `.exe` to the Windows workstation
 
 **Checkpoint:** ✅ Havoc Demon calling back through redirector URI prefix /edge/cache/assets/
 
@@ -1023,7 +1034,7 @@ REDIRECTOR URI ROUTING (all on ports 80/443):
 CREDENTIALS:
 - All credentials in: terraform output deployment_info
 - Mythic admin password: sudo cat /opt/Mythic/.env | grep MYTHIC_ADMIN_PASSWORD
-- Havoc: operator / Training123!
+- Havoc: operator / <lab-password> (same as all machines)
 
 STATUS: All systems operational
 EOF
