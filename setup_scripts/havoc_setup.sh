@@ -59,7 +59,7 @@ DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 # Install all build deps and runtime deps up front so build_havoc.sh
 # does not need apt access and can focus solely on the build steps.
 echo "[*] Installing packages (build deps, Qt5, XFCE4, TigerVNC)..."
-apt-get install -y \
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
     build-essential \
     cmake \
