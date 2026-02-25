@@ -142,6 +142,8 @@ sudo -E /usr/local/go/bin/go build -buildvcs=false -o teamserver . 2>&1 || {
     cd /opt/Havoc
     make teamserver 2>&1 || echo "[!] Build failed - may need manual build"
 }
+# Allow teamserver to bind privileged ports (80/443) as non-root user
+setcap 'cap_net_bind_service=+ep' /opt/Havoc/teamserver/teamserver
 
 # Build Havoc client (Qt5 GUI)
 echo "[*] Building Havoc client (this may take several minutes)..."

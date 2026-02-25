@@ -928,13 +928,13 @@ havoc-client client
 
 1. Navigate to: **View → Listeners → Add**
 2. Set protocol to **HTTP**, bind port **80**, host **0.0.0.0**
-3. The redirector forwards `/edge/cache/assets/` URI traffic to the Havoc listener on port 80
+3. No URI prefix or header config needed in the listener — the redirector strips the prefix before forwarding
 
 **Generate a Demon (Havoc implant):**
 
 1. Navigate to: **Attack → Payloads**
-2. Configure the callback host as `https://<YOUR_REDIRECTOR_DOMAIN>/edge/cache/assets/`
-3. Ensure the implant sends the `X-Request-ID` header with the correct token value (from `terraform output deployment_info`)
+2. Set the callback host to `https://<YOUR_REDIRECTOR_DOMAIN>` and set the URI path to `/edge/cache/assets/` (this is where the URI prefix goes — in the Demon callback config, not the listener)
+3. In the Demon's HTTP profile/headers section, add a custom header: `X-Request-ID: <token from terraform output deployment_info>`
 4. Generate and transfer the `.exe` to the Windows workstation
 
 **Checkpoint:** ✅ Havoc Demon calling back through redirector URI prefix /edge/cache/assets/
