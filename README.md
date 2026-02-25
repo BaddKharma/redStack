@@ -1073,15 +1073,15 @@ sudo tail -20 /var/log/apache2/redirector-access.log
 
 ---
 
-## Troubleshooting
+# Troubleshooting
 
 Reference this section if any component is not behaving as expected after deployment. Each subsection targets a specific failure mode with symptoms, root cause, and fix.
 
-### Component Health Checks
+## Component Health Checks
 
 Use these checks if something isn't working as expected after deployment.
 
-#### Mythic C2 Server
+### Mythic C2 Server
 
 SSH to Mythic via Guacamole or jump host, then:
 
@@ -1106,7 +1106,7 @@ https://mythic:7443
 
 Login: `mythic_admin` / password from above.
 
-#### Guacamole Server
+### Guacamole Server
 
 SSH to Guacamole, then check Docker containers:
 
@@ -1116,7 +1116,7 @@ docker ps
 
 **Expected:** 3 containers, all up: `guacamole/guacamole`, `postgres:15`, and `guacamole/guacd`.
 
-#### Apache Redirector
+### Apache Redirector
 
 SSH to the redirector, then run the pre-installed test script:
 
@@ -1164,7 +1164,7 @@ sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 > sudo systemctl reload apache2
 > ```
 
-#### Sliver C2 Server
+### Sliver C2 Server
 
 SSH to Sliver via Guacamole, then:
 
@@ -1174,7 +1174,7 @@ which sliver-server
 
 If missing, see [Sliver Not Installed](#sliver-not-installed).
 
-#### Havoc C2 Server
+### Havoc C2 Server
 
 SSH to Havoc via Guacamole, then:
 
@@ -1184,7 +1184,7 @@ sudo systemctl status havoc
 
 If not running: `sudo systemctl start havoc`. If the binary is missing, see [Havoc Build Failed](#havoc-build-failed).
 
-#### SSH Connections via Guacamole
+### SSH Connections via Guacamole
 
 Each Guacamole SSH connection should connect without a password prompt and land at the correct hostname. Quick check:
 
@@ -1198,7 +1198,7 @@ Each Guacamole SSH connection should connect without a password prompt and land 
 
 ---
 
-### redirect.rules Download Fails
+## redirect.rules Download Fails
 
 **Symptoms:** Apache fails to start, `apache2ctl -S` shows:
 
@@ -1224,7 +1224,7 @@ sudo apache2ctl configtest && sudo systemctl reload apache2
 
 ---
 
-### Mythic nginx SSL Certificate Missing
+## Mythic nginx SSL Certificate Missing
 
 **Symptoms:** `mythic_nginx` container keeps restarting. Logs show:
 
@@ -1255,7 +1255,7 @@ sudo ./mythic-cli status
 
 ---
 
-### Guacamole Connections Not Auto-Created
+## Guacamole Connections Not Auto-Created
 
 **Symptoms:** Some or all of the 7 connections don't appear in Guacamole UI after deployment
 
@@ -1292,7 +1292,7 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
 
 ---
 
-### Mythic Not Starting
+## Mythic Not Starting
 
 **Symptoms:** mythic-cli status shows containers not running
 
@@ -1317,7 +1317,7 @@ sudo ./mythic-cli restart
 
 ---
 
-### Sliver Not Installed
+## Sliver Not Installed
 
 **Symptoms:** `sliver-server` command not found
 
@@ -1333,7 +1333,7 @@ curl https://sliver.sh/install | sudo bash
 
 ---
 
-### Havoc Build Failed
+## Havoc Build Failed
 
 **Symptoms:** Havoc teamserver binary not found or service fails to start
 
@@ -1356,7 +1356,7 @@ sudo -E /usr/local/go/bin/go build -o teamserver .
 
 ---
 
-### Guacamole RDP Fails
+## Guacamole RDP Fails
 
 **Symptoms:** Can't connect to Windows via Guacamole
 
@@ -1379,7 +1379,7 @@ nc -zv win-operator 3389
 
 ---
 
-### Agent Won't Callback
+## Agent Won't Callback
 
 **Symptoms:** Agent executes but no callback in Mythic/Sliver/Havoc
 
@@ -1409,7 +1409,7 @@ sudo /root/test_redirector.sh
 
 ---
 
-### Terraform Errors
+## Terraform Errors
 
 **Error:** `InvalidKeyPair.NotFound`
 
