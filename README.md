@@ -1,4 +1,4 @@
-# redStack: A Boot-to-Breach Lab Environment for Red Team Operations
+# redStack: A Boot-to-Breach Lab Environment for Red Team Operators
 
 > [!WARNING]
 > This is still very much in development! Please excuse the mess while I continue to get this to a more stable release version.
