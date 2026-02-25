@@ -802,13 +802,14 @@ The Sliver daemon runs automatically as a systemd service on boot. Connect to it
 sliver-client
 ```
 
-**On first login only** — import the pre-built C2 profile. This only needs to be done once per deployment since Sliver stores it in its database:
+**On first login only:** import the pre-built C2 profile. This only needs to be done once per deployment since Sliver stores it in its database:
 
 ```text
 sliver > c2profiles import --file /root/redstack-c2-profile.json --name redstack
 ```
 
-The profile is generated at boot with the correct `X-Request-ID` token from your Terraform configuration, so no manual editing is needed.
+> [!NOTE]
+> The `redstack` C2 profile is pre-generated at boot with the correct `X-Request-ID` token from your Terraform configuration. Import it once per deployment; Sliver stores it in its database so this step is not needed again after a reconnect.
 
 **Start the HTTP listener:**
 
@@ -835,13 +836,14 @@ Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfva
 
 **Transfer the implant to the Windows workstation:**
 
-From PowerShell on the Windows operator machine, SCP the file directly from Sliver without interrupting the Sliver console:
+> [!TIP]
+> Run the SCP command from PowerShell on the Windows workstation. The `sliver` hostname resolves automatically via the hosts file, so no IP is needed. This does not interrupt your active Sliver console session.
 
 ```powershell
 scp admin@sliver:/tmp/implant.exe C:\Users\Administrator\Desktop\implant.exe
 ```
 
-The `sliver` hostname resolves automatically via the hosts file. Authenticate with the lab SSH password when prompted.
+Authenticate with the lab SSH password when prompted.
 
 Execute the implant on the Windows workstation. You should see a new session appear in the Sliver console.
 
@@ -851,7 +853,12 @@ Execute the implant on the Windows workstation. You should see a new session app
 
 ```text
 sliver > sessions
+```
 
+> [!TIP]
+> Use `sessions -i [SESSION_ID]` to list and interact with a session in one command instead of two steps.
+
+```text
 sliver > use [SESSION_ID]
 
 sliver (SESSION) > whoami
@@ -873,7 +880,7 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 > [!IMPORTANT]
 > Havoc is a modern open-source C2 framework developed by Paul Ungur (5pider) with a focus on evasion and advanced post-exploitation. It features a Qt-based GUI client (the "Katana" client) that connects to a remote teamserver, similar in model to Cobalt Strike. Havoc's agents ("Demons") are written in C and include features like indirect syscalls and sleep obfuscation, making it a popular choice for practicing modern evasion techniques.
 >
-> **Access model:** The Havoc client GUI runs directly on the Havoc server inside an XFCE4 desktop. Operators access it through Guacamole via VNC — no local client install required.
+> **Access model:** The Havoc client GUI runs directly on the Havoc server inside an XFCE4 desktop. Operators access it through Guacamole via VNC with no local client install required.
 
 ### Objective: Havoc Proof-of-Function
 
@@ -891,7 +898,7 @@ sudo systemctl status havoc
 
 The teamserver runs on port 40056 with the profile at `/opt/Havoc/profiles/default.yaotl`. It starts automatically on boot.
 
-**Operator Credentials** (same lab password as all other machines — see `terraform output deployment_info`):
+**Operator Credentials** (same lab password as all other machines; see `terraform output deployment_info`):
 
 - Username: `operator`
 - Password: `<lab-password>`
@@ -902,11 +909,22 @@ If the teamserver is not running, start it:
 sudo systemctl start havoc
 ```
 
+> [!CAUTION]
+> If the teamserver starts and immediately crashes, a stale database from a previous deployment may be the cause. Delete it and restart:
+>
+> ```bash
+> rm /opt/Havoc/teamserver/data/teamserver.db
+> sudo systemctl restart havoc
+> ```
+
 **Checkpoint:** ✅ Havoc teamserver running on port 40056
 
 ### Step 6.2: Open the Havoc Desktop and Connect the Client
 
 **Via Guacamole:** Click **"Havoc C2 Desktop (VNC)"**
+
+> [!NOTE]
+> Havoc has two separate Guacamole connections. The **SSH** connection gives terminal-only access for checking service status and logs. The **VNC** connection opens the full XFCE4 desktop where the GUI client runs. The Havoc client can only be used from the VNC session.
 
 An XFCE4 desktop loads. The Havoc GUI client launches automatically. When the login dialog appears, enter:
 
@@ -925,12 +943,13 @@ havoc-client client
 
 ### Step 6.3: Create Listener and Generate Demon
 
-Get your token value before starting:
-
-```bash
-terraform output deployment_info
-# Look for: C2 Header: X-Request-ID: <token>
-```
+> [!IMPORTANT]
+> Retrieve your `X-Request-ID` token before creating the listener. It is required for the **Headers** field and gets baked into the demon at generation time. Run this on your local machine:
+>
+> ```bash
+> terraform output deployment_info
+> # Look for: C2 Header: X-Request-ID: <token>
+> ```
 
 **Create the listener in the Havoc client:**
 
@@ -953,9 +972,12 @@ terraform output deployment_info
 
 **Generate a Demon (Havoc implant):**
 
+> [!CAUTION]
+> The **Spawn64** and **Spawn32** fields in the Injection section are required. Leaving either blank causes a silent build error. Always fill both in before clicking Generate.
+
 1. Navigate to: **Attack → Payloads**
 2. Select the listener you just created, set Arch **x64**, Format **Windows Exe**
-3. Fill in the **Injection** section — Spawn64 and Spawn32 are required (leave blank = build error):
+3. Fill in the **Injection** section:
    - **Spawn64:** `C:\Windows\System32\notepad.exe`
    - **Spawn32:** `C:\Windows\SysWOW64\notepad.exe`
 4. Click **Generate** — the `.exe` is saved to `/home/admin/Desktop/demon.x64.exe`
@@ -1052,6 +1074,8 @@ sudo tail -20 /var/log/apache2/redirector-access.log
 ---
 
 ## Troubleshooting
+
+Reference this section if any component is not behaving as expected after deployment. Each subsection targets a specific failure mode with symptoms, root cause, and fix.
 
 ### Component Health Checks
 
