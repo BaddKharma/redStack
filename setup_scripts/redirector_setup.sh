@@ -249,7 +249,7 @@ cat > /etc/apache2/sites-available/redirector-http.conf << 'APACHECONF'
 
     # Havoc C2 - header validation + URI prefix routing
     RewriteCond %%{HTTP:HEADER_NAME_PLACEHOLDER} ^HEADER_VALUE_PLACEHOLDER$
-    RewriteRule ^HAVOC_PREFIX_PLACEHOLDER/(.*) http://HAVOC_IP_PLACEHOLDER/$1 [P,L]
+    RewriteRule ^(HAVOC_PREFIX_PLACEHOLDER/.*) http://HAVOC_IP_PLACEHOLDER$1 [P,L]
     ProxyPassReverse HAVOC_PREFIX_PLACEHOLDER/ http://HAVOC_IP_PLACEHOLDER/
 
     # Default: serve decoy page (falls through to DocumentRoot)
@@ -295,7 +295,7 @@ cat > /etc/apache2/sites-available/redirector-https.conf << 'APACHECONF'
 
     # Havoc C2 - header validation + URI prefix routing
     RewriteCond %%{HTTP:HEADER_NAME_PLACEHOLDER} ^HEADER_VALUE_PLACEHOLDER$
-    RewriteRule ^HAVOC_PREFIX_PLACEHOLDER/(.*) http://HAVOC_IP_PLACEHOLDER/$1 [P,L]
+    RewriteRule ^(HAVOC_PREFIX_PLACEHOLDER/.*) http://HAVOC_IP_PLACEHOLDER$1 [P,L]
     ProxyPassReverse HAVOC_PREFIX_PLACEHOLDER/ http://HAVOC_IP_PLACEHOLDER/
 
     # Default: serve decoy page (falls through to DocumentRoot)
