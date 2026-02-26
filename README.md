@@ -220,7 +220,6 @@ Deploy all AWS infrastructure using Terraform: VPCs, security groups, EC2 instan
 ### Step 1.1: Configure Terraform Variables
 
 ```bash
-cd redstack_tf
 cp terraform.tfvars.example terraform.tfvars
 nano terraform.tfvars   # Linux/Mac
 notepad terraform.tfvars  # Windows
