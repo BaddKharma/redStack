@@ -563,7 +563,70 @@ exit
 
 **Checkpoint:** ✅ SSL certificate issued, HTTPS active on redirector
 
-### Step 3.2: Review Configuration
+### Step 3.2: Run the Connectivity Test
+
+A pre-installed script checks the full redirector stack in one command:
+
+```bash
+sudo /root/test_redirector.sh
+```
+
+**Key sections of expected output:**
+
+```text
+===== Redirector Connectivity Test =====
+
+[*] Apache status:
+● apache2.service - The Apache HTTP Server
+     Active: active (running) ...
+
+[*] Enabled Apache modules:
+ deflate_module (shared)
+ headers_module (shared)
+ proxy_module (shared)
+ proxy_http_module (shared)
+ rewrite_module (shared)
+ ssl_module (shared)
+
+[*] Active VirtualHosts:
+*:80                   yourdomain.tld (.../redirector-http.conf:1)
+*:443                  yourdomain.tld (.../redirector-https.conf:1)
+
+[*] Testing direct backend connectivity:
+  Mythic: OK
+  Sliver: FAILED
+  Havoc:  FAILED
+
+[*] Testing decoy page (no header - should get CloudEdge CDN page):
+<!DOCTYPE html>
+<html lang="en">
+...
+
+[*] Testing C2 routing WITH correct header:
+< HTTP/1.1 404 Not Found
+
+[*] Testing C2 routing WITHOUT header (should get decoy):
+< HTTP/1.1 200 OK
+
+[*] Header validation:
+  Header:  X-Request-ID: <your-token>
+
+[*] URI routing (requires correct header):
+  /cdn/media/stream/ -> Mythic  (10.50.x.x)
+  /cloud/storage/objects/ -> Sliver  (10.50.x.x)
+  /edge/cache/assets/ -> Havoc   (10.50.x.x)
+```
+
+> [!NOTE]
+> **Sliver and Havoc show FAILED** — This is expected. C2 listeners for Sliver and Havoc have not been started yet (covered in Parts 5 and 6). Mythic shows OK because its HTTP port is reachable before a listener is configured. Re-run this script after completing Parts 5 and 6 to confirm all three backends are reachable.
+>
+> **C2 routing WITH header returns 404** — The request was proxied to Mythic (header check passed) but Mythic has no listener running yet, so it returns 404. This is correct. If the decoy page is returned instead, the header value is wrong.
+>
+> **C2 routing WITHOUT header returns 200** — The decoy page is served correctly when no valid header is present.
+
+**Checkpoint:** ✅ Apache active, required modules loaded, VirtualHosts on 80/443, decoy page and header validation working
+
+### Step 3.3: Review Configuration
 
 **SSH to redirector** (substitute your actual redirector IP):
 
@@ -599,7 +662,7 @@ Each VirtualHost uses three security layers before proxying traffic:
 
 **Checkpoint:** ✅ Understand the three-layer security model
 
-### Step 3.3: Security Layer Details
+### Step 3.4: Security Layer Details
 
 #### Layer 1: redirect.rules (Automated Scanner Blocking)
 
@@ -647,7 +710,7 @@ Mythic and Sliver have the URI prefix stripped before forwarding. Havoc receives
 
 **Checkpoint:** ✅ Understand header validation, URI routing, and scanner blocking
 
-### Step 3.4: Test the Security Layers
+### Step 3.5: Test the Security Layers
 
 > [!IMPORTANT]
 > `curl` is blocked by redirect.rules (it's in the suspicious User-Agent list). All manual tests must use a browser-like User-Agent with `-A`.
@@ -669,7 +732,7 @@ curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://<YOUR_DOMAIN>/cdn/med
 
 **Checkpoint:** ✅ Security layers verified
 
-### Step 3.5: Review Logs
+### Step 3.6: Review Logs
 
 All C2 traffic is logged to separate access/error log files:
 
