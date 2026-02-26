@@ -1133,15 +1133,6 @@ From the Windows machine (via Guacamole RDP or MobaXterm), pull the file from th
 scp admin@havoc:/home/admin/Desktop/demon.x64.exe C:\Users\Administrator\Desktop\
 ```
 
-Then zip and download via Guacamole drive share:
-
-```powershell
-Compress-Archive -Path C:\Users\Administrator\Desktop\demon.x64.exe -DestinationPath C:\Users\Administrator\Desktop\demon.zip
-Copy-Item C:\Users\Administrator\Desktop\demon.zip C:\guacshare\
-```
-
-> Open the Guacamole sidebar (`Ctrl+Alt+Shift`), click the **Drive** section, and download `demon.zip` to your local machine.
-
 **Checkpoint:** ✅ Havoc Demon calling back through redirector URI prefix /edge/cache/assets/
 
 ---
