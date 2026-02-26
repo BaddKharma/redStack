@@ -1,6 +1,7 @@
 # redStack: A Boot-to-Breach Lab Environment for Red Team Operators
 
 > [!WARNING]
+> External Target Environment is still being Tested/Debugged, Rest of the environment works fine.
 > This is still very much in development! Please excuse the mess while I continue to get this to a more stable release version.
 
 ## Complete Deployment Walkthrough
