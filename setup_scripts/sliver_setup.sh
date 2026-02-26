@@ -141,6 +141,7 @@ jq -n \
       "cookies": ["PHPSESSID"]
     }
   }' > /root/redstack-c2-profile.json
+chmod 644 /root/redstack-c2-profile.json
 echo "[+] C2 profile written to /root/redstack-c2-profile.json"
 
 # Create operator config generation script
