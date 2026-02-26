@@ -394,11 +394,7 @@ dig +short yourdomain.tld
 **Expected:** The IP returned should match your redirector's Elastic IP.
 
 > [!NOTE]
-> DNS propagation can vary. After DNS resolves correctly, run Certbot on the redirector (see Step 2.4):
->
-> ```bash
-> sudo certbot --apache -d yourdomain.tld
-> ```
+> DNS propagation can vary. Once DNS resolves correctly, proceed to Part 3 to run Certbot and configure the redirector.
 
 **Checkpoint:** ✅ Domain pointed to redirector IP, DNS verified
 
@@ -482,7 +478,15 @@ ping guac
 
 **Checkpoint:** ✅ All lab machines reachable by hostname from Windows
 
-### Step 2.4: Obtain SSL Certificate
+---
+
+## Part 3: Apache Redirector Configuration
+
+### Objective: Configure and Understand the Redirector
+
+This section covers the one manual step required after deployment (SSL certificate), then walks through the pre-configured security layers.
+
+### Step 3.1: Obtain SSL Certificate
 
 Once DNS has propagated (Step 1.6), SSH to the redirector and run Certbot.
 
@@ -493,8 +497,6 @@ Once DNS has propagated (Step 1.6), SSH to the redirector and run Certbot.
 | From your host workstation | `ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>` (use `.pem` key) |
 | Via Guacamole | Click **"Apache Redirector (SSH)"** in the Guacamole portal |
 | From Windows workstation | Open MobaXterm → **redStack Lab** → **Apache Redirector (SSH)** |
-
-**Host workstation (substitute your actual redirector IP):**
 
 **Windows (PowerShell):**
 
@@ -520,15 +522,7 @@ exit
 
 **Checkpoint:** ✅ SSL certificate issued, HTTPS active on redirector
 
----
-
-## Part 3: Apache Redirector Configuration
-
-### Objective: Understand Redirector Security Layers
-
-The redirector is pre-configured with multiple security layers. This section explains how they work and how to customize them.
-
-### Step 3.1: Review Configuration
+### Step 3.2: Review Configuration
 
 **SSH to redirector** (substitute your actual redirector IP):
 
@@ -564,7 +558,7 @@ Each VirtualHost uses three security layers before proxying traffic:
 
 **Checkpoint:** ✅ Understand the three-layer security model
 
-### Step 3.2: Security Layer Details
+### Step 3.3: Security Layer Details
 
 #### Layer 1: redirect.rules (Automated Scanner Blocking)
 
@@ -612,7 +606,7 @@ Mythic and Sliver have the URI prefix stripped before forwarding. Havoc receives
 
 **Checkpoint:** ✅ Understand header validation, URI routing, and scanner blocking
 
-### Step 3.3: Test the Security Layers
+### Step 3.4: Test the Security Layers
 
 > [!IMPORTANT]
 > `curl` is blocked by redirect.rules (it's in the suspicious User-Agent list). All manual tests must use a browser-like User-Agent with `-A`.
@@ -634,7 +628,7 @@ curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://<YOUR_DOMAIN>/cdn/med
 
 **Checkpoint:** ✅ Security layers verified
 
-### Step 3.4: Review Logs
+### Step 3.5: Review Logs
 
 All C2 traffic is logged to separate access/error log files:
 
