@@ -259,7 +259,7 @@ enable_external_vpn = false   # Set to true + configure external_vpn_cidrs for V
 tags = {
   Owner      = "Operator"
   CostCenter = "redStack"
-  Purpose    = "redStack-Boot-to-Breach"
+  Purpose    = "Boot-to-Breach Training Environment"
 }
 ```
 

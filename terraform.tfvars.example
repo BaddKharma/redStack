@@ -67,7 +67,7 @@ enable_external_vpn  = false
 tags = {
   Owner      = "Operator"
   CostCenter = "redStack"
-  Purpose    = "redStack-Boot-to-Breach"
+  Purpose    = "Boot-to-Breach Training Environment"
 }
 
 # ============================================================================
