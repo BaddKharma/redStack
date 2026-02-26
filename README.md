@@ -517,7 +517,45 @@ ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 sudo certbot --apache -d yourdomain.tld
 ```
 
-Follow the prompts. Certbot automatically updates the Apache HTTPS config and configures auto-renewal.
+Certbot will walk you through a few prompts:
+
+```text
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Enter email address (used for urgent renewal and security notices)
+ (Enter 'c' to cancel): you@youremail.com
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Please read the Terms of Service at
+https://letsencrypt.org/documents/LE-SA-v1.6-August-18-2025.pdf. You must agree
+in order to register with the ACME server. Do you agree?
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+(Y)es/(N)o: Y
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Would you be willing, once your first certificate is successfully issued, to
+share your email address with the Electronic Frontier Foundation, a founding
+partner of the Let's Encrypt project and the non-profit organization that
+develops Certbot? We'd like to send you email about our work encrypting the web,
+EFF news, campaigns, and ways to support digital freedom.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+(Y)es/(N)o: N
+Account registered.
+Requesting a certificate for yourdomain.tld
+
+Successfully received certificate.
+Certificate is saved at: /etc/letsencrypt/live/yourdomain.tld/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/yourdomain.tld/privkey.pem
+This certificate expires on 2026-05-27.
+These files will be updated when the certificate renews.
+Certbot has set up a scheduled task to automatically renew this certificate in the background.
+
+Deploying certificate
+Successfully deployed certificate for yourdomain.tld to /etc/apache2/sites-enabled/redirector-https.conf
+Added an HTTP->HTTPS rewrite in addition to other RewriteRules; you may wish to check for overall consistency.
+Congratulations! You have successfully enabled HTTPS on https://yourdomain.tld
+```
+
+Certbot automatically updates the Apache HTTPS config and configures auto-renewal.
 
 ```bash
 exit
