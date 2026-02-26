@@ -13,6 +13,13 @@ localPub_ip = "1.2.3.4/32"
 # Must already exist in AWS EC2 Console > Key Pairs
 ssh_key_name = "rs-rsa-key"
 
+# Path to your SSH private key (.pem file) — used to decrypt the Windows Administrator password
+ssh_private_key_path = "./rs-rsa-key.pem"
+
+# Your redirector domain — apex or subdomain (e.g. c2.yourdomain.com)
+# Point this domain's A record to the Redirector Elastic IP after deployment
+redirector_domain = "c2.example.com"
+
 # ============================================================================
 # OPTIONAL VARIABLES - Customize as needed
 # ============================================================================
@@ -24,28 +31,41 @@ aws_region = "us-east-1"
 project_name = "redStack"
 
 # Instance types (adjust based on budget/performance needs)
-mythic_instance_type = "t3.medium"      # 2 vCPU, 4GB RAM
-guacamole_instance_type = "t3.small"    # 2 vCPU, 2GB RAM
-windows_instance_type = "t3.medium"     # 2 vCPU, 4GB RAM
+mythic_instance_type     = "t3.medium"  # 2 vCPU, 4GB RAM
+guacamole_instance_type  = "t3.small"   # 2 vCPU, 2GB RAM
+windows_instance_type    = "t3.medium"  # 2 vCPU, 4GB RAM
+sliver_instance_type     = "t3.small"   # 2 vCPU, 2GB RAM
+havoc_instance_type      = "t3.medium"  # 2 vCPU, 4GB RAM
 redirector_instance_type = "t3.micro"   # 1 vCPU, 1GB RAM
 
-# NOTE: Passwords are auto-generated. Run 'terraform output lab_password' to retrieve.
-
 # Network configuration
-use_default_vpc = true  # Set to false to create dedicated VPC
+use_default_vpc = true    # Set to false to create a dedicated VPC
+# vpc_cidr = "10.50.0.0/16"  # Only used if use_default_vpc = false
 
 # Mythic configuration
 enable_mythic_autostart = true  # Auto-start Mythic on boot
 
 # Redirector configuration
-redirector_domain = "c2.example.com"  # Change to your real domain
 enable_redirector_htaccess_filtering = true
+
+# C2 URI prefixes (CDN/cloud-style paths routed through the redirector)
+mythic_uri_prefix = "/cdn/media/stream"
+sliver_uri_prefix = "/cloud/storage/objects"
+havoc_uri_prefix  = "/edge/cache/assets"
+
+# C2 header validation
+# c2_header_name  = "X-Request-ID"  # Defaults to X-Request-ID
+# c2_header_value = ""              # Leave empty to auto-generate a token
+
+# External VPN routing (for HTB/THM/ProvingGrounds access via redirector)
+enable_external_vpn  = false
+# external_vpn_cidrs = ["10.10.0.0/16"]  # CIDR blocks reachable through the VPN tunnel
 
 # Optional: Custom tags for all resources
 tags = {
-  Owner = "YourName"
+  Owner      = "YourName"
   CostCenter = "redStack"
-  Purpose = "redStack-Boot-to-Breach"
+  Purpose    = "redStack-Boot-to-Breach"
 }
 
 # ============================================================================
@@ -62,10 +82,10 @@ tags = {
 #    Then: chmod 400 ./rs-rsa-key.pem
 #
 # 3. Estimated monthly cost (all instances running 24/7):
-#    - t3.medium (2x): ~$60/month
-#    - t3.small (1x): ~$15/month
-#    - t3.micro (1x): ~$7.50/month
-#    Total: ~$142.50/month + data transfer
+#    - t3.medium (3x): ~$90/month
+#    - t3.small  (2x): ~$30/month
+#    - t3.micro  (1x): ~$7.50/month
+#    Total: ~$127.50/month + data transfer
 #
 # 4. To reduce costs:
 #    - Stop instances when not in use
