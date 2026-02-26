@@ -51,10 +51,10 @@ echo "[*] Testing decoy page (no header - should get CloudEdge CDN page):"
 curl -s -A "$UA" http://localhost/ | head -5
 echo ""
 echo "[*] Testing C2 routing WITH correct header:"
-curl -v -A "$UA" -H "HEADER_NAME_PLACEHOLDER: HEADER_VALUE_PLACEHOLDER" http://localhost/MYTHIC_PREFIX_PLACEHOLDER/ 2>&1 | head -15
+curl -v -A "$UA" -H "HEADER_NAME_PLACEHOLDER: HEADER_VALUE_PLACEHOLDER" http://localhostMYTHIC_PREFIX_PLACEHOLDER/ 2>&1 | head -15
 echo ""
 echo "[*] Testing C2 routing WITHOUT header (should get decoy):"
-curl -v -A "$UA" http://localhost/MYTHIC_PREFIX_PLACEHOLDER/ 2>&1 | head -15
+curl -v -A "$UA" http://localhostMYTHIC_PREFIX_PLACEHOLDER/ 2>&1 | head -15
 echo ""
 echo "[*] UFW status:"
 ufw status verbose
@@ -253,6 +253,12 @@ cat > /etc/apache2/sites-available/redirector-http.conf << 'APACHECONF'
     ProxyPassReverse HAVOC_PREFIX_PLACEHOLDER/ http://HAVOC_IP_PLACEHOLDER/
 
     # Default: serve decoy page (falls through to DocumentRoot)
+
+    <Directory /var/www/html/decoy>
+        AllowOverride All
+        Options -Indexes
+        Require all granted
+    </Directory>
 </VirtualHost>
 APACHECONF
 
@@ -299,6 +305,12 @@ cat > /etc/apache2/sites-available/redirector-https.conf << 'APACHECONF'
     ProxyPassReverse HAVOC_PREFIX_PLACEHOLDER/ http://HAVOC_IP_PLACEHOLDER/
 
     # Default: serve decoy page (falls through to DocumentRoot)
+
+    <Directory /var/www/html/decoy>
+        AllowOverride All
+        Options -Indexes
+        Require all granted
+    </Directory>
 
     SSLProxyEngine On
     SSLProxyVerify none
