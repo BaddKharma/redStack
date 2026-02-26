@@ -934,7 +934,7 @@ sliver-client
 **On first login only:** import the pre-built C2 profile. This only needs to be done once per deployment since Sliver stores it in its database:
 
 ```text
-sliver > c2profiles import --file /root/redstack-c2-profile.json --name redstack
+sliver > c2profiles import --file /home/admin/redstack-c2-profile.json --name redstack
 ```
 
 > [!NOTE]

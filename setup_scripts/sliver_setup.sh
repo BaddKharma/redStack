@@ -140,9 +140,9 @@ jq -n \
       "headers": [{"name": "Cache-Control", "value": "no-store, no-cache, must-revalidate", "probability": 100, "method": "GET"}],
       "cookies": ["PHPSESSID"]
     }
-  }' > /root/redstack-c2-profile.json
-chmod 644 /root/redstack-c2-profile.json
-echo "[+] C2 profile written to /root/redstack-c2-profile.json"
+  }' > /home/admin/redstack-c2-profile.json
+chmod 644 /home/admin/redstack-c2-profile.json
+echo "[+] C2 profile written to /home/admin/redstack-c2-profile.json"
 
 # Create operator config generation script
 cat > /root/generate_operator_config.sh << 'OPSCRIPT'
@@ -175,7 +175,7 @@ echo "1. Connect to the Sliver console:"
 echo "   sliver-client"
 echo ""
 echo "2. Import the redstack C2 profile (first time only):"
-echo "   c2profiles import --file /root/redstack-c2-profile.json --name redstack"
+echo "   c2profiles import --file /home/admin/redstack-c2-profile.json --name redstack"
 echo ""
 echo "3. Start an HTTP listener:"
 echo "   http --lhost 0.0.0.0 --lport 80"
