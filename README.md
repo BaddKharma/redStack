@@ -252,10 +252,12 @@ enable_external_vpn = false   # Set to true + configure external_vpn_cidrs for V
 # C2 header token — leave empty to auto-generate
 c2_header_value = ""
 
-# Optional: custom tags applied to all AWS resources
+# Optional: custom tags applied to every AWS resource (instances, SGs, EIPs, etc.)
+# Useful for cost tracking and filtering resources in the AWS Console
 tags = {
-  Owner      = "YourName"
+  Owner      = "Operator"
   CostCenter = "redStack"
+  Purpose    = "redStack-Boot-to-Breach"
 }
 ```
 

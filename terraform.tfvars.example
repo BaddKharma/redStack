@@ -61,9 +61,10 @@ havoc_uri_prefix  = "/edge/cache/assets"
 enable_external_vpn  = false
 # external_vpn_cidrs = ["10.10.0.0/16"]  # CIDR blocks reachable through the VPN tunnel
 
-# Optional: Custom tags for all resources
+# Optional: Custom tags applied to every AWS resource (instances, SGs, EIPs, etc.)
+# Useful for cost tracking, filtering resources in the AWS Console, and billing reports
 tags = {
-  Owner      = "YourName"
+  Owner      = "Operator"
   CostCenter = "redStack"
   Purpose    = "redStack-Boot-to-Breach"
 }
