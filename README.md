@@ -242,6 +242,7 @@ sliver_instance_type = "t3.small"
 havoc_instance_type  = "t3.medium"
 
 # C2 URI prefixes (CDN/cloud-style paths on the redirector)
+# These are baked into payloads at deploy time. Customize before deploying.
 mythic_uri_prefix = "/cdn/media/stream"
 sliver_uri_prefix = "/cloud/storage/objects"
 havoc_uri_prefix  = "/edge/cache/assets"

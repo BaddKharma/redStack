@@ -49,6 +49,7 @@ enable_mythic_autostart = true  # Auto-start Mythic on boot
 enable_redirector_htaccess_filtering = true
 
 # C2 URI prefixes (CDN/cloud-style paths routed through the redirector)
+# These are baked into payloads at deploy time. Customize before deploying.
 mythic_uri_prefix = "/cdn/media/stream"
 sliver_uri_prefix = "/cloud/storage/objects"
 havoc_uri_prefix  = "/edge/cache/assets"
