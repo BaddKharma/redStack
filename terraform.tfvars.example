@@ -53,9 +53,9 @@ mythic_uri_prefix = "/cdn/media/stream"
 sliver_uri_prefix = "/cloud/storage/objects"
 havoc_uri_prefix  = "/edge/cache/assets"
 
-# C2 header validation
-# c2_header_name  = "X-Request-ID"  # Defaults to X-Request-ID
-# c2_header_value = ""              # Leave empty to auto-generate a token
+# C2 header validation is always enabled. These override the defaults:
+# c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
+# c2_header_value = ""              # Token value — leave empty to auto-generate (recommended)
 
 # External VPN routing (for HTB/THM/ProvingGrounds access via redirector)
 enable_external_vpn  = false
