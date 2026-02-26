@@ -510,6 +510,9 @@ ssh -i ".\rs-rsa-key.pem" admin@<REDIR_PUBLIC_IP>
 ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 ```
 
+> [!NOTE]
+> **What is Certbot?** Certbot is a free, open-source tool from the Electronic Frontier Foundation (EFF) that automates obtaining and renewing TLS certificates from Let's Encrypt. Running it against the Apache server automatically provisions a trusted certificate, updates the HTTPS VirtualHost config, and sets up a cron job for auto-renewal — no manual certificate management required.
+
 ```bash
 sudo certbot --apache -d yourdomain.tld
 ```
