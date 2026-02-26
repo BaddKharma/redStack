@@ -271,7 +271,6 @@ sudo chown -R admin:admin /opt/Havoc
 echo "[*] Building Havoc teamserver..."
 cd /opt/Havoc/teamserver
 /usr/local/go/bin/go build -buildvcs=false -o teamserver .
-sudo setcap 'cap_net_bind_service=+ep' /opt/Havoc/teamserver/teamserver
 echo "[+] Teamserver built"
 
 # ── Build client (Qt5) ───────────────────────────────────────────────────────
@@ -293,7 +292,9 @@ WRAPPER
 sudo chmod +x /usr/local/bin/havoc-client
 
 # ── Final ownership and service start ────────────────────────────────────────
+# chown must run before setcap — chown clears file capabilities on Linux
 sudo chown -R admin:admin /opt/Havoc
+sudo setcap 'cap_net_bind_service=+ep' /opt/Havoc/teamserver/teamserver
 
 echo "[*] Starting Havoc teamserver..."
 sudo systemctl daemon-reload
