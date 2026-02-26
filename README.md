@@ -249,8 +249,9 @@ havoc_uri_prefix  = "/edge/cache/assets"
 # External VPN routing (HTB/THM/ProvingGrounds)
 enable_external_vpn = false   # Set to true + configure external_vpn_cidrs for VPN access (see Part 8)
 
-# C2 header token — leave empty to auto-generate
-c2_header_value = ""
+# C2 header validation is always enabled. These override the defaults:
+# c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
+# c2_header_value = ""              # Token value — leave empty to auto-generate (recommended)
 
 # Optional: custom tags applied to every AWS resource (instances, SGs, EIPs, etc.)
 # Useful for cost tracking and filtering resources in the AWS Console
