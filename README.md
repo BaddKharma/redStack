@@ -251,6 +251,12 @@ enable_external_vpn = false   # Set to true + configure external_vpn_cidrs for V
 
 # C2 header token — leave empty to auto-generate
 c2_header_value = ""
+
+# Optional: custom tags applied to all AWS resources
+tags = {
+  Owner      = "YourName"
+  CostCenter = "redStack"
+}
 ```
 
 > [!NOTE]
