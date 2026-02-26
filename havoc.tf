@@ -156,6 +156,7 @@ resource "aws_instance" "havoc" {
 
   user_data = templatefile("${path.module}/setup_scripts/havoc_setup.sh", {
     ssh_password          = random_password.lab.result
+    main_vpc_cidr         = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
     redirector_vpc_cidr   = aws_vpc.redirector.cidr_block
     havoc_private_ip      = aws_network_interface.havoc.private_ip
     guacamole_private_ip  = aws_network_interface.guacamole.private_ip

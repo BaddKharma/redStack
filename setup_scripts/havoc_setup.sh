@@ -11,6 +11,7 @@ exec 2>&1
 echo "===== Havoc C2 Server Setup Started $(date) ====="
 
 SSH_PASSWORD="${ssh_password}"
+MAIN_VPC_CIDR="${main_vpc_cidr}"
 REDIRECTOR_VPC_CIDR="${redirector_vpc_cidr}"
 
 # Set hostname
@@ -101,7 +102,7 @@ ufw allow 22/tcp
 ufw allow from $REDIRECTOR_VPC_CIDR to any port 80 proto tcp comment 'HTTP C2 from redirector'
 ufw allow from $REDIRECTOR_VPC_CIDR to any port 443 proto tcp comment 'HTTPS C2 from redirector'
 ufw allow 40056/tcp comment 'Havoc teamserver'
-ufw allow from 10.0.0.0/8 to any port 5901 proto tcp comment 'VNC from internal VPC'
+ufw allow from $MAIN_VPC_CIDR to any port 5901 proto tcp comment 'VNC from main VPC'
 ufw --force enable
 
 # Create Havoc profile (contains SSH_PASSWORD — must be templated here)
