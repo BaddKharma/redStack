@@ -79,6 +79,8 @@ sed -i "s|HAVOC_PREFIX_PLACEHOLDER|$HAVOC_URI_PREFIX|g" /root/test_redirector.sh
 sed -i "s|HEADER_NAME_PLACEHOLDER|$C2_HEADER_NAME|g" /root/test_redirector.sh
 sed -i "s|HEADER_VALUE_PLACEHOLDER|$C2_HEADER_VALUE|g" /root/test_redirector.sh
 chmod +x /root/test_redirector.sh
+cp /root/test_redirector.sh /home/admin/test_redirector.sh
+chmod +x /home/admin/test_redirector.sh
 
 # Update package lists
 echo "[*] Updating package lists..."
@@ -553,7 +555,7 @@ echo "To obtain a Let's Encrypt SSL certificate, run:"
 echo "  sudo certbot --apache -d $DOMAIN_NAME"
 echo ""
 echo "To verify setup, run:"
-echo "  sudo /root/test_redirector.sh"
+echo "  sudo /home/admin/test_redirector.sh"
 
 if [ "$ENABLE_VPN" = "true" ]; then
     echo ""

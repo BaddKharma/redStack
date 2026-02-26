@@ -568,7 +568,7 @@ exit
 A pre-installed script checks the full redirector stack in one command:
 
 ```bash
-sudo /root/test_redirector.sh
+sudo /home/admin/test_redirector.sh
 ```
 
 **Key sections of expected output:**
@@ -1264,7 +1264,7 @@ docker ps
 SSH to the redirector, then run the pre-installed test script:
 
 ```bash
-sudo /root/test_redirector.sh
+sudo /home/admin/test_redirector.sh
 ```
 
 This checks Apache status, VirtualHost config, connectivity to all three C2 backends, and header/decoy page behavior.
@@ -1547,7 +1547,7 @@ sudo tail -100 /var/log/apache2/redirector-ssl-access.log
 sudo tail -100 /var/log/apache2/redirector-ssl-error.log
 
 # Run the pre-installed test script
-sudo /root/test_redirector.sh
+sudo /home/admin/test_redirector.sh
 ```
 
 ---
