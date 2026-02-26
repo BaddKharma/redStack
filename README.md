@@ -234,7 +234,7 @@ ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Wind
 redirector_domain    = "c2.yourdomain.tld"    # Your domain — apex or subdomain (see Step 1.6)
 ```
 
-**Optional but worth reviewing:**
+**Optional** — these have sensible defaults but affect cost, callback URLs baked into payloads, and VPN routing. Review before deploying:
 
 ```hcl
 # Instance types — adjust for budget/performance
