@@ -226,7 +226,7 @@ resource "aws_instance" "redirector" {
       mythic_private_ip   = aws_network_interface.mythic.private_ip
       sliver_private_ip   = aws_network_interface.sliver.private_ip
       havoc_private_ip    = aws_network_interface.havoc.private_ip
-      domain_name         = var.redirector_domain != "" ? var.redirector_domain : "c2.example.com"
+      domain_name         = var.redirector_domain
       mythic_uri_prefix   = var.mythic_uri_prefix
       sliver_uri_prefix   = var.sliver_uri_prefix
       havoc_uri_prefix    = var.havoc_uri_prefix

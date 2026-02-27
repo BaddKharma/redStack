@@ -3,8 +3,11 @@
 # Run this manually after logging into the Apache redirector instance:
 #   sudo /root/setup_redirector.sh
 #
-# After setup, obtain a Let's Encrypt SSL certificate:
+# With domain: after setup, obtain a Let's Encrypt SSL certificate:
 #   sudo certbot --apache -d <your-domain>
+#
+# Without domain: self-signed cert with IP SAN is generated automatically.
+#   C2 agents should connect to https://<public-ip>/... with cert verification disabled.
 
 set -e
 
@@ -22,6 +25,22 @@ C2_HEADER_NAME="${c2_header_name}"
 C2_HEADER_VALUE="${c2_header_value}"
 ENABLE_VPN="${enable_external_vpn}"
 MAIN_VPC_CIDR="${main_vpc_cidr}"
+
+# Fetch public IP early - needed for cert SAN and no-domain fallback
+IMDS_TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+PUBLIC_IP=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4)
+
+# When no domain is configured, use the public IP as the server identity
+if [ -z "$DOMAIN_NAME" ]; then
+    DOMAIN_NAME="$PUBLIC_IP"
+    CERT_CN="$PUBLIC_IP"
+    CERT_SAN="IP:$PUBLIC_IP"
+    NO_DOMAIN=true
+else
+    CERT_CN="$DOMAIN_NAME"
+    CERT_SAN="DNS:$DOMAIN_NAME,IP:$PUBLIC_IP"
+    NO_DOMAIN=false
+fi
 
 # ============================================================================
 # CREATE TEST SCRIPT EARLY (available even if setup fails partway)
@@ -156,12 +175,14 @@ fi
 ufw --force enable
 
 # Generate self-signed SSL certificate (placeholder until Certbot is run)
-echo "[*] Generating self-signed SSL certificate..."
+# Always includes the public IP as a SAN so IP-based HTTPS connections work
+echo "[*] Generating self-signed SSL certificate (CN=$CERT_CN, SAN=$CERT_SAN)..."
 mkdir -p /etc/apache2/ssl
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout /etc/apache2/ssl/redirector.key \
     -out /etc/apache2/ssl/redirector.crt \
-    -subj "/C=US/ST=State/L=City/O=Company/CN=$DOMAIN_NAME"
+    -subj "/C=US/ST=State/L=City/O=Company/CN=$CERT_CN" \
+    -addext "subjectAltName=$CERT_SAN"
 
 # ============================================================================
 # REDIRECT RULES (block security scanners, AV vendors, TOR exit nodes)
@@ -523,20 +544,22 @@ VPNSCRIPT
     chown admin:admin /home/admin/vpn.sh /home/admin/vpn
 fi
 
-# Display public IP
-IMDS_TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-PUBLIC_IP=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4)
-
 echo ""
 echo "===== Redirector Setup Complete ====="
 echo "===== Public IP: $PUBLIC_IP ====="
 echo ""
 echo "Installed components:"
 echo "  - Apache2 with modules: rewrite, ssl, proxy, proxy_http, headers, deflate, proxy_balancer, proxy_html"
+if [ "$NO_DOMAIN" = "false" ]; then
 echo "  - Certbot (run: sudo certbot --apache -d $DOMAIN_NAME)"
+fi
 echo "  - OpenJDK 17"
 echo "  - UFW firewall (ports 22, 80, 443)"
+if [ "$NO_DOMAIN" = "true" ]; then
+echo "  - Self-signed SSL certificate (CN=$PUBLIC_IP, SAN=IP:$PUBLIC_IP) - no domain configured"
+else
 echo "  - Self-signed SSL certificate (replace with Certbot)"
+fi
 echo "  - Decoy page: CloudEdge CDN maintenance page"
 echo "  - redirect.rules: curi0usJack OPSEC rules (AV/scanner/TOR blocking)"
 echo ""
@@ -551,9 +574,16 @@ echo ""
 echo "Requests without the correct header get the decoy page."
 echo "Configure each C2 agent's HTTP profile with the URI prefix AND custom header."
 echo ""
+if [ "$NO_DOMAIN" = "false" ]; then
 echo "To obtain a Let's Encrypt SSL certificate, run:"
 echo "  sudo certbot --apache -d $DOMAIN_NAME"
 echo ""
+else
+echo "No domain configured. Self-signed cert with IP SAN is active."
+echo "C2 agents connecting to https://$PUBLIC_IP will accept the cert."
+echo "To add a domain later, set redirector_domain in terraform.tfvars and re-apply."
+echo ""
+fi
 echo "To verify setup, run:"
 echo "  sudo /home/admin/test_redirector.sh"
 
