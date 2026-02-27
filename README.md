@@ -1781,9 +1781,11 @@ ip -4 addr show tun0 | grep -oP '(?<=inet\s)\d+(\.\d+)+'
 | Sliver | `--http http://<tun0-ip>/cloud/storage/objects/` |
 | Havoc | Hosts: `<tun0-ip>`, PortConn: `80` (HTTP — already the default in the listener config) |
 
-All other settings (URI prefix, `X-Request-ID` header) remain the same. The redirector's Apache listens on all interfaces including `tun0`, so header validation and URI routing apply regardless of how the connection arrives.
+All other settings (URI prefix, `X-Request-ID` header) remain the same.
 
 > [!NOTE]
+> Apache is already listening on `0.0.0.0:80` and `0.0.0.0:443` — all interfaces. The VirtualHost configs use `<VirtualHost *:80>` and `<VirtualHost *:443>`, and UFW allows ports 80/443 on all interfaces. When tun0 comes up after `vpn.sh start`, Apache automatically handles traffic arriving on that IP with no reload or restart required. Header validation and URI routing apply to all requests regardless of which interface they arrive on.
+>
 > If the target machine has outbound internet access (most HTB standalone boxes and many Pro Lab machines do), you can use the public Elastic IP with HTTPS (`https://<REDIR_PUBLIC_IP>/prefix/`) instead. The tun0 IP is only needed when targets are fully isolated from the internet and can only reach the VPN network.
 
 ### Step 8.5: Verify Connectivity from Internal Machines
