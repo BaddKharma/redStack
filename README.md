@@ -1719,16 +1719,22 @@ external_vpn_cidrs  = ["10.10.0.0/16", "10.200.0.0/16"]
 1. Deploy the infrastructure with `terraform apply`
 2. Download your `.ovpn` file from your CTF platform (HTB, THM, or Proving Grounds)
 
-### Step 8.3: Get the .ovpn File onto WIN-OPERATOR
+### Step 8.3: Get the .ovpn File to the Redirector
 
-Download your `.ovpn` file from your CTF platform, then transfer it to WIN-OPERATOR using Guacamole's built-in file transfer:
+The file needs to land at `~/vpn/external.ovpn` on the redirector. Two ways to do it:
 
-1. In Guacamole, open the **"WIN-OPERATOR (RDP)"** connection
-2. Press `Ctrl+Alt+Shift` to open the Guacamole sidebar
-3. Click **Devices**, then drag and drop your `.ovpn` file into the upload area
-4. The file will appear on the Windows desktop
+**Option A: Guacamole sidebar upload (browser only)**
 
-From WIN-OPERATOR, SCP the file to the redirector's persistent config location over the internal network (no key needed for internal transfers):
+1. In Guacamole, open the **"Apache Redirector (SSH)"** connection
+2. Press `Ctrl+Alt+Shift` to open the sidebar
+3. Click **Devices** and upload your `.ovpn` file — it will land in `~`
+4. Rename it into place:
+
+```bash
+mv ~/lab.ovpn ~/vpn/external.ovpn
+```
+
+**Option B: SCP from WIN-OPERATOR (MobaXterm or PowerShell)**
 
 ```bash
 scp lab.ovpn admin@<REDIR_PRIVATE_IP>:~/vpn/external.ovpn
