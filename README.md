@@ -1719,26 +1719,23 @@ external_vpn_cidrs  = ["10.10.0.0/16", "10.200.0.0/16"]
 1. Deploy the infrastructure with `terraform apply`
 2. Download your `.ovpn` file from your CTF platform (HTB, THM, or Proving Grounds)
 
-### Step 8.3: Upload the .ovpn File to the Redirector
+### Step 8.3: Get the .ovpn File onto WIN-OPERATOR
 
-Get the redirector public IP from `terraform output deployment_info`, then:
+Download your `.ovpn` file from your CTF platform, then transfer it to WIN-OPERATOR using Guacamole's built-in file transfer:
 
-**Windows (PowerShell):**
+1. In Guacamole, open the **"WIN-OPERATOR (RDP)"** connection
+2. Press `Ctrl+Alt+Shift` to open the Guacamole sidebar
+3. Click **Devices**, then drag and drop your `.ovpn` file into the upload area
+4. The file will appear on the Windows desktop
+
+From WIN-OPERATOR you can SCP it to the redirector using MobaXterm or PowerShell:
 
 ```powershell
-scp -i ".\rs-rsa-key.pem" "C:\path\to\lab.ovpn" admin@<REDIR_PUBLIC_IP>:~/vpn/
+scp -i "C:\path\to\rs-rsa-key.pem" "C:\Users\Administrator\Desktop\lab.ovpn" admin@<REDIR_PUBLIC_IP>:~/vpn/
 ```
 
-**Linux/Mac (bash):**
-
-```bash
-scp -i rs-rsa-key.pem lab.ovpn admin@<REDIR_PUBLIC_IP>:~/vpn/
-```
-
-**Or via Guacamole:**
-
-1. Open the **"Apache Redirector (SSH)"** connection in Guacamole
-2. Transfer the `.ovpn` file using Guacamole's file transfer feature
+> [!TIP]
+> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SCP file browser — connect to the redirector and drag the file across.
 
 ### Step 8.4: Start the VPN Tunnel
 
