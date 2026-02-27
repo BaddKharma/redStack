@@ -233,20 +233,22 @@ ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Wind
 ```
 
 > [!NOTE]
-> **Open vs Closed Environment — choose before deploying:**
+> **Default deployment uses a public domain with htaccess filtering enabled.** This is the standard mode for real-world use and is what the rest of this guide assumes. The closed environment option below is only for HTB/THM Pro Labs and other isolated OpenVPN environments where no public DNS exists.
 >
-> **Open environment** (internet access, domain registered):
-> Set `redirector_domain` to your domain. Complete Step 1.6 (DNS) and Step 3.1 (Certbot) to get a trusted TLS certificate. Agents call back using your domain over HTTPS.
+> **Open environment** (default — internet access, domain registered):
+> Set `redirector_domain` to your domain. Complete Step 1.6 (DNS) and Step 3.1 (Certbot) to get a trusted TLS certificate. Agents call back using your domain over HTTPS. Scanner/AV blocking via `redirect.rules` is enabled by default.
 >
 > ```hcl
 > redirector_domain = "c2.yourdomain.tld"
 > ```
 >
-> **Closed environment** (no DNS, no internet — HTB/THM Pro Labs, isolated networks):
-> Leave `redirector_domain` empty. The redirector uses its public Elastic IP as the server identity. A self-signed certificate with the IP as a Subject Alternative Name is generated automatically. Skip Step 1.6 and Step 3.1. Agents call back using the redirector IP over HTTPS or HTTP.
+> **Closed environment** (HTB/THM Pro Labs, OpenVPN-only, no public DNS):
+> Leave `redirector_domain` empty and set the two CTF toggles below. The redirector uses its public Elastic IP as the server identity with a self-signed certificate. Scanner/AV blocking is disabled since it is not needed in lab environments. Skip Step 1.6 and Step 3.1. See Part 8 for the full CTF deployment workflow.
 >
 > ```hcl
-> # redirector_domain = ""   # leave commented out or set to empty string
+> # redirector_domain = ""                    # leave empty — redirector uses its public IP
+> enable_external_vpn                  = true  # enables OpenVPN client + VPC routing
+> enable_redirector_htaccess_filtering = false  # disables scanner/AV blocking (not needed in labs)
 > ```
 
 **Optional:** these have sensible defaults but affect callback URLs baked into payloads and VPN routing. Review before deploying:
@@ -262,11 +264,10 @@ mythic_uri_prefix = "/cdn/media/stream"
 sliver_uri_prefix = "/cloud/storage/objects"
 havoc_uri_prefix  = "/edge/cache/assets"
 
-# External VPN routing (HTB/THM/ProvingGrounds)
-enable_external_vpn = false   # Set to true + configure external_vpn_cidrs for VPN access (see Part 8)
-
-# redirect.rules scanner/AV blocking (disable for CTF/lab environments where scanner traffic is not a concern)
-enable_redirector_htaccess_filtering = true   # Set to false for HTB/THM/isolated lab use
+# --- CTF/Pro Lab mode (HTB/THM/ProvingGrounds via OpenVPN) ---
+# Default is open-environment (public domain + htaccess on). Only change these for CTF/Pro Lab use.
+enable_external_vpn                  = false  # Set to true for HTB/THM/PG — enables OpenVPN client + VPC routing (see Part 8)
+enable_redirector_htaccess_filtering = true   # Set to false for HTB/THM/PG — scanner/AV blocking not needed in lab environments
 
 # C2 header validation is always enabled. These override the defaults:
 # c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
@@ -1645,6 +1646,9 @@ At the end of this deployment, you should have:
 
 ## External Target Environments (HTB/THM/ProvingGrounds)
 
+> [!NOTE]
+> **This section is for CTF/Pro Lab use only.** The default redStack deployment uses a public domain, trusted TLS certificate, and htaccess filtering. Only follow Part 8 if you are connecting to an isolated platform (HTB Pro Labs, THM, Proving Grounds) via OpenVPN where targets cannot reach the public internet.
+
 ### Objective: Connect Lab to External CTF Platforms
 
 Route traffic from your internal lab machines (Windows workstation, C2 servers) to external target environments like HackTheBox, TryHackMe, or Proving Grounds through the Apache redirector's OpenVPN tunnel.
@@ -1671,11 +1675,11 @@ redirector, then masqueraded out the VPN tunnel.
 
 **This must be configured before running `terraform apply`.**
 
-Edit `terraform.tfvars` and set:
+Edit `terraform.tfvars` and set the following. These two toggles are the only settings that differ from a standard open-environment deployment:
 
 ```hcl
-enable_external_vpn                  = true
-enable_redirector_htaccess_filtering = false   # disable scanner/AV blocking for CTF use
+enable_external_vpn                  = true   # installs OpenVPN client + enables VPC routing
+enable_redirector_htaccess_filtering = false  # disables scanner/AV blocking (not needed in lab environments)
 ```
 
 This enables the following infrastructure changes:
