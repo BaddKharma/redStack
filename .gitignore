@@ -25,3 +25,12 @@ Thumbs.db
 # Crash logs
 crash.log
 crash.*.log
+
+# Terraform local vars
+terraform.tfvars
+*.tfvars
+*.tfvars.json
+.terraform/
+terraform.tfstate*
+crash.log
+
