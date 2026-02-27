@@ -65,12 +65,20 @@ output "deployment_info" {
 ${var.enable_external_vpn ? <<-VPNINFO
 
   +---------------------------------------------------------------------+
-  | 5b. EXTERNAL VPN ROUTING (via Redirector)                           |
+  | 5b. EXTERNAL VPN ROUTING (OpenVPN + WireGuard)                      |
   +---------------------------------------------------------------------+
     Status:       ENABLED
-    Gateway:      ${aws_network_interface.redirector.private_ip} (redirector)
+    VPN Gateway:  ${aws_network_interface.redirector.private_ip} (redirector, tun0)
+    WG Gateway:   ${aws_network_interface.guacamole.private_ip}  (guacamole, wg0)
     Target CIDRs: ${join(", ", var.external_vpn_cidrs)}
-    VPN Service:  sudo systemctl {start|stop|status} ext-vpn
+    VPN Service:  sudo systemctl {start|stop|status} ext-vpn    (on redirector)
+    WG Service:   sudo wg show                                   (on redirector or guacamole)
+
+    Traffic path (internal -> CTF target):
+      [Teamserver/WIN-OPERATOR]
+        -> default VPC route -> guacamole (wg0 gateway)
+        -> WireGuard tunnel -> redirector (wg0 server)
+        -> tun0 (OpenVPN) -> CTF target
 
     Quick Start:
       1. Transfer .ovpn to WIN-OPERATOR via Guacamole:
@@ -79,8 +87,11 @@ ${var.enable_external_vpn ? <<-VPNINFO
          scp lab.ovpn admin@${aws_network_interface.redirector.private_ip}:~/vpn/
       3. Start VPN service on redirector:
          sudo systemctl start ext-vpn
-      4. Verify from any internal machine:
-         ping <target-ip>
+      4. Verify tunnel is up (both sides):
+         sudo wg show          (on redirector: should show guacamole as peer)
+         sudo wg show          (on guacamole: should show redirector as peer)
+      5. Verify routing from any internal machine:
+         ping <ctf-target-ip>
 VPNINFO
 : ""}
   +---------------------------------------------------------------------+
@@ -125,14 +136,15 @@ output "network_architecture" {
 ${var.enable_external_vpn ? <<-VPNARCH
 
   External VPN Routing (HTB/THM/VulnLabs):
-    [Internal Machine] -> VPC Peering -> ${aws_network_interface.redirector.private_ip} -> tun0 -> [CTF Targets]
+    [Internal Machine] -> Guacamole (wg0) -> WireGuard -> Redirector (wg0) -> tun0 -> [CTF Targets]
     Routed CIDRs: ${join(", ", var.external_vpn_cidrs)}
 
   VPN Security:
-    [x] source_dest_check disabled on redirector (required for forwarding)
-    [x] NAT masquerade on tun0 (internal IPs not exposed to CTF network)
-    [x] IP forwarding enabled on redirector only
+    [x] source_dest_check disabled on redirector + guacamole (packet forwarding)
+    [x] NAT masquerade on guacamole wg0 + redirector tun0 (double NAT)
+    [x] IP forwarding enabled on redirector and guacamole
     [x] redirect-gateway filtered (preserves VPC peering connectivity)
+    [x] WireGuard tunnel: guacamole (10.100.0.2) <-> redirector (10.100.0.1)
 VPNARCH
 : ""}
   EOT

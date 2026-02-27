@@ -61,6 +61,16 @@ enable_external_vpn                  = false  # Set to true for HTB/THM/VulnLabs
 enable_redirector_htaccess_filtering = true   # Set to false for HTB/THM/VulnLabs/PG — scanner/AV blocking not needed in lab environments
 # external_vpn_cidrs = ["10.10.0.0/16"]  # CIDR blocks reachable through the VPN tunnel (default covers most HTB/THM/VulnLabs ranges)
 
+# WireGuard keys — required when enable_external_vpn = true
+# Guacamole acts as WireGuard client/gateway in the default VPC, tunneling to the redirector.
+# Generate on any Linux/WSL machine:
+#   wg genkey | tee /tmp/wg-server.key | wg pubkey > /tmp/wg-server.pub
+#   wg genkey | tee /tmp/wg-client.key | wg pubkey > /tmp/wg-client.pub
+# wg_server_private_key = ""   # redirector (server) private key
+# wg_server_public_key  = ""   # redirector (server) public key
+# wg_client_private_key = ""   # guacamole (client) private key
+# wg_client_public_key  = ""   # guacamole (client) public key
+
 # Optional: Custom tags applied to every AWS resource (instances, SGs, EIPs, etc.)
 # Useful for cost tracking, filtering resources in the AWS Console, and billing reports
 tags = {

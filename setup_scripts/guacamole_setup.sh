@@ -420,3 +420,36 @@ fi
 echo "===== Guacamole Server Setup Completed $(date) ====="
 echo "===== Access Guacamole at https://$PUBLIC_IP/guacamole ====="
 echo "===== Default credentials: guacadmin / $GUAC_ADMIN_PASSWORD ====="
+
+%{ if enable_external_vpn }
+# ============================================================================
+# WireGuard Client — Routes lab VPN targets through redirector tunnel
+# ============================================================================
+echo "[*] Setting up WireGuard client (wg0)..."
+
+apt-get install -y wireguard
+
+echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
+sysctl -w net.ipv4.ip_forward=1
+
+cat > /etc/wireguard/wg0.conf << 'WGEOF'
+[Interface]
+Address = 10.100.0.2/30
+PrivateKey = ${wg_client_private_key}
+PostUp   = iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE; iptables -A FORWARD -i ens5 -o wg0 -j ACCEPT; iptables -A FORWARD -i wg0 -o ens5 -j ACCEPT
+PostDown = iptables -t nat -D POSTROUTING -o wg0 -j MASQUERADE; iptables -D FORWARD -i ens5 -o wg0 -j ACCEPT; iptables -D FORWARD -i wg0 -o ens5 -j ACCEPT
+
+[Peer]
+# Redirector (WireGuard server)
+PublicKey = ${wg_server_public_key}
+Endpoint = ${redirector_private_ip}:51820
+AllowedIPs = ${join(",", external_vpn_cidrs)}
+PersistentKeepalive = 25
+WGEOF
+
+chmod 600 /etc/wireguard/wg0.conf
+
+systemctl enable wg-quick@wg0
+systemctl start wg-quick@wg0
+echo "[+] WireGuard client (wg0) started — tunneling to redirector at ${redirector_private_ip}:51820"
+%{ endif }

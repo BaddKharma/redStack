@@ -85,20 +85,15 @@ resource "aws_route" "teamserver_to_redirector" {
 # EXTERNAL VPN ROUTING (Optional - for HTB/THM/VulnLabs access)
 # ============================================================================
 
-# Route VPN target CIDRs to redirector instance ENI (for VPN forwarding)
-resource "aws_route" "redirector_vpn_targets" {
-  count                  = var.enable_external_vpn ? length(var.external_vpn_cidrs) : 0
-  route_table_id         = aws_route_table.redirector.id
-  destination_cidr_block = var.external_vpn_cidrs[count.index]
-  network_interface_id   = aws_network_interface.redirector.id
-}
-
-# Route VPN target CIDRs from main VPC to redirector VPC via peering
+# Route VPN target CIDRs from main VPC to Guacamole ENI (WireGuard gateway)
+# Guacamole tunnels this traffic to the redirector via WireGuard, which forwards
+# to tun0 (OpenVPN). Routes Guacamole's ENI directly (same VPC) — avoids the
+# VPC peering restriction that drops packets destined outside either VPC's CIDR.
 resource "aws_route" "teamserver_vpn_targets" {
-  count                     = var.enable_external_vpn ? length(var.external_vpn_cidrs) : 0
-  route_table_id            = var.use_default_vpc ? data.aws_vpc.default[0].main_route_table_id : aws_route_table.training[0].id
-  destination_cidr_block    = var.external_vpn_cidrs[count.index]
-  vpc_peering_connection_id = aws_vpc_peering_connection.redirector_to_teamserver.id
+  count                  = var.enable_external_vpn ? length(var.external_vpn_cidrs) : 0
+  route_table_id         = var.use_default_vpc ? data.aws_vpc.default[0].main_route_table_id : aws_route_table.training[0].id
+  destination_cidr_block = var.external_vpn_cidrs[count.index]
+  network_interface_id   = aws_network_interface.guacamole.id
 }
 
 # ============================================================================
@@ -223,18 +218,20 @@ resource "aws_instance" "redirector" {
     havoc_private_ip      = aws_network_interface.havoc.private_ip
     windows_private_ip    = aws_network_interface.windows.private_ip
     setup_script_b64 = base64gzip(replace(templatefile("${path.module}/setup_scripts/redirector_setup.sh", {
-      mythic_private_ip   = aws_network_interface.mythic.private_ip
-      sliver_private_ip   = aws_network_interface.sliver.private_ip
-      havoc_private_ip    = aws_network_interface.havoc.private_ip
-      domain_name         = var.redirector_domain
-      mythic_uri_prefix   = var.mythic_uri_prefix
-      sliver_uri_prefix   = var.sliver_uri_prefix
-      havoc_uri_prefix    = var.havoc_uri_prefix
-      c2_header_name      = var.c2_header_name
-      c2_header_value     = local.c2_header_value
-      enable_external_vpn  = var.enable_external_vpn
+      mythic_private_ip     = aws_network_interface.mythic.private_ip
+      sliver_private_ip     = aws_network_interface.sliver.private_ip
+      havoc_private_ip      = aws_network_interface.havoc.private_ip
+      domain_name           = var.redirector_domain
+      mythic_uri_prefix     = var.mythic_uri_prefix
+      sliver_uri_prefix     = var.sliver_uri_prefix
+      havoc_uri_prefix      = var.havoc_uri_prefix
+      c2_header_name        = var.c2_header_name
+      c2_header_value       = local.c2_header_value
+      enable_external_vpn   = var.enable_external_vpn
       enable_redirect_rules = var.enable_redirector_htaccess_filtering
-      main_vpc_cidr        = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
+      main_vpc_cidr         = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
+      wg_server_private_key = var.wg_server_private_key
+      wg_client_public_key  = var.wg_client_public_key
     }), "\r", ""))
   }), "\r", "")
 

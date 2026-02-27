@@ -161,9 +161,10 @@ resource "aws_network_interface" "mythic" {
 }
 
 resource "aws_network_interface" "guacamole" {
-  subnet_id       = local.subnet_id
-  security_groups = [aws_security_group.guacamole.id]
-  tags            = { Name = "${var.project_name}-guacamole-eni" }
+  subnet_id         = local.subnet_id
+  security_groups   = [aws_security_group.guacamole.id]
+  source_dest_check = var.enable_external_vpn ? false : true
+  tags              = { Name = "${var.project_name}-guacamole-eni" }
 }
 
 resource "aws_network_interface" "windows" {
@@ -262,6 +263,10 @@ resource "aws_instance" "guacamole" {
     sliver_private_ip     = aws_network_interface.sliver.private_ip
     havoc_private_ip      = aws_network_interface.havoc.private_ip
     guacamole_private_ip  = aws_network_interface.guacamole.private_ip
+    enable_external_vpn   = var.enable_external_vpn
+    external_vpn_cidrs    = var.external_vpn_cidrs
+    wg_client_private_key = var.wg_client_private_key
+    wg_server_public_key  = var.wg_server_public_key
   })
 
   depends_on = [aws_instance.windows]
