@@ -61,7 +61,7 @@ No header: Decoy page (CloudEdge CDN maintenance)
 > - The redirector runs in its own VPC, simulating an external provider
 > - Every lab machine has `/etc/hosts` entries so all hostnames resolve across the environment
 > - Requests without a valid `X-Request-ID` header receive a decoy CloudEdge CDN maintenance page
-> - Only requests with a matching URI prefix and the correct header token are proxied to a backend
+> - Only requests with a matching URI prefix and the correct header token are proxied to the Team Server VPC and its specific C2 server
 > - `redirect.rules` blocks AV vendors and TOR exits (403); cloud IP blocks commented out for AWS compatibility
 > - Run `terraform output network_architecture` to see this diagram populated with your actual IPs
 
