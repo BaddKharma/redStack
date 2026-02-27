@@ -1749,6 +1749,35 @@ sudo ~/vpn.sh status
 
 This shows the tunnel state, VPN IP, and active NAT rules.
 
+### Step 8.4b: Get the VPN Interface IP for C2 Callbacks
+
+The OpenVPN server assigns a dynamic IP to the `tun0` interface at connect time. In a closed environment where target machines can only reach IPs on the VPN network (not the public internet), this `tun0` IP is what you use as the C2 callback address.
+
+**Get the VPN IP:**
+
+```bash
+# Shown automatically by vpn.sh start and vpn.sh status, or query directly:
+ip -4 addr show tun0 | grep -oP '(?<=inet\s)\d+(\.\d+)+'
+```
+
+> [!NOTE]
+> This IP is only known after the VPN connects. Generate your C2 agents **after** running `vpn.sh start` — not before. The IP changes each time you reconnect.
+
+**Use HTTP (port 80) for VPN-based callbacks.** The self-signed certificate on the redirector only has the public Elastic IP as a Subject Alternative Name, not the `tun0` IP. Using HTTP avoids certificate issues entirely. Traffic between the target and the redirector travels inside the encrypted OpenVPN tunnel, so it is already protected in transit.
+
+**Callback addresses by C2 framework:**
+
+| Framework | Callback Address |
+| --------- | ---------------- |
+| Mythic | `callback_host = "http://<tun0-ip>"`, `callback_port = 80` |
+| Sliver | `--http http://<tun0-ip>/cloud/storage/objects/` |
+| Havoc | Hosts: `<tun0-ip>`, PortConn: `80` (HTTP — already the default in the listener config) |
+
+All other settings (URI prefix, `X-Request-ID` header) remain the same. The redirector's Apache listens on all interfaces including `tun0`, so header validation and URI routing apply regardless of how the connection arrives.
+
+> [!NOTE]
+> If the target machine has outbound internet access (most HTB standalone boxes and many Pro Lab machines do), you can use the public Elastic IP with HTTPS (`https://<REDIR_PUBLIC_IP>/prefix/`) instead. The tun0 IP is only needed when targets are fully isolated from the internet and can only reach the VPN network.
+
 ### Step 8.5: Verify Connectivity from Internal Machines
 
 **From the Windows operator workstation (via Guacamole RDP):**
@@ -1783,5 +1812,7 @@ This kills the OpenVPN process and removes the iptables MASQUERADE rules. The `.
 - **Only the configured CIDRs are routed.** By default, only `10.10.0.0/16` is routed through the VPN. Traffic to other destinations (internet, VPC peers) is unaffected.
 - **The .ovpn file persists across reboots** in `~/vpn/external.ovpn`. However, the VPN tunnel itself does not auto-start. Run `sudo ~/vpn.sh start` after a reboot.
 - **All internal machines can reach CTF targets.** The routing is configured at the VPC level, so the Windows workstation, all C2 servers, and the Guacamole server can all reach targets through the VPN tunnel.
+- **tun0 IP is dynamic.** It changes with each VPN reconnect. Agents baked with the tun0 IP will stop working after a reconnect that assigns a different IP. For long engagements, check the IP after each reconnect and regenerate agents if it changed. Run `sudo ~/vpn.sh status` to get the current IP.
+- **Callback address choice.** If targets have internet access, use the public Elastic IP (stable, no regeneration needed). If targets are isolated to the VPN network only, use the tun0 IP with HTTP (port 80).
 
 **Checkpoint:** Lab connected to external target environment, all internal machines can reach CTF targets
