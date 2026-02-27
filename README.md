@@ -56,7 +56,14 @@ No header: Decoy page (CloudEdge CDN maintenance)
 ```
 
 > [!NOTE]
-> All three C2 servers have no public IPs and are reachable only through the redirector via VPC peering. The redirector runs in its own VPC, simulating an external provider. Every lab machine has /etc/hosts entries so all hostnames resolve across the environment. Requests without a valid X-Request-ID header receive a decoy CloudEdge CDN maintenance page. Only requests with a matching URI prefix and the correct header token are proxied to a backend. redirect.rules blocks AV vendors and TOR exits with 403 responses; cloud provider IP blocks are commented out for AWS compatibility. After deployment, run `terraform output network_architecture` to see this diagram populated with your actual IPs.
+>
+> - All three C2 servers have no public IPs, reachable only through the redirector via VPC peering
+> - The redirector runs in its own VPC, simulating an external provider
+> - Every lab machine has `/etc/hosts` entries so all hostnames resolve across the environment
+> - Requests without a valid `X-Request-ID` header receive a decoy CloudEdge CDN maintenance page
+> - Only requests with a matching URI prefix and the correct header token are proxied to a backend
+> - `redirect.rules` blocks AV vendors and TOR exits (403); cloud IP blocks commented out for AWS compatibility
+> - Run `terraform output network_architecture` to see this diagram populated with your actual IPs
 
 ---
 
