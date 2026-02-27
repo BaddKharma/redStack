@@ -1735,7 +1735,7 @@ scp lab.ovpn admin@<REDIR_PRIVATE_IP>:~/vpn/external.ovpn
 ```
 
 > [!TIP]
-> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SFTP browser. Open a session to the redirector's private IP and drag the file directly to `~/vpn/external.ovpn` — no command needed.
+> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SFTP browser. Open a session to the redirector's private IP, navigate to `~/vpn/`, drop your `.ovpn` file there, then rename it to `external.ovpn`.
 
 ### Step 8.4: Start the VPN Tunnel
 
