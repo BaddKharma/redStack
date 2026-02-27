@@ -75,9 +75,10 @@ ${var.enable_external_vpn ? <<-VPNINFO
     Quick Start:
       1. Transfer .ovpn to WIN-OPERATOR via Guacamole:
          Guacamole sidebar (Ctrl+Alt+Shift) -> Devices -> upload .ovpn
-      2. SCP from WIN-OPERATOR to redirector (MobaXterm or PowerShell):
-         scp -i rs-rsa-key.pem lab.ovpn admin@${aws_eip.redirector.public_ip}:~/vpn/
-      3. Start VPN on redirector:
+      2. SCP to redirector from WIN-OPERATOR (internal - no key needed):
+         scp lab.ovpn admin@${aws_network_interface.redirector.private_ip}:~/vpn/
+      3. Start VPN on redirector in screen/tmux for persistence:
+         screen -S vpn
          sudo ~/vpn.sh start ~/vpn/lab.ovpn
       4. Verify from any internal machine:
          ping <target-ip>

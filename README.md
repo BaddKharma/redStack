@@ -1728,28 +1728,31 @@ Download your `.ovpn` file from your CTF platform, then transfer it to WIN-OPERA
 3. Click **Devices**, then drag and drop your `.ovpn` file into the upload area
 4. The file will appear on the Windows desktop
 
-From WIN-OPERATOR you can SCP it to the redirector using MobaXterm or PowerShell:
+From WIN-OPERATOR, SCP the file to the redirector over the internal network (no key needed for internal transfers):
 
-```powershell
-scp -i "C:\path\to\rs-rsa-key.pem" "C:\Users\Administrator\Desktop\lab.ovpn" admin@<REDIR_PUBLIC_IP>:~/vpn/
+```bash
+scp lab.ovpn admin@<REDIR_PRIVATE_IP>:~/vpn/
 ```
 
 > [!TIP]
-> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SCP file browser — connect to the redirector and drag the file across.
+> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SFTP browser. Open a session to the redirector's private IP and drag the file across — no command needed.
 
 ### Step 8.4: Start the VPN Tunnel
 
-**SSH to the redirector:**
+**SSH to the redirector** from WIN-OPERATOR using the private IP (MobaXterm session or internal SCP):
 
 ```bash
-ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
+ssh admin@<REDIR_PRIVATE_IP>
 ```
 
-**Start the VPN:**
+**Start the VPN inside a screen or tmux session** so it persists if your SSH connection drops:
 
 ```bash
+screen -S vpn
 sudo ~/vpn.sh start ~/vpn/lab.ovpn
 ```
+
+Detach with `Ctrl+A, D`. Reattach later with `screen -r vpn`.
 
 This will:
 
