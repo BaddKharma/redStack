@@ -1721,27 +1721,27 @@ external_vpn_cidrs  = ["10.10.0.0/16", "10.200.0.0/16"]
 
 ### Step 8.3: Get the .ovpn File to the Redirector
 
-The file needs to land at `~/vpn/external.ovpn` on the redirector. Two ways to do it:
+Drop any `.ovpn` file into `~/vpn/` on the redirector — the service picks up whichever file is there. Two ways to do it:
 
-**Option A: Guacamole sidebar upload (browser only)**
+#### Option A: Guacamole sidebar upload (browser only)
 
 1. In Guacamole, open the **"Apache Redirector (SSH)"** connection
 2. Press `Ctrl+Alt+Shift` to open the sidebar
 3. Click **Devices** and upload your `.ovpn` file — it will land in `~`
-4. Rename it into place:
+4. Move it into the vpn directory:
 
 ```bash
-mv ~/lab.ovpn ~/vpn/external.ovpn
+mv ~/*.ovpn ~/vpn/
 ```
 
-**Option B: SCP from WIN-OPERATOR (MobaXterm or PowerShell)**
+#### Option B: SCP from WIN-OPERATOR (MobaXterm or PowerShell)
 
 ```bash
-scp lab.ovpn admin@<REDIR_PRIVATE_IP>:~/vpn/external.ovpn
+scp lab.ovpn admin@<REDIR_PRIVATE_IP>:~/vpn/
 ```
 
 > [!TIP]
-> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SFTP browser. Open a session to the redirector's private IP, navigate to `~/vpn/`, drop your `.ovpn` file there, then rename it to `external.ovpn`.
+> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SFTP browser. Open a session to the redirector's private IP, navigate to `~/vpn/`, and drop your `.ovpn` file there.
 
 ### Step 8.4: Start the VPN Tunnel
 
@@ -1775,7 +1775,7 @@ journalctl -u ext-vpn -f
 The service uses `--pull-filter ignore "redirect-gateway"` (critical: prevents the VPN from hijacking the redirector's default route, which would break all VPC peering and C2 proxy connectivity). iptables MASQUERADE rules are applied automatically when `tun0` comes up and removed when it goes down.
 
 > [!NOTE]
-> The `ext-vpn` service will refuse to start if `~/vpn/external.ovpn` does not exist. Drop the file there before running `systemctl start`.
+> The `ext-vpn` service will fail to start if no `.ovpn` file exists in `~/vpn/`. If multiple files are present, it picks the first one alphabetically.
 
 ### Step 8.4b: Get the VPN Interface IP for C2 Callbacks
 

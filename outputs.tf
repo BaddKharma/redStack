@@ -76,7 +76,7 @@ ${var.enable_external_vpn ? <<-VPNINFO
       1. Transfer .ovpn to WIN-OPERATOR via Guacamole:
          Guacamole sidebar (Ctrl+Alt+Shift) -> Devices -> upload .ovpn
       2. SCP to redirector from WIN-OPERATOR (internal - no key needed):
-         scp lab.ovpn admin@${aws_network_interface.redirector.private_ip}:~/vpn/external.ovpn
+         scp lab.ovpn admin@${aws_network_interface.redirector.private_ip}:~/vpn/
       3. Start VPN service on redirector:
          sudo systemctl start ext-vpn
       4. Verify from any internal machine:

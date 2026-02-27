@@ -424,23 +424,35 @@ echo "[vpn-down] NAT rules removed for $dev"
 VPNDOWN
     chmod +x /usr/local/bin/vpn-down.sh
 
+    # wrapper: finds the first .ovpn file in ~/vpn/ and launches openvpn
+    cat > /usr/local/bin/vpn-start.sh << 'VPNSTART'
+#!/bin/bash
+OVPN_FILE=$(find /home/admin/vpn -maxdepth 1 -name "*.ovpn" | sort | head -1)
+if [ -z "$OVPN_FILE" ]; then
+    echo "[ext-vpn] No .ovpn file found in ~/vpn/ — upload one and retry."
+    exit 1
+fi
+echo "[ext-vpn] Using config: $OVPN_FILE"
+exec /usr/sbin/openvpn \
+    --config "$OVPN_FILE" \
+    --pull-filter ignore "redirect-gateway" \
+    --script-security 2 \
+    --up /usr/local/bin/vpn-up.sh \
+    --down /usr/local/bin/vpn-down.sh \
+    --down-pre
+VPNSTART
+    chmod +x /usr/local/bin/vpn-start.sh
+
     # systemd service unit — not enabled, manual start only
     cat > /etc/systemd/system/ext-vpn.service << 'VPNSERVICE'
 [Unit]
 Description=External VPN (HTB/THM/PG)
 After=network-online.target
 Wants=network-online.target
-ConditionPathExists=/home/admin/vpn/external.ovpn
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/openvpn \
-    --config /home/admin/vpn/external.ovpn \
-    --pull-filter ignore "redirect-gateway" \
-    --script-security 2 \
-    --up /usr/local/bin/vpn-up.sh \
-    --down /usr/local/bin/vpn-down.sh \
-    --down-pre
+ExecStart=/usr/local/bin/vpn-start.sh
 Restart=no
 StandardOutput=journal
 StandardError=journal
