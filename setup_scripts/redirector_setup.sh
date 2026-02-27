@@ -24,6 +24,7 @@ HAVOC_URI_PREFIX="${havoc_uri_prefix}"
 C2_HEADER_NAME="${c2_header_name}"
 C2_HEADER_VALUE="${c2_header_value}"
 ENABLE_VPN="${enable_external_vpn}"
+ENABLE_REDIRECT_RULES="${enable_redirect_rules}"
 MAIN_VPC_CIDR="${main_vpc_cidr}"
 
 # Fetch public IP early - needed for cert SAN and no-domain fallback
@@ -188,13 +189,18 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 # REDIRECT RULES (block security scanners, AV vendors, TOR exit nodes)
 # ============================================================================
 
-echo "[*] Downloading redirect.rules from redStack repo..."
-REDIRECT_URL="https://raw.githubusercontent.com/BaddKharma/redRules/main/redirect.rules"
-if curl -sL --max-time 30 "$REDIRECT_URL" -o /etc/apache2/redirect.rules; then
-    echo "[+] Installed redirect.rules ($(grep -c 'RewriteCond' /etc/apache2/redirect.rules) total rules, cloud IPs commented out)"
+if [ "$ENABLE_REDIRECT_RULES" = "true" ]; then
+    echo "[*] Downloading redirect.rules from redStack repo..."
+    REDIRECT_URL="https://raw.githubusercontent.com/BaddKharma/redRules/main/redirect.rules"
+    if curl -sL --max-time 30 "$REDIRECT_URL" -o /etc/apache2/redirect.rules; then
+        echo "[+] Installed redirect.rules ($(grep -c 'RewriteCond' /etc/apache2/redirect.rules) total rules, cloud IPs commented out)"
+    else
+        echo "[!] Failed to download redirect.rules - creating empty placeholder"
+        echo "# redirect.rules - download failed at $(date), add rules manually" > /etc/apache2/redirect.rules
+    fi
 else
-    echo "[!] Failed to download redirect.rules - creating empty placeholder"
-    echo "# redirect.rules - download failed at $(date), add rules manually" > /etc/apache2/redirect.rules
+    echo "[*] redirect.rules DISABLED (lab/CTF mode) - scanner and AV blocking skipped"
+    echo "# redirect.rules disabled - set enable_redirector_htaccess_filtering = true to enable" > /etc/apache2/redirect.rules
 fi
 
 # ============================================================================
@@ -561,7 +567,11 @@ else
 echo "  - Self-signed SSL certificate (replace with Certbot)"
 fi
 echo "  - Decoy page: CloudEdge CDN maintenance page"
+if [ "$ENABLE_REDIRECT_RULES" = "true" ]; then
 echo "  - redirect.rules: curi0usJack OPSEC rules (AV/scanner/TOR blocking)"
+else
+echo "  - redirect.rules: DISABLED (lab/CTF mode)"
+fi
 echo ""
 echo "Header validation (required for C2 proxy):"
 echo "  Header:  $C2_HEADER_NAME: $C2_HEADER_VALUE"

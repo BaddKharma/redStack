@@ -232,8 +232,9 @@ resource "aws_instance" "redirector" {
       havoc_uri_prefix    = var.havoc_uri_prefix
       c2_header_name      = var.c2_header_name
       c2_header_value     = local.c2_header_value
-      enable_external_vpn = var.enable_external_vpn
-      main_vpc_cidr       = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
+      enable_external_vpn  = var.enable_external_vpn
+      enable_redirect_rules = var.enable_redirector_htaccess_filtering
+      main_vpc_cidr        = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
     }), "\r", ""))
   }), "\r", "")
 

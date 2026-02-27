@@ -265,6 +265,9 @@ havoc_uri_prefix  = "/edge/cache/assets"
 # External VPN routing (HTB/THM/ProvingGrounds)
 enable_external_vpn = false   # Set to true + configure external_vpn_cidrs for VPN access (see Part 8)
 
+# redirect.rules scanner/AV blocking (disable for CTF/lab environments where scanner traffic is not a concern)
+enable_redirector_htaccess_filtering = true   # Set to false for HTB/THM/isolated lab use
+
 # C2 header validation is always enabled. These override the defaults:
 # c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
 # c2_header_value = ""              # Token value — leave empty to auto-generate (recommended)
@@ -1671,7 +1674,8 @@ redirector, then masqueraded out the VPN tunnel.
 Edit `terraform.tfvars` and set:
 
 ```hcl
-enable_external_vpn = true
+enable_external_vpn                  = true
+enable_redirector_htaccess_filtering = false   # disable scanner/AV blocking for CTF use
 ```
 
 This enables the following infrastructure changes:
