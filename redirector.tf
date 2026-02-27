@@ -170,18 +170,6 @@ resource "aws_security_group_rule" "redirector_egress" {
   security_group_id = aws_security_group.redirector.id
 }
 
-# All traffic from main VPC when VPN routing is enabled
-resource "aws_security_group_rule" "redirector_vpn_from_main_vpc" {
-  count             = var.enable_external_vpn ? 1 : 0
-  type              = "ingress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = [var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr]
-  description       = "All traffic from main VPC for VPN routing"
-  security_group_id = aws_security_group.redirector.id
-}
-
 # ============================================================================
 # REDIRECTOR NETWORK INTERFACE
 # ============================================================================
