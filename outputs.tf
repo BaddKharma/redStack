@@ -122,13 +122,6 @@ output "network_architecture" {
     Required:   ${var.c2_header_name}: ${local.c2_header_value}
     No header:  Decoy page (CloudEdge CDN maintenance)
 
-  Security Posture:
-    [x] ALL C2 servers have NO public IPs (internal only)
-    [x] Full internal mesh - all lab machines can reach each other (ping/SSH/any)
-    [x] Redirector in separate VPC (simulates external provider isolation)
-    [x] External C2 callbacks: Redirector proxies only matching URI patterns
-    [x] All hosts have hostnames and /etc/hosts entries for name resolution
-    [x] redirect.rules: AV vendors, cloud scanners, TOR exits blocked (403)
 ${var.enable_external_vpn ? <<-VPNARCH
 
   External VPN Routing (HTB/THM):
