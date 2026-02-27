@@ -396,158 +396,62 @@ echo "[*] Restarting Apache..."
 systemctl restart apache2
 
 # ============================================================================
-# VPN HELPER SCRIPT (conditional)
+# VPN SYSTEMD SERVICE (conditional)
 # ============================================================================
 
 if [ "$ENABLE_VPN" = "true" ]; then
-    echo "[*] Creating VPN helper script..."
+    echo "[*] Creating VPN systemd service..."
     mkdir -p /home/admin/vpn
+    chown admin:admin /home/admin/vpn
 
-    cat > /home/admin/vpn.sh << 'VPNSCRIPT'
+    # iptables hook: called by openvpn when tun0 comes up
+    cat > /usr/local/bin/vpn-up.sh << 'VPNUP'
 #!/bin/bash
-# vpn.sh - OpenVPN helper for external platform access (HTB/THM)
-# Usage:
-#   sudo ~/vpn.sh start /path/to/your.ovpn
-#   sudo ~/vpn.sh stop
-#   sudo ~/vpn.sh status
+iptables -t nat -A POSTROUTING -o "$dev" -j MASQUERADE
+iptables -A FORWARD -i "$dev" -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -o "$dev" -j ACCEPT
+echo "[vpn-up] NAT masquerade active on $dev ($ifconfig_local)"
+VPNUP
+    chmod +x /usr/local/bin/vpn-up.sh
 
-OVPN_CONFIG="/home/admin/vpn/external.ovpn"
-OVPN_PID_FILE="/var/run/openvpn-external.pid"
-OVPN_LOG="/var/log/openvpn-external.log"
+    # iptables hook: called by openvpn before tun0 is torn down
+    cat > /usr/local/bin/vpn-down.sh << 'VPNDOWN'
+#!/bin/bash
+iptables -t nat -D POSTROUTING -o "$dev" -j MASQUERADE 2>/dev/null || true
+iptables -D FORWARD -i "$dev" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+iptables -D FORWARD -o "$dev" -j ACCEPT 2>/dev/null || true
+echo "[vpn-down] NAT rules removed for $dev"
+VPNDOWN
+    chmod +x /usr/local/bin/vpn-down.sh
 
-case "$1" in
-    start)
-        if [ -z "$2" ] && [ ! -f "$OVPN_CONFIG" ]; then
-            echo "Usage: $0 start /path/to/your.ovpn"
-            echo ""
-            echo "Upload your .ovpn file first:"
-            echo "  scp your-lab.ovpn admin@<redirector-ip>:~/vpn/"
-            echo "Then run:"
-            echo "  sudo ~/vpn.sh start ~/vpn/your-lab.ovpn"
-            exit 1
-        fi
+    # systemd service unit — not enabled, manual start only
+    cat > /etc/systemd/system/ext-vpn.service << 'VPNSERVICE'
+[Unit]
+Description=External VPN (HTB/THM/PG)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/home/admin/vpn/external.ovpn
 
-        # Copy .ovpn to persistent location if a path was provided
-        if [ -n "$2" ]; then
-            if [ ! -f "$2" ]; then
-                echo "[!] File not found: $2"
-                exit 1
-            fi
-            echo "[*] Copying config to $OVPN_CONFIG..."
-            cp "$2" "$OVPN_CONFIG"
-            chown admin:admin "$OVPN_CONFIG"
-        fi
+[Service]
+Type=simple
+ExecStart=/usr/sbin/openvpn \
+    --config /home/admin/vpn/external.ovpn \
+    --pull-filter ignore "redirect-gateway" \
+    --script-security 2 \
+    --up /usr/local/bin/vpn-up.sh \
+    --down /usr/local/bin/vpn-down.sh \
+    --down-pre
+Restart=no
+StandardOutput=journal
+StandardError=journal
 
-        if [ -f "$OVPN_PID_FILE" ] && kill -0 $(cat "$OVPN_PID_FILE") 2>/dev/null; then
-            echo "[!] VPN is already running (PID: $(cat $OVPN_PID_FILE))"
-            echo "    Run '$0 stop' first to disconnect."
-            exit 1
-        fi
+[Install]
+WantedBy=multi-user.target
+VPNSERVICE
 
-        echo "[*] Starting OpenVPN tunnel..."
-        openvpn --config "$OVPN_CONFIG" \
-            --daemon \
-            --log "$OVPN_LOG" \
-            --writepid "$OVPN_PID_FILE" \
-            --pull-filter ignore "redirect-gateway"
-
-        # Wait for tunnel to establish
-        echo "[*] Waiting for tunnel to come up..."
-        for i in $(seq 1 30); do
-            if ip link show tun0 >/dev/null 2>&1; then
-                break
-            fi
-            sleep 1
-        done
-
-        if ! ip link show tun0 >/dev/null 2>&1; then
-            echo "[!] Tunnel failed to come up after 30 seconds."
-            echo "[!] Check logs: cat $OVPN_LOG"
-            exit 1
-        fi
-
-        # Get VPN IP
-        VPN_IP=$(ip -4 addr show tun0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
-        echo "[+] VPN tunnel established!"
-        echo "    Interface: tun0"
-        echo "    VPN IP:    $VPN_IP"
-
-        # Set up NAT masquerade for forwarded traffic
-        echo "[*] Configuring NAT masquerade on tun0..."
-        iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE
-        iptables -A FORWARD -i tun0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-        iptables -A FORWARD -o tun0 -j ACCEPT
-
-        echo ""
-        echo "[+] VPN routing is active. Internal lab machines can now reach"
-        echo "    external targets through this redirector's VPN tunnel."
-        echo ""
-        echo "    To verify from an internal machine:"
-        echo "      ping <target-ip>"
-        ;;
-
-    stop)
-        if [ -f "$OVPN_PID_FILE" ] && kill -0 $(cat "$OVPN_PID_FILE") 2>/dev/null; then
-            echo "[*] Stopping OpenVPN tunnel..."
-            kill $(cat "$OVPN_PID_FILE")
-            rm -f "$OVPN_PID_FILE"
-
-            # Remove NAT rules
-            echo "[*] Removing NAT masquerade rules..."
-            iptables -t nat -D POSTROUTING -o tun0 -j MASQUERADE 2>/dev/null || true
-            iptables -D FORWARD -i tun0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
-            iptables -D FORWARD -o tun0 -j ACCEPT 2>/dev/null || true
-
-            echo "[+] VPN tunnel stopped."
-            echo "    Config file preserved at: $OVPN_CONFIG"
-            echo "    Reconnect with: sudo ~/vpn.sh start"
-        else
-            echo "[*] VPN is not running."
-        fi
-        ;;
-
-    status)
-        echo "===== OpenVPN External Tunnel Status ====="
-        echo ""
-        if [ -f "$OVPN_PID_FILE" ] && kill -0 $(cat "$OVPN_PID_FILE") 2>/dev/null; then
-            echo "State:     CONNECTED (PID: $(cat $OVPN_PID_FILE))"
-            if ip link show tun0 >/dev/null 2>&1; then
-                VPN_IP=$(ip -4 addr show tun0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
-                echo "Interface: tun0"
-                echo "VPN IP:    $VPN_IP"
-            else
-                echo "Interface: tun0 (not found - tunnel may be reconnecting)"
-            fi
-        else
-            echo "State:     DISCONNECTED"
-        fi
-        echo ""
-        if [ -f "$OVPN_CONFIG" ]; then
-            echo "Config:    $OVPN_CONFIG"
-        else
-            echo "Config:    (none - upload an .ovpn file first)"
-        fi
-        echo ""
-        echo "IP Forwarding: $(cat /proc/sys/net/ipv4/ip_forward)"
-        echo ""
-        echo "NAT rules:"
-        iptables -t nat -L POSTROUTING -n 2>/dev/null | grep -E "MASQUERADE|tun" || echo "  (none)"
-        echo ""
-        echo "Log file: $OVPN_LOG"
-        ;;
-
-    *)
-        echo "Usage: $0 {start|stop|status}"
-        echo ""
-        echo "  start /path/to/file.ovpn  - Connect VPN and enable routing"
-        echo "  start                      - Reconnect using saved config"
-        echo "  stop                       - Disconnect VPN"
-        echo "  status                     - Show VPN connection status"
-        ;;
-esac
-VPNSCRIPT
-    chmod +x /home/admin/vpn.sh
-    chown admin:admin /home/admin/vpn.sh /home/admin/vpn
+    systemctl daemon-reload
+    # NOT enabled — operator starts manually after uploading .ovpn
+    echo "[+] VPN service installed (disabled — start manually with: sudo systemctl start ext-vpn)"
 fi
 
 echo ""

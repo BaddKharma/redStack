@@ -70,16 +70,15 @@ ${var.enable_external_vpn ? <<-VPNINFO
     Status:       ENABLED
     Gateway:      ${aws_network_interface.redirector.private_ip} (redirector)
     Target CIDRs: ${join(", ", var.external_vpn_cidrs)}
-    VPN Script:   sudo ~/vpn.sh {start|stop|status}
+    VPN Service:  sudo systemctl {start|stop|status} ext-vpn
 
     Quick Start:
       1. Transfer .ovpn to WIN-OPERATOR via Guacamole:
          Guacamole sidebar (Ctrl+Alt+Shift) -> Devices -> upload .ovpn
       2. SCP to redirector from WIN-OPERATOR (internal - no key needed):
-         scp lab.ovpn admin@${aws_network_interface.redirector.private_ip}:~/vpn/
-      3. Start VPN on redirector in screen/tmux for persistence:
-         screen -S vpn
-         sudo ~/vpn.sh start ~/vpn/lab.ovpn
+         scp lab.ovpn admin@${aws_network_interface.redirector.private_ip}:~/vpn/external.ovpn
+      3. Start VPN service on redirector:
+         sudo systemctl start ext-vpn
       4. Verify from any internal machine:
          ping <target-ip>
 VPNINFO

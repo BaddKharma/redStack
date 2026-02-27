@@ -1728,46 +1728,48 @@ Download your `.ovpn` file from your CTF platform, then transfer it to WIN-OPERA
 3. Click **Devices**, then drag and drop your `.ovpn` file into the upload area
 4. The file will appear on the Windows desktop
 
-From WIN-OPERATOR, SCP the file to the redirector over the internal network (no key needed for internal transfers):
+From WIN-OPERATOR, SCP the file to the redirector's persistent config location over the internal network (no key needed for internal transfers):
 
 ```bash
-scp lab.ovpn admin@<REDIR_PRIVATE_IP>:~/vpn/
+scp lab.ovpn admin@<REDIR_PRIVATE_IP>:~/vpn/external.ovpn
 ```
 
 > [!TIP]
-> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SFTP browser. Open a session to the redirector's private IP and drag the file across — no command needed.
+> MobaXterm (pre-installed on WIN-OPERATOR) has a built-in SFTP browser. Open a session to the redirector's private IP and drag the file directly to `~/vpn/external.ovpn` — no command needed.
 
 ### Step 8.4: Start the VPN Tunnel
 
-**SSH to the redirector** from WIN-OPERATOR using the private IP (MobaXterm session or internal SCP):
+**SSH to the redirector** from WIN-OPERATOR using the private IP:
 
 ```bash
 ssh admin@<REDIR_PRIVATE_IP>
 ```
 
-**Start the VPN inside a screen or tmux session** so it persists if your SSH connection drops:
+**Start the VPN service:**
 
 ```bash
-screen -S vpn
-sudo ~/vpn.sh start ~/vpn/lab.ovpn
+sudo systemctl start ext-vpn
 ```
 
-Detach with `Ctrl+A, D`. Reattach later with `screen -r vpn`.
+The `ext-vpn` service runs openvpn in the foreground under systemd — no screen or tmux needed. It persists as long as the redirector instance is running, and stops cleanly with `systemctl stop`.
 
-This will:
-
-- Copy the `.ovpn` file to a persistent location (`~/vpn/external.ovpn`)
-- Start OpenVPN with `--pull-filter ignore "redirect-gateway"` (critical: prevents the VPN from hijacking the redirector's default route, which would break all VPC peering and C2 proxy connectivity)
-- Wait for the `tun0` interface to come up
-- Configure iptables MASQUERADE rules for NAT
-
-**Check VPN status:**
+**Stop the VPN:**
 
 ```bash
-sudo ~/vpn.sh status
+sudo systemctl stop ext-vpn
 ```
 
-This shows the tunnel state, VPN IP, and active NAT rules.
+**Check VPN status and logs:**
+
+```bash
+sudo systemctl status ext-vpn
+journalctl -u ext-vpn -f
+```
+
+The service uses `--pull-filter ignore "redirect-gateway"` (critical: prevents the VPN from hijacking the redirector's default route, which would break all VPC peering and C2 proxy connectivity). iptables MASQUERADE rules are applied automatically when `tun0` comes up and removed when it goes down.
+
+> [!NOTE]
+> The `ext-vpn` service will refuse to start if `~/vpn/external.ovpn` does not exist. Drop the file there before running `systemctl start`.
 
 ### Step 8.4b: Get the VPN Interface IP for C2 Callbacks
 
@@ -1776,12 +1778,11 @@ The OpenVPN server assigns a dynamic IP to the `tun0` interface at connect time.
 **Get the VPN IP:**
 
 ```bash
-# Shown automatically by vpn.sh start and vpn.sh status, or query directly:
 ip -4 addr show tun0 | grep -oP '(?<=inet\s)\d+(\.\d+)+'
 ```
 
 > [!NOTE]
-> This IP is only known after the VPN connects. Generate your C2 agents **after** running `vpn.sh start` — not before. The IP changes each time you reconnect.
+> This IP is only known after the VPN connects. Generate your C2 agents **after** running `sudo systemctl start ext-vpn` — not before. The IP changes each time you reconnect.
 
 **Use HTTP (port 80) for VPN-based callbacks.** The self-signed certificate on the redirector only has the public Elastic IP as a Subject Alternative Name, not the `tun0` IP. Using HTTP avoids certificate issues entirely. Traffic between the target and the redirector travels inside the encrypted OpenVPN tunnel, so it is already protected in transit.
 
