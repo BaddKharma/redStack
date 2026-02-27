@@ -1660,16 +1660,27 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 |                     VPN ROUTING ARCHITECTURE                        |
 +---------------------------------------------------------------------+
 
-Traffic Flow:
-[WIN-OPERATOR / mythic / sliver / havoc] -> Main VPC route table
-  (10.10.0.0/16 -> VPC peering)
-  -> Redirector VPC route table (10.10.0.0/16 -> redirector ENI)
-  -> redirector (iptables MASQUERADE on tun0)
-  -> OpenVPN tunnel -> HTB/THM/PG targets
+VPC A - Team Server Infrastructure (10.50.0.0/16 or Default VPC)
+├── WIN-OPERATOR - Windows Workstation    (target traffic -> VPC A route table -> peering)
+├── mythic       - Mythic C2 Server       (target traffic -> VPC A route table -> peering)
+├── sliver       - Sliver C2 Server       (target traffic -> VPC A route table -> peering)
+└── havoc        - Havoc C2 Server        (target traffic -> VPC A route table -> peering)
 
-The redirector acts as a NAT gateway: operator machines send traffic
-to target IPs, which gets routed through VPC peering to the
-redirector, then masqueraded out the VPN tunnel.
+VPC B - Redirector Infrastructure (10.60.0.0/16)
+└── redirector   - Apache Redirector      (OpenVPN client, iptables MASQUERADE on tun0)
+
+VPC Peering: VPC A <-> VPC B
+
+Route Tables:
+  VPC A: 10.10.0.0/16 -> VPC peering -> VPC B
+  VPC B: 10.10.0.0/16 -> redirector ENI (NAT gateway)
+
+Traffic Flow (CTF/Pro Lab mode):
+[WIN-OPERATOR / mythic / sliver / havoc]
+  -> VPC A route table  (10.10.0.0/16 -> VPC peering)
+  -> VPC B route table  (10.10.0.0/16 -> redirector ENI)
+  -> redirector         (iptables MASQUERADE on tun0)
+  -> OpenVPN tunnel     -> HTB/THM/PG targets
 ```
 
 ### Step 8.1: Enable VPN Routing Before Deployment
