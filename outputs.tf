@@ -73,11 +73,11 @@ ${var.enable_external_vpn ? <<-VPNINFO
     VPN Script:   sudo ~/vpn.sh {start|stop|status}
 
     Quick Start:
-      1. SSH to redirector:
-         ssh -i ${var.ssh_key_name}.pem admin@${aws_eip.redirector.public_ip}
-      2. Upload your .ovpn file:
-         scp -i ${var.ssh_key_name}.pem lab.ovpn admin@${aws_eip.redirector.public_ip}:~/vpn/
-      3. Start VPN:
+      1. Transfer .ovpn to WIN-OPERATOR via Guacamole:
+         Guacamole sidebar (Ctrl+Alt+Shift) -> Devices -> upload .ovpn
+      2. SCP from WIN-OPERATOR to redirector (MobaXterm or PowerShell):
+         scp -i rs-rsa-key.pem lab.ovpn admin@${aws_eip.redirector.public_ip}:~/vpn/
+      3. Start VPN on redirector:
          sudo ~/vpn.sh start ~/vpn/lab.ovpn
       4. Verify from any internal machine:
          ping <target-ip>
