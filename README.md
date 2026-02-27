@@ -1661,13 +1661,14 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 +---------------------------------------------------------------------+
 
 Traffic Flow:
-[Windows/C2 Servers] -> Main VPC route table (10.10.0.0/16 -> VPC peering)
+[WIN-OPERATOR / mythic / sliver / havoc] -> Main VPC route table
+  (10.10.0.0/16 -> VPC peering)
   -> Redirector VPC route table (10.10.0.0/16 -> redirector ENI)
-  -> Redirector (iptables MASQUERADE on tun0)
+  -> redirector (iptables MASQUERADE on tun0)
   -> OpenVPN tunnel -> HTB/THM/PG targets
 
-The redirector acts as a NAT gateway: internal machines send traffic
-to CTF target IPs, which gets routed through VPC peering to the
+The redirector acts as a NAT gateway: operator machines send traffic
+to target IPs, which gets routed through VPC peering to the
 redirector, then masqueraded out the VPN tunnel.
 ```
 
