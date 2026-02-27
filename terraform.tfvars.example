@@ -45,9 +45,6 @@ use_default_vpc = true    # Set to false to create a dedicated VPC
 # Mythic configuration
 enable_mythic_autostart = true  # Auto-start Mythic on boot
 
-# Redirector configuration
-enable_redirector_htaccess_filtering = true
-
 # C2 URI prefixes (CDN/cloud-style paths routed through the redirector)
 # These are baked into payloads at deploy time. Customize before deploying.
 mythic_uri_prefix = "/cdn/media/stream"
@@ -58,9 +55,11 @@ havoc_uri_prefix  = "/edge/cache/assets"
 # c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
 # c2_header_value = ""              # Token value — leave empty to auto-generate (recommended)
 
-# External VPN routing (for HTB/THM/ProvingGrounds access via redirector)
-enable_external_vpn  = false
-# external_vpn_cidrs = ["10.10.0.0/16"]  # CIDR blocks reachable through the VPN tunnel
+# --- CTF/Pro Lab mode (HTB/THM/ProvingGrounds via OpenVPN) ---
+# Default is open-environment (public domain + htaccess on). Only change these for CTF/Pro Lab use.
+enable_external_vpn                  = false  # Set to true for HTB/THM/PG — enables OpenVPN client + VPC routing (see Part 8)
+enable_redirector_htaccess_filtering = true   # Set to false for HTB/THM/PG — scanner/AV blocking not needed in lab environments
+# external_vpn_cidrs = ["10.10.0.0/16"]  # CIDR blocks reachable through the VPN tunnel (default covers most HTB/THM ranges)
 
 # Optional: Custom tags applied to every AWS resource (instances, SGs, EIPs, etc.)
 # Useful for cost tracking, filtering resources in the AWS Console, and billing reports
