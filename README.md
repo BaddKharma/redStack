@@ -1712,7 +1712,7 @@ external_vpn_cidrs  = ["10.10.0.0/16", "10.200.0.0/16"]
 ```
 
 > [!NOTE]
-> If you already deployed without `enable_external_vpn = true`, you can enable it and run `terraform apply` again. Terraform will add the required routes, security group rules, and update the redirector instance.
+> If you already deployed without `enable_external_vpn = true`, you can enable it and run `terraform apply` again. Terraform will add the required routes, security group rules, and update the redirector instance. That said, a full `terraform destroy` followed by a fresh `terraform apply` is recommended for the cleanest build.
 
 ### Step 8.2: Deploy and Obtain Your .ovpn File
 
