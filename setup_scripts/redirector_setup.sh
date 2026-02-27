@@ -128,11 +128,15 @@ apt-get install -y certbot python3-certbot-apache
 echo "[*] Installing OpenJDK 17..."
 apt-get install -y openjdk-17-jdk
 
-# Enable IP forwarding if VPN routing is enabled
+# Enable IP forwarding and UFW forward policy if VPN routing is enabled
 if [ "$ENABLE_VPN" = "true" ]; then
     echo "[*] Enabling IP forwarding for VPN routing..."
     echo 'net.ipv4.ip_forward = 1' > /etc/sysctl.d/99-vpn-forward.conf
     sysctl -p /etc/sysctl.d/99-vpn-forward.conf
+
+    echo "[*] Setting UFW default forward policy to ACCEPT..."
+    sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
+    ufw reload
 fi
 
 # Enable Apache service
