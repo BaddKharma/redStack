@@ -82,7 +82,7 @@ resource "aws_route" "teamserver_to_redirector" {
 }
 
 # ============================================================================
-# EXTERNAL VPN ROUTING (Optional - for HTB/THM access)
+# EXTERNAL VPN ROUTING (Optional - for HTB/THM/VulnLabs access)
 # ============================================================================
 
 # Route VPN target CIDRs to redirector instance ENI (for VPN forwarding)

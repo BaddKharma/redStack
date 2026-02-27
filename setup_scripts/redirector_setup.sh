@@ -446,7 +446,7 @@ VPNSTART
     # systemd service unit — not enabled, manual start only
     cat > /etc/systemd/system/ext-vpn.service << 'VPNSERVICE'
 [Unit]
-Description=External VPN (HTB/THM/PG)
+Description=External VPN (HTB/THM/VulnLabs/PG)
 After=network-online.target
 Wants=network-online.target
 
@@ -515,7 +515,7 @@ echo "  sudo /home/admin/test_redirector.sh"
 
 if [ "$ENABLE_VPN" = "true" ]; then
     echo ""
-    echo "External VPN routing (HTB/THM):"
+    echo "External VPN routing (HTB/THM/VulnLabs):"
     echo "  1. Upload .ovpn:  scp lab.ovpn admin@<redirector-ip>:~/vpn/"
     echo "  2. Start VPN:     sudo ~/vpn.sh start ~/vpn/lab.ovpn"
     echo "  3. Stop VPN:      sudo ~/vpn.sh stop"

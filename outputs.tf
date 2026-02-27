@@ -124,7 +124,7 @@ output "network_architecture" {
 
 ${var.enable_external_vpn ? <<-VPNARCH
 
-  External VPN Routing (HTB/THM):
+  External VPN Routing (HTB/THM/VulnLabs):
     [Internal Machine] -> VPC Peering -> ${aws_network_interface.redirector.private_ip} -> tun0 -> [CTF Targets]
     Routed CIDRs: ${join(", ", var.external_vpn_cidrs)}
 

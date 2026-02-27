@@ -22,7 +22,7 @@
 - [Part 5: Sliver C2 Setup](#part-5-sliver-c2-setup)
 - [Part 6: Havoc C2 Setup](#part-6-havoc-c2-setup)
 - [Part 7: Final Validation](#part-7-final-validation)
-- [External Target Environments (HTB/THM/ProvingGrounds)](#external-target-environments-htbthmprovinggrounds)
+- [External Target Environments (HTB/THM/VulnLabs/ProvingGrounds)](#external-target-environments-htbthmvulnlabsprovinggrounds)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -233,7 +233,7 @@ ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Wind
 ```
 
 > [!NOTE]
-> **Default deployment uses a public domain with htaccess filtering enabled.** This is the standard mode for real-world use and is what the rest of this guide assumes. The closed environment option below is only for HTB/THM Pro Labs and other isolated OpenVPN environments where no public DNS exists.
+> **Default deployment uses a public domain with htaccess filtering enabled.** This is the standard mode for real-world use and is what the rest of this guide assumes. The closed environment option below is only for HTB/THM/VulnLabs Pro Labs and other isolated OpenVPN environments where no public DNS exists.
 >
 > **Open environment** (default — internet access, domain registered):
 > Set `redirector_domain` to your domain. Complete Step 1.6 (DNS) and Step 3.1 (Certbot) to get a trusted TLS certificate. Agents call back using your domain over HTTPS. Scanner/AV blocking via `redirect.rules` is enabled by default.
@@ -242,7 +242,7 @@ ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Wind
 > redirector_domain = "c2.yourdomain.tld"
 > ```
 >
-> **Closed environment** (HTB/THM Pro Labs, OpenVPN-only, no public DNS):
+> **Closed environment** (HTB/THM/VulnLabs Pro Labs, OpenVPN-only, no public DNS):
 > Leave `redirector_domain` empty and set the two CTF toggles below. The redirector uses its public Elastic IP as the server identity with a self-signed certificate. Scanner/AV blocking is disabled since it is not needed in lab environments. Skip Step 1.6 and Step 3.1. See Part 8 for the full CTF deployment workflow.
 >
 > ```hcl
@@ -264,10 +264,10 @@ mythic_uri_prefix = "/cdn/media/stream"
 sliver_uri_prefix = "/cloud/storage/objects"
 havoc_uri_prefix  = "/edge/cache/assets"
 
-# --- CTF/Pro Lab mode (HTB/THM/ProvingGrounds via OpenVPN) ---
+# --- CTF/Pro Lab mode (HTB/THM/VulnLabs/ProvingGrounds via OpenVPN) ---
 # Default is open-environment (public domain + htaccess on). Only change these for CTF/Pro Lab use.
-enable_external_vpn                  = false  # Set to true for HTB/THM/PG — enables OpenVPN client + VPC routing (see Part 8)
-enable_redirector_htaccess_filtering = true   # Set to false for HTB/THM/PG — scanner/AV blocking not needed in lab environments
+enable_external_vpn                  = false  # Set to true for HTB/THM/VulnLabs/PG — enables OpenVPN client + VPC routing (see Part 8)
+enable_redirector_htaccess_filtering = true   # Set to false for HTB/THM/VulnLabs/PG — scanner/AV blocking not needed in lab environments
 
 # C2 header validation is always enabled. These override the defaults:
 # c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
@@ -1644,7 +1644,7 @@ At the end of this deployment, you should have:
 
 ---
 
-## External Target Environments (HTB/THM/ProvingGrounds)
+## External Target Environments (HTB/THM/VulnLabs/ProvingGrounds)
 
 > [!NOTE]
 > **This section is for CTF/Pro Lab use only.** The default redStack deployment uses a public domain, trusted TLS certificate, and htaccess filtering. Only follow Part 8 if you are connecting to an isolated platform (HTB Pro Labs, THM, Proving Grounds) via OpenVPN where targets cannot reach the public internet.
@@ -1680,7 +1680,7 @@ Traffic Flow (CTF/Pro Lab mode):
   -> VPC A route table  (10.10.0.0/16 -> VPC peering)
   -> VPC B route table  (10.10.0.0/16 -> redirector ENI)
   -> redirector         (iptables MASQUERADE on tun0)
-  -> OpenVPN tunnel     -> HTB/THM/PG targets
+  -> OpenVPN tunnel     -> HTB/THM/VulnLabs/PG targets
 ```
 
 ### Step 8.1: Enable VPN Routing Before Deployment
@@ -1704,7 +1704,7 @@ This enables the following infrastructure changes:
 
 **Custom Target CIDRs (optional):**
 
-The default routed CIDR is `10.10.0.0/16` which covers most HTB/THM lab ranges. If your target platform uses different ranges, add them in `terraform.tfvars`:
+The default routed CIDR is `10.10.0.0/16` which covers most HTB/THM/VulnLabs lab ranges. If your target platform uses different ranges, add them in `terraform.tfvars`:
 
 ```hcl
 enable_external_vpn = true

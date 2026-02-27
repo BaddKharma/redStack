@@ -98,13 +98,13 @@ variable "enable_redirector_htaccess_filtering" {
 }
 
 variable "enable_external_vpn" {
-  description = "Enable OpenVPN client on redirector for external platform access (HTB/THM)"
+  description = "Enable OpenVPN client on redirector for external platform access (HTB/THM/VulnLabs)"
   type        = bool
   default     = false
 }
 
 variable "external_vpn_cidrs" {
-  description = "CIDR blocks routable through the redirector's VPN tunnel (e.g., HTB/THM target ranges)"
+  description = "CIDR blocks routable through the redirector's VPN tunnel (e.g., HTB/THM/VulnLabs target ranges)"
   type        = list(string)
   default     = ["10.10.0.0/16"]
 }
