@@ -230,8 +230,6 @@ resource "aws_instance" "redirector" {
       enable_external_vpn   = var.enable_external_vpn
       enable_redirect_rules = var.enable_redirector_htaccess_filtering
       main_vpc_cidr         = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
-      wg_server_private_key = var.wg_server_private_key
-      wg_client_public_key  = var.wg_client_public_key
     }), "\r", ""))
   }), "\r", "")
 

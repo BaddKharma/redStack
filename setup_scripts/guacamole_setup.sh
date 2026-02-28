@@ -423,25 +423,36 @@ echo "===== Default credentials: guacadmin / $GUAC_ADMIN_PASSWORD ====="
 
 %{ if enable_external_vpn }
 # ============================================================================
-# WireGuard Client — Routes lab VPN targets through redirector tunnel
+# WireGuard Tunnel Setup
+# Generates keypairs on-box and configures both ends of the tunnel via SSH.
+# Guacamole (10.100.0.2) is the WireGuard client and routing gateway.
+# Redirector (10.100.0.1) is the WireGuard server, forwarding to tun0 (OpenVPN).
 # ============================================================================
-echo "[*] Setting up WireGuard client (wg0)..."
+echo "[*] Setting up WireGuard tunnel..."
 
-apt-get install -y wireguard
+apt-get install -y wireguard sshpass
 
 echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
 sysctl -w net.ipv4.ip_forward=1
 
-cat > /etc/wireguard/wg0.conf << 'WGEOF'
+# Generate keypairs on this instance at boot — no pre-deployment key management needed
+WG_SERVER_PRIV=$(wg genkey)
+WG_SERVER_PUB=$(echo "$WG_SERVER_PRIV" | wg pubkey)
+WG_CLIENT_PRIV=$(wg genkey)
+WG_CLIENT_PUB=$(echo "$WG_CLIENT_PRIV" | wg pubkey)
+echo "[*] WireGuard keypairs generated"
+
+# Write Guacamole (client) wg0.conf
+cat > /etc/wireguard/wg0.conf << WGEOF
 [Interface]
 Address = 10.100.0.2/30
-PrivateKey = ${wg_client_private_key}
+PrivateKey = $WG_CLIENT_PRIV
 PostUp   = iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE; iptables -A FORWARD -i ens5 -o wg0 -j ACCEPT; iptables -A FORWARD -i wg0 -o ens5 -j ACCEPT
 PostDown = iptables -t nat -D POSTROUTING -o wg0 -j MASQUERADE; iptables -D FORWARD -i ens5 -o wg0 -j ACCEPT; iptables -D FORWARD -i wg0 -o ens5 -j ACCEPT
 
 [Peer]
 # Redirector (WireGuard server)
-PublicKey = ${wg_server_public_key}
+PublicKey = $WG_SERVER_PUB
 Endpoint = ${redirector_private_ip}:51820
 AllowedIPs = ${join(",", external_vpn_cidrs)}
 PersistentKeepalive = 25
@@ -449,7 +460,59 @@ WGEOF
 
 chmod 600 /etc/wireguard/wg0.conf
 
+# Wait for redirector SSH to become available
+echo "[*] Waiting for redirector SSH at ${redirector_private_ip}..."
+until sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    -o ConnectTimeout=5 \
+    admin@${redirector_private_ip} "echo ok" 2>/dev/null; do
+    echo "    ... retrying in 10s"
+    sleep 10
+done
+echo "[+] Redirector SSH is up"
+
+# Wait for redirector apt lock to clear (redirector cloud-init may still be running)
+echo "[*] Waiting for redirector package manager to be free..."
+sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    admin@${redirector_private_ip} \
+    "while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done"
+
+# Install WireGuard on redirector
+sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    admin@${redirector_private_ip} \
+    "sudo apt-get install -y wireguard"
+
+# Push server wg0.conf to redirector
+sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    admin@${redirector_private_ip} \
+    "sudo tee /etc/wireguard/wg0.conf > /dev/null" << WG_SERVER_CONF
+[Interface]
+Address = 10.100.0.1/30
+PrivateKey = $WG_SERVER_PRIV
+ListenPort = 51820
+
+[Peer]
+# Guacamole (WireGuard client / routing gateway for default VPC)
+PublicKey = $WG_CLIENT_PUB
+AllowedIPs = 10.100.0.2/32
+WG_SERVER_CONF
+
+# Secure config and start WireGuard server on redirector
+sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    admin@${redirector_private_ip} \
+    "sudo chmod 600 /etc/wireguard/wg0.conf && \
+     sudo iptables -A FORWARD -i wg0 -o tun0 -j ACCEPT && \
+     sudo iptables -A FORWARD -i tun0 -o wg0 -j ACCEPT && \
+     sudo systemctl enable wg-quick@wg0 && \
+     sudo systemctl start wg-quick@wg0"
+echo "[+] WireGuard server started on redirector (10.100.0.1)"
+
+# Start WireGuard client on Guacamole
 systemctl enable wg-quick@wg0
 systemctl start wg-quick@wg0
-echo "[+] WireGuard client (wg0) started — tunneling to redirector at ${redirector_private_ip}:51820"
+echo "[+] WireGuard client started — tunnel: guac (10.100.0.2) <-> redirector (10.100.0.1)"
 %{ endif }

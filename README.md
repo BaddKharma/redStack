@@ -1661,78 +1661,74 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 +---------------------------------------------------------------------+
 
 VPC A - Team Server Infrastructure (Default VPC / 172.31.0.0/16)
-├── WIN-OPERATOR - Windows Workstation    (target traffic -> VPC A route table -> guacamole wg0)
-├── mythic       - Mythic C2 Server       (target traffic -> VPC A route table -> guacamole wg0)
-├── sliver       - Sliver C2 Server       (target traffic -> VPC A route table -> guacamole wg0)
-├── havoc        - Havoc C2 Server        (target traffic -> VPC A route table -> guacamole wg0)
-└── guacamole    - WireGuard Gateway      (wg0: 10.100.0.2, MASQUERADE, forwards to redirector)
++-- WIN-OPERATOR - Windows Workstation
++-- mythic       - Mythic C2 Server           } all target traffic
++-- sliver       - Sliver C2 Server           } -> VPC A route table
++-- havoc        - Havoc C2 Server            } -> guacamole ENI
++-- guacamole    - Access Gateway + WireGuard Client
+                   wg0: 10.100.0.2/30
+                   MASQUERADE on wg0 (src -> 10.100.0.2)
 
 VPC B - Redirector Infrastructure (10.60.0.0/16)
-└── redirector   - Apache Redirector      (wg0: 10.100.0.1 server, OpenVPN client, tun0 MASQUERADE)
++-- redirector   - Apache Redirector + WireGuard Server + OpenVPN Client
+                   wg0: 10.100.0.1/30  (WireGuard server, listens UDP 51820)
+                   tun0: <dynamic>     (assigned by HTB/THM OpenVPN server)
+                   MASQUERADE on tun0  (src -> tun0 IP)
 
 VPC Peering: VPC A <-> VPC B
+  Used for: C2 callback proxying (Apache -> teamservers) and WireGuard UDP transport
+
+Why WireGuard bridges the VPCs:
+  AWS VPC peering only delivers packets whose destination IP falls inside
+  either VPC's CIDR block. CTF target IPs (e.g. 10.13.38.33) are outside
+  both VPCs, so packets routed via peering are silently dropped.
+  Routing from Guacamole (same VPC as teamservers) avoids the peering
+  restriction entirely, and WireGuard carries those packets across to
+  the redirector's OpenVPN tunnel.
 
 Route Tables:
-  VPC A: 10.10.0.0/16 -> guacamole ENI   (same VPC, no peering restriction)
-  WireGuard: guacamole (10.100.0.2) <-> redirector (10.100.0.1) via VPC peering
+  VPC A: 10.10.0.0/16, 10.13.0.0/16, 10.129.0.0/16 -> guacamole ENI
+         (same VPC delivery - no peering restriction)
+
+WireGuard Tunnel (auto-configured at boot, no pre-deployment keys needed):
+  guacamole (10.100.0.2) <-> redirector (10.100.0.1) via UDP 51820
 
 Traffic Flow (CTF/Pro Lab mode):
 [WIN-OPERATOR / mythic / sliver / havoc]
-  -> VPC A route table  (10.10.0.0/16 -> guacamole ENI)
-  -> guacamole          (MASQUERADE src -> 10.100.0.2, forward via wg0)
-  -> WireGuard tunnel   (UDP 51820, guacamole -> redirector via VPC peering)
-  -> redirector         (decapsulate, MASQUERADE on tun0)
-  -> OpenVPN tunnel     -> HTB/THM/VulnLabs/PG targets
+  -> VPC A route table      (CTF CIDRs -> guacamole ENI, same VPC)
+  -> guacamole wg0          (MASQUERADE: src -> 10.100.0.2)
+  -> WireGuard UDP 51820    (encrypted tunnel via VPC peering to redirector)
+  -> redirector wg0         (decapsulate, forward to tun0)
+  -> redirector tun0        (MASQUERADE: src -> tun0 IP, OpenVPN to HTB/THM)
+  -> CTF target
 ```
 
-### Step 8.1: Enable VPN Routing Before Deployment
+### Why WireGuard?
 
-**This must be configured before running `terraform apply`.**
+AWS VPC peering has a hard constraint: it will only deliver packets whose destination IP falls within one of the two peered VPC CIDR blocks. Attempting to route CTF target traffic (e.g. `10.13.38.33`) via a peering connection causes it to be silently dropped at the AWS fabric level — correct route tables, security groups, and `source_dest_check=false` make no difference.
 
-#### 8.1a: Generate WireGuard Keys
+WireGuard solves this by creating a Layer 3 encrypted tunnel directly between Guacamole (in the default VPC) and the redirector (in the redirector VPC). Guacamole receives CTF-bound packets from the teamservers via normal same-VPC routing, encapsulates them in WireGuard UDP frames, and sends those frames to the redirector over VPC peering. Because the WireGuard UDP frames are addressed to the redirector's VPC IP (`10.60.x.x`) — not to the CTF target — they pass through VPC peering cleanly. The redirector decapsulates the packets and forwards them out `tun0` to the OpenVPN server.
 
-WireGuard requires a keypair for each end of the tunnel. Generate them on any Linux/WSL machine:
+The result is a double-NAT path: Guacamole MASQUERADEs onto `wg0` (source becomes `10.100.0.2`), and the redirector's `ext-vpn` up-script MASQUERADEs onto `tun0` (source becomes the VPN-assigned IP). CTF targets see traffic from the redirector's `tun0` IP and reply normally.
 
-```bash
-# Redirector (server) keypair
-wg genkey | tee /tmp/wg-server.key | wg pubkey > /tmp/wg-server.pub
+**WireGuard configuration is fully automatic.** Guacamole generates both keypairs at boot, writes its own config, then SSHes into the redirector to push the server config and start the service. No pre-deployment key generation is required.
 
-# Guacamole (client) keypair
-wg genkey | tee /tmp/wg-client.key | wg pubkey > /tmp/wg-client.pub
+### Step 8.1: Configure terraform.tfvars
 
-# Print all four values
-echo "server private:"; cat /tmp/wg-server.key
-echo "server public:";  cat /tmp/wg-server.pub
-echo "client private:"; cat /tmp/wg-client.key
-echo "client public:";  cat /tmp/wg-client.pub
-```
-
-> [!TIP]
-> On Windows, run the above in WSL (`wsl` in PowerShell) or any Linux VM. WireGuard keys are just Curve25519 keypairs — generate them once and reuse across deployments unless you want to rotate.
-
-#### 8.1b: Configure terraform.tfvars
-
-Edit `terraform.tfvars` and set the following:
+Edit `terraform.tfvars` and set:
 
 ```hcl
 enable_external_vpn                  = true   # installs OpenVPN + WireGuard, enables routing
 enable_redirector_htaccess_filtering = false  # disables scanner/AV blocking (not needed in lab)
-
-# WireGuard keys (from Step 8.1a)
-wg_server_private_key = "<redirector private key>"
-wg_server_public_key  = "<redirector public key>"
-wg_client_private_key = "<guacamole private key>"
-wg_client_public_key  = "<guacamole public key>"
 ```
 
-This enables the following infrastructure changes:
+This enables the following at deploy time:
 
-- Installs OpenVPN client on the redirector (for `ext-vpn` service)
-- Installs WireGuard on both the redirector (server, `wg0: 10.100.0.1`) and Guacamole (client, `wg0: 10.100.0.2`)
+- Installs OpenVPN client on the redirector (`ext-vpn` systemd service)
+- Installs WireGuard on both instances (redirector at boot, Guacamole configures both via SSH)
 - Enables IP forwarding on both the redirector and Guacamole
 - Disables AWS `source_dest_check` on both ENIs (required for packet forwarding)
-- Routes CTF target CIDRs in the default VPC to Guacamole's ENI (same-VPC routing, bypasses VPC peering restriction)
-- Guacamole tunnels that traffic to the redirector via WireGuard, which forwards to `tun0` (OpenVPN)
+- Routes CTF target CIDRs in the default VPC to Guacamole's ENI (bypasses VPC peering restriction)
 
 **Custom Target CIDRs (optional):**
 
@@ -1743,12 +1739,13 @@ external_vpn_cidrs = ["10.10.0.0/16", "10.13.0.0/16", "10.129.0.0/16"]
 ```
 
 > [!NOTE]
-> If you already deployed without `enable_external_vpn = true`, a full `terraform destroy` followed by a fresh `terraform apply` is recommended for the cleanest build. Enabling it on a live deployment will update the routes and install WireGuard, but the instances will need to be reprovisioned for the setup scripts to run.
+> If you already deployed without `enable_external_vpn = true`, a full `terraform destroy` followed by a fresh `terraform apply` is required. The WireGuard setup runs as part of cloud-init at first boot — it cannot be triggered on a running instance by re-applying Terraform.
 
 ### Step 8.2: Deploy and Obtain Your .ovpn File
 
 1. Deploy the infrastructure with `terraform apply`
-2. Download your `.ovpn` file from your CTF platform (HTB, THM, or Proving Grounds)
+2. Wait for cloud-init to complete on all instances (~5 minutes). Guacamole will automatically configure the WireGuard tunnel with the redirector during this time.
+3. Download your `.ovpn` file from your CTF platform (HTB, THM, or Proving Grounds)
 
 ### Step 8.3: Get the .ovpn File to the Redirector
 
@@ -1868,11 +1865,12 @@ This stops the OpenVPN process and removes the iptables MASQUERADE rules on `tun
 
 ### Important Notes
 
+- **WireGuard is automatic.** Keys are generated on Guacamole at first boot. Guacamole then SSHes into the redirector to push the server config and start `wg-quick@wg0` on both ends. No pre-deployment key setup is needed.
 - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only CTF target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
-- **Only the configured CIDRs are routed.** By default, only `10.10.0.0/16` is routed through the VPN. Traffic to other destinations (internet, VPC peers) is unaffected.
-- **The .ovpn file persists across reboots** in `~/vpn/external.ovpn`. However, the VPN tunnel itself does not auto-start. Run `sudo ~/vpn.sh start` after a reboot.
-- **All internal machines can reach CTF targets.** The routing is configured at the VPC level, so the Windows workstation, all C2 servers, and the Guacamole server can all reach targets through the VPN tunnel.
-- **tun0 IP is dynamic.** It changes with each VPN reconnect. Agents baked with the tun0 IP will stop working after a reconnect that assigns a different IP. For long engagements, check the IP after each reconnect and regenerate agents if it changed. Run `sudo ~/vpn.sh status` to get the current IP.
+- **Only the configured CIDRs are routed.** Traffic to other destinations (internet, VPC peers) is unaffected. Add CIDRs to `external_vpn_cidrs` in `terraform.tfvars` if your platform uses different subnets.
+- **The .ovpn file persists across reboots** in `~/vpn/`. The VPN tunnel itself does not auto-start — run `sudo systemctl start ext-vpn` after a reboot. The WireGuard tunnel (`wg-quick@wg0`) is enabled at boot on both instances and comes up automatically.
+- **All internal machines can reach CTF targets.** Routing is configured at the VPC level — the Windows workstation, all C2 servers, and Guacamole can all reach targets through the tunnel.
+- **tun0 IP is dynamic.** It changes with each VPN reconnect. Agents baked with the tun0 IP will stop working after a reconnect that assigns a different IP. Check the IP after each reconnect and regenerate agents if it changed.
 - **Callback address choice.** If targets have internet access, use the public Elastic IP (stable, no regeneration needed). If targets are isolated to the VPN network only, use the tun0 IP with HTTP (port 80).
 
 **Checkpoint:** Lab connected to external target environment, all internal machines can reach CTF targets

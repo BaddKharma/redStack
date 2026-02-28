@@ -470,29 +470,9 @@ VPNSERVICE
     echo "[+] VPN service installed (disabled — start manually with: sudo systemctl start ext-vpn)"
 
     # --- WireGuard Server (wg0) ---
+    # Package pre-installed here so it is ready when Guacamole SSHes in to push config.
     apt-get install -y wireguard
-
-    cat > /etc/wireguard/wg0.conf << 'WGEOF'
-[Interface]
-Address = 10.100.0.1/30
-PrivateKey = ${wg_server_private_key}
-ListenPort = 51820
-
-[Peer]
-# Guacamole (WireGuard client / routing gateway for default VPC)
-PublicKey = ${wg_client_public_key}
-AllowedIPs = 10.100.0.2/32
-WGEOF
-
-    chmod 600 /etc/wireguard/wg0.conf
-
-    # Forward traffic between WireGuard tunnel and OpenVPN tunnel
-    iptables -A FORWARD -i wg0 -o tun0 -j ACCEPT
-    iptables -A FORWARD -i tun0 -o wg0 -j ACCEPT
-
-    systemctl enable wg-quick@wg0
-    systemctl start wg-quick@wg0
-    echo "[+] WireGuard server (wg0) started — peer: Guacamole at 10.100.0.2"
+    echo "[+] WireGuard installed — configuration will be pushed by Guacamole at boot"
 fi
 
 echo ""

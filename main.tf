@@ -265,8 +265,6 @@ resource "aws_instance" "guacamole" {
     guacamole_private_ip  = aws_network_interface.guacamole.private_ip
     enable_external_vpn   = var.enable_external_vpn
     external_vpn_cidrs    = var.external_vpn_cidrs
-    wg_client_private_key = var.wg_client_private_key
-    wg_server_public_key  = var.wg_server_public_key
   })
 
   depends_on = [aws_instance.windows]

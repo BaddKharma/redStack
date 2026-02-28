@@ -109,31 +109,6 @@ variable "external_vpn_cidrs" {
   default     = ["10.10.0.0/16"]
 }
 
-variable "wg_server_private_key" {
-  description = "WireGuard private key for the redirector (server). Required when enable_external_vpn = true. Generate with: wg genkey"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "wg_server_public_key" {
-  description = "WireGuard public key for the redirector. Derive with: echo <private_key> | wg pubkey"
-  type        = string
-  default     = ""
-}
-
-variable "wg_client_private_key" {
-  description = "WireGuard private key for Guacamole (client). Required when enable_external_vpn = true. Generate with: wg genkey"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "wg_client_public_key" {
-  description = "WireGuard public key for Guacamole. Derive with: echo <private_key> | wg pubkey"
-  type        = string
-  default     = ""
-}
 
 variable "mythic_uri_prefix" {
   description = "URI prefix for Mythic C2 callbacks on the redirector"
