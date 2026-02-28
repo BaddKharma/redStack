@@ -1,5 +1,7 @@
 # redStack: A Boot-to-Breach Lab Environment for Red Team Operators
 
+![redStack Banner](assets/redStack_banner.png)
+
 > [!NOTE]
 > redStack is now feature complete and supports both public internet deployments and closed environments (HTB/VL/PG) that use OpenVPN. This is actively being tested and debugged, so please reach out with any issues or concerns.
 
@@ -1845,14 +1847,16 @@ sudo systemctl stop ext-vpn
 
 This stops the OpenVPN process and removes the iptables MASQUERADE rules on `tun0`. The `.ovpn` file is preserved in `~/vpn/` so you can restart without re-uploading. The WireGuard tunnel (`wg-quick@wg0`) stays up and will reconnect automatically when `ext-vpn` restarts.
 
+**Checkpoint:** ✅ VPN stopped, lab C2 operations unaffected
+
 ### Important Notes
 
-- **WireGuard is automatic.** Keys are generated on Guacamole at first boot. Guacamole then SSHes into the redirector to push the server config and start `wg-quick@wg0` on both ends. No pre-deployment key setup is needed.
-- **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only CTF target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
-- **Only the configured CIDRs are routed.** Traffic to other destinations (internet, VPC peers) is unaffected. Add CIDRs to `external_vpn_cidrs` in `terraform.tfvars` if your platform uses different subnets.
-- **The .ovpn file persists across reboots** in `~/vpn/`. The VPN tunnel itself does not auto-start. Run `sudo systemctl start ext-vpn` after a reboot. The WireGuard tunnel (`wg-quick@wg0`) is enabled at boot on both instances and comes up automatically.
-- **All internal machines can reach CTF targets.** Routing is configured at the VPC level. The Windows workstation, all C2 servers, and Guacamole can all reach targets through the tunnel.
-- **tun0 IP is dynamic.** It changes with each VPN reconnect. Agents baked with the tun0 IP will stop working after a reconnect that assigns a different IP. Check the IP after each reconnect and regenerate agents if it changed.
-- **Callback address choice.** If targets have internet access, use the public Elastic IP (stable, no regeneration needed). If targets are isolated to the VPN network only, use the tun0 IP with HTTP (port 80).
-
-**Checkpoint:** Lab connected to external target environment, all internal machines can reach CTF targets
+> [!IMPORTANT]
+>
+> - **WireGuard is automatic.** Keys are generated on Guacamole at first boot. Guacamole then SSHes into the redirector to push the server config and start `wg-quick@wg0` on both ends. No pre-deployment key setup is needed.
+> - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only CTF target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
+> - **Only the configured CIDRs are routed.** Traffic to other destinations (internet, VPC peers) is unaffected. Add CIDRs to `external_vpn_cidrs` in `terraform.tfvars` if your platform uses different subnets.
+> - **The .ovpn file persists across reboots** in `~/vpn/`. The VPN tunnel itself does not auto-start. Run `sudo systemctl start ext-vpn` after a reboot. The WireGuard tunnel (`wg-quick@wg0`) is enabled at boot on both instances and comes up automatically.
+> - **All internal machines can reach CTF targets.** Routing is configured at the VPC level. The Windows workstation, all C2 servers, and Guacamole can all reach targets through the tunnel.
+> - **tun0 IP is dynamic.** It changes with each VPN reconnect. Agents baked with the tun0 IP will stop working after a reconnect that assigns a different IP. Check the IP after each reconnect and regenerate agents if it changed.
+> - **Callback address choice.** If targets have internet access, use the public Elastic IP (stable, no regeneration needed). If targets are isolated to the VPN network only, use the tun0 IP with HTTP (port 80).
