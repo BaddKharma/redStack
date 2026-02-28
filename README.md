@@ -23,7 +23,6 @@
 - [Part 4: Mythic C2 Setup](#part-4-mythic-c2-setup)
 - [Part 5: Sliver C2 Setup](#part-5-sliver-c2-setup)
 - [Part 6: Havoc C2 Setup](#part-6-havoc-c2-setup)
-- [Part 7: Final Validation](#part-7-final-validation)
 - [External Target Environments (HTB/VL/PG)](#external-target-environments-htbvlpg)
 - [Troubleshooting](#troubleshooting)
 
@@ -1139,81 +1138,53 @@ scp admin@havoc:/home/admin/Desktop/demon.x64.exe C:\Users\Administrator\Desktop
 
 **Checkpoint:** ✅ Havoc Demon calling back through redirector URI prefix /edge/cache/assets/
 
----
-
-## Part 7: Final Validation
-
-### Objective: Complete Infrastructure Validation
-
-Verify complete infrastructure and security posture.
-
-### Step 7.1: Test Security Isolation
-
-**Critical Test - C2 Servers Should NOT Be Directly Accessible:**
-
-All three C2 servers (Mythic, Sliver, Havoc) have no public IPs and are unreachable from the internet by design. They can only be accessed internally via Guacamole or through the redirector's VPC peering.
-
-**Expected:** No C2 server has a public IP. All C2 traffic must flow through the Apache redirector.
-
-**Checkpoint:** ✅ C2 servers not directly accessible (GOOD!)
-
-**Verify Redirector CAN Reach All C2 Servers (run on the redirector via SSH):**
-
-```bash
-# Use a browser User-Agent; curl is blocked by redirect.rules
-UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-
-# Test direct backend connectivity (hostnames resolve via /etc/hosts on the redirector)
-curl -I -m 5 -A "$UA" http://mythic/
-curl -I -m 5 -A "$UA" http://sliver/
-curl -I -m 5 -A "$UA" http://havoc/
-```
-
-**Expected:** `curl: (7) Failed to connect` (no listener running yet). This is correct. Verify ping works to confirm VPC peering:
-
-```bash
-ping -c 3 mythic
-```
-
-**Checkpoint:** ✅ Redirector can ping all C2 servers via private IPs (VPC peering confirmed)
-
-### Step 7.2: Verify All Agent Callbacks
-
-**Check across all C2 frameworks:**
-
-- Mythic: Active Callbacks page in the web UI
-- Sliver: `sessions` command in the Sliver console
-- Havoc: Active sessions in the Havoc client
-
-**Checkpoint:** ✅ All C2 callback paths functional
-
-### Step 7.3: Review Redirector Logs
-
-**All C2 traffic flows through the redirector:**
-
-```bash
-# SSH to redirector
-ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
-
-# HTTPS traffic (C2 callbacks)
-sudo tail -20 /var/log/apache2/redirector-ssl-access.log
-
-# HTTP traffic
-sudo tail -20 /var/log/apache2/redirector-access.log
-
-# Differentiate by URI prefix:
-# /cdn/media/stream/ = Mythic
-# /cloud/storage/objects/ = Sliver
-# /edge/cache/assets/ = Havoc
-```
-
-**Checkpoint:** ✅ Redirector logging understood for all C2 servers
+> [!TIP]
+> With all three C2 listeners running, re-run the redirector test script to confirm all backends show **OK**:
+>
+> ```bash
+> sudo /home/admin/test_redirector.sh
+> ```
+>
+> All three entries under **Testing direct backend connectivity** should now show `OK`.
 
 ---
 
 ## Troubleshooting
 
 Reference this section if any component is not behaving as expected after deployment. Each subsection targets a specific failure mode with symptoms, root cause, and fix.
+
+### Connectivity Checks
+
+#### C2 Server Isolation
+
+All three C2 servers (Mythic, Sliver, Havoc) have no public IPs and are unreachable from the internet by design. All C2 traffic must flow through the Apache redirector. Verify VPC peering is working from the redirector:
+
+```bash
+ping -c 3 mythic
+ping -c 3 sliver
+ping -c 3 havoc
+```
+
+#### Verify Agent Callbacks
+
+- **Mythic:** Active Callbacks page in the web UI
+- **Sliver:** `sessions` command in the Sliver console
+- **Havoc:** Active sessions in the Havoc client
+
+#### Review Redirector Logs
+
+```bash
+sudo tail -20 /var/log/apache2/redirector-ssl-access.log
+sudo tail -20 /var/log/apache2/redirector-access.log
+```
+
+URI prefixes in the logs identify which C2 is receiving traffic:
+
+```text
+/cdn/media/stream/      = Mythic
+/cloud/storage/objects/ = Sliver
+/edge/cache/assets/     = Havoc
+```
 
 ### Component Health Checks
 
