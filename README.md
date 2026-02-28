@@ -106,10 +106,20 @@ Public Internet Environment (C2 Callback Flow):
 - [ ] AWS CLI installed and configured
 - [ ] Terraform >= 1.0 installed
 - [ ] Your public IP obtained
+- [ ] Repository cloned (see Step 0.1)
 - [ ] SSH key pair created in AWS EC2 (see Step 0.3 below)
-- [ ] redstack_tf package extracted
 
-### Step 0.1: Install AWS CLI & Terraform
+### Step 0.1: Clone Repository & Install Tools
+
+**Clone the repository:**
+
+```bash
+git clone https://github.com/BaddKharma/redStack.git
+cd redStack
+```
+
+> [!NOTE]
+> All subsequent commands should be run from inside the `redStack/` directory. This ensures the SSH key pair created in Step 0.3 lands in the right place.
 
 **Install AWS CLI:**
 
@@ -145,7 +155,7 @@ You will be prompted for:
 | Linux (Ubuntu/Debian) | See <https://developer.hashicorp.com/terraform/install> |
 | Windows | `choco install terraform` or download from <https://developer.hashicorp.com/terraform/install> |
 
-**Checkpoint:** ✅ AWS CLI and Terraform installed
+**Checkpoint:** ✅ Repository cloned, AWS CLI and Terraform installed
 
 ### Step 0.2: Verification Commands
 
@@ -208,7 +218,7 @@ aws ec2 describe-key-pairs --key-names rs-rsa-key
 ```
 
 > [!NOTE]
-> You can also create the key pair in the AWS Console under EC2 → Key Pairs → Create key pair. Use RSA and .pem format. Move the downloaded file to your project folder and fix permissions with the `icacls` command above.
+> You can also create the key pair in the AWS Console under EC2 → Key Pairs → Create key pair. Use RSA and .pem format. Download the file into your `redStack/` directory and fix permissions with the `icacls` command above.
 
 **Checkpoint:** ✅ SSH key pair created and .pem file saved in project folder
 
