@@ -59,12 +59,12 @@
 | |      ||      ||      |  |            |            |       |
 | +------++------++------+  +------------+            |       |
 |        ( no public IPs - internal only )            |       |
-+------------------------------+----------------------+       |
-                               |                              |
-           VPC Peering: 172.31.0.0/16 <-> 10.60.0.0/16        |
-           - C2 callbacks: Apache proxy -> teamservers        |
-           - WireGuard: UDP :51820 [VPN]                      |
-                                                              |
++------------------------------+----------------------+-------+       
+                               |                              
+           VPC Peering: 172.31.0.0/16 <-> 10.60.0.0/16        
+           - C2 callbacks: Apache proxy -> teamservers        
+           - WireGuard: UDP :51820 [VPN]                      
+                               |                               
 +------------------------------+------------------------------+
 |                Redirector VPC (10.60.0.0/16)                |
 |                                                             |
@@ -87,12 +87,12 @@
 
 [VPN] = only active when enable_external_vpn = true
 
-C2 Callback Flow:
-  [implant] --HTTPS/HTTP--> redirector Elastic IP --> Apache
-  --> X-Request-ID + URI prefix check --> proxy via VPC peering
-  --> mythic / sliver / havoc (172.31.x.x)
+Public Internet Environment (C2 Callback Flow):
+  [target / implant] --HTTPS/HTTP--> public internet / cloud DNS
+  --> redirector Elastic IP --> Apache (X-Request-ID + URI validation)
+  --> VPC peering --> mythic / sliver / havoc (172.31.x.x)
 
-CTF Target Flow (VPN mode):
+External VPN Environments (ExtVPN):
   [teamserver / WIN-OPERATOR] --> TeamServer VPC route --> guacamole wg0 (MASQUERADE)
   --> WireGuard UDP :51820 --> redirector wg0 --> tun0 (MASQUERADE) --> target
 ```
@@ -1744,13 +1744,13 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
                           | (5) OpenVPN UDP (ext-vpn service)
                           |     outbound from redirector Elastic IP
                           |
-+- - - - - - - - - - - - | - - - - - - - - - - - -+
++- - - - - - - - - - - -  | - - - - - - - - - - - -+
 :         PUBLIC INTERNET / AWS CLOUD              :
 :                         |                        :
 :    OpenVPN tunnel (encrypted UDP)                :
-:    Elastic IP -> HTB/VL/PG VPN endpoint         :
+:    Elastic IP -> HTB/VL/PG VPN endpoint          :
 :                         |                        :
-+- - - - - - - - - - - - | - - - - - - - - - - - -+
++- - - - - - - - - - - -  | - - - - - - - - - - - -+
                           |
                           v
              [HTB / VL / PG VPN Server]
