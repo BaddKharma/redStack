@@ -398,6 +398,8 @@ Log into your domain registrar or DNS provider (e.g., Namecheap, Cloudflare, Rou
 | A Record | `www` | `<Redirector Elastic IP>` | Automatic |
 | A Record | `sub` | `<Redirector Elastic IP>` | Automatic |
 
+Only `@` (the apex domain) is required. The `www` entry is only needed if you want callbacks over `www.yourdomain.tld`. The `sub` placeholder represents any custom subdomain — e.g., `test.yourdomain.tld`, `cdn.yourdomain.tld`, `chat.yourdomain.tld`. Custom subdomains blend beacon and implant traffic into patterns that look like legitimate service traffic, making callbacks harder to flag in firewall logs and network monitoring.
+
 **Verify DNS Propagation** (substitute your actual `redirector_domain` value from `terraform.tfvars`):
 
 **Windows (PowerShell):**
