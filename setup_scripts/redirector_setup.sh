@@ -472,8 +472,63 @@ VPNSERVICE
     # --- WireGuard Server (wg0) ---
     # Package pre-installed here so it is ready when Guacamole SSHes in to push config.
     apt-get install -y wireguard
-    echo "[+] WireGuard installed — configuration will be pushed by Guacamole at boot"
+    echo "[+] WireGuard installed. Configuration will be pushed by Guacamole at boot."
 fi
+
+# ============================================================================
+# MOTD - Operator login banner
+# ============================================================================
+echo "[*] Creating MOTD..."
+
+cat > /etc/update-motd.d/99-redstack << MOTDEOF
+#!/bin/sh
+printf '\n+--------------------------------------------------+\n'
+printf '|  redStack  |  Apache Redirector                  |\n'
+printf '+--------------------------------------------------+\n\n'
+printf '  Public IP:  $PUBLIC_IP\n'
+MOTDEOF
+
+if [ "$NO_DOMAIN" = "false" ]; then
+    cat >> /etc/update-motd.d/99-redstack << MOTDEOF
+printf '  Domain:     $DOMAIN_NAME\n'
+MOTDEOF
+fi
+
+cat >> /etc/update-motd.d/99-redstack << MOTDEOF
+printf '  C2 Header:  $C2_HEADER_NAME: $C2_HEADER_VALUE\n'
+printf '\n'
+MOTDEOF
+
+if [ "$NO_DOMAIN" = "false" ]; then
+    cat >> /etc/update-motd.d/99-redstack << MOTDEOF
+printf "[SSL] Self-signed cert active. Get a Let's Encrypt cert:\n"
+printf '  sudo certbot --apache -d $DOMAIN_NAME\n'
+printf '\n'
+MOTDEOF
+fi
+
+if [ "$ENABLE_VPN" = "true" ]; then
+    cat >> /etc/update-motd.d/99-redstack << 'MOTDEOF'
+printf '[EXT-VPN] HTB / VL / PG\n'
+printf '  1. Upload:   scp lab.ovpn admin@<redirector-ip>:~/vpn/\n'
+printf '  2. Connect:  sudo systemctl start ext-vpn\n'
+printf '  3. Status:   sudo systemctl status ext-vpn\n'
+printf '  4. Logs:     sudo journalctl -u ext-vpn -f\n'
+printf '  5. Stop:     sudo systemctl stop ext-vpn\n'
+printf '\n'
+MOTDEOF
+fi
+
+cat >> /etc/update-motd.d/99-redstack << 'MOTDEOF'
+printf '[Diagnostics]\n'
+printf '  Test:        sudo /home/admin/test_redirector.sh\n'
+printf '  Access log:  sudo tail -f /var/log/apache2/redirector-access.log\n'
+printf '  Error log:   sudo tail -f /var/log/apache2/redirector-error.log\n'
+printf '+--------------------------------------------------+\n\n'
+MOTDEOF
+
+chmod +x /etc/update-motd.d/99-redstack
+> /etc/motd
 
 echo ""
 echo "===== Redirector Setup Complete ====="
@@ -526,7 +581,8 @@ if [ "$ENABLE_VPN" = "true" ]; then
     echo ""
     echo "External VPN routing (HTB/VL/PG):"
     echo "  1. Upload .ovpn:  scp lab.ovpn admin@<redirector-ip>:~/vpn/"
-    echo "  2. Start VPN:     sudo ~/vpn.sh start ~/vpn/lab.ovpn"
-    echo "  3. Stop VPN:      sudo ~/vpn.sh stop"
-    echo "  4. Check status:  sudo ~/vpn.sh status"
+    echo "  2. Connect:       sudo systemctl start ext-vpn"
+    echo "  3. Status:        sudo systemctl status ext-vpn"
+    echo "  4. Logs:          sudo journalctl -u ext-vpn -f"
+    echo "  5. Stop:          sudo systemctl stop ext-vpn"
 fi
