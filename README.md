@@ -370,18 +370,6 @@ terraform output network_architecture
 
 > [!TIP]
 > Save `deployment_info` to a file for quick offline reference — you will need the IPs, credentials, and C2 header throughout this guide.
->
-> **Windows (PowerShell):**
->
-> ```powershell
-> terraform output deployment_info | Out-File -Encoding utf8 deployment_info.txt
-> ```
->
-> **Linux/Mac (bash):**
->
-> ```bash
-> terraform output deployment_info > deployment_info.txt
-> ```
 
 **Checkpoint:** ✅ Deployment info reviewed, IPs and credentials noted
 
