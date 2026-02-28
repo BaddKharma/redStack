@@ -36,7 +36,7 @@ guacamole_instance_type  = "t3.small"   # 2 vCPU, 2GB RAM
 windows_instance_type    = "t3.medium"  # 2 vCPU, 4GB RAM
 sliver_instance_type     = "t3.small"   # 2 vCPU, 2GB RAM
 havoc_instance_type      = "t3.medium"  # 2 vCPU, 4GB RAM
-redirector_instance_type = "t3.micro"   # 1 vCPU, 1GB RAM
+redirector_instance_type = "t3.small"   # 2 vCPU, 2GB RAM
 
 # Network configuration
 use_default_vpc = true    # Set to false to create a dedicated VPC
@@ -85,9 +85,8 @@ tags = {
 #
 # 3. Estimated monthly cost (all instances running 24/7):
 #    - t3.medium (3x): ~$90/month
-#    - t3.small  (2x): ~$30/month
-#    - t3.micro  (1x): ~$7.50/month
-#    Total: ~$127.50/month + data transfer
+#    - t3.small  (3x): ~$45/month
+#    Total: ~$135/month + data transfer
 #
 # 4. To reduce costs:
 #    - Stop instances when not in use
