@@ -9,7 +9,7 @@
 **Difficulty:** Intermediate to Advanced
 
 > [!IMPORTANT]
-> redStack is not a tutorial on how to use C2 frameworks. It is an environment that removes the infrastructure hurdle so you can focus on learning. The lab gives you a fully configured, production-style red team setup out of the box. What you do with it is up to you.
+> redStack is not a tutorial on how to use C2 frameworks. It is an environment that removes the infrastructure hurdle so you can focus on learning. The lab gives you a fully configured, production-style red team setup out of the box (Boot-to-Breach). What you do with it is up to you.
 
 ---
 
