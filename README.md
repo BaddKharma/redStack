@@ -37,21 +37,20 @@
 +----------------------------------------------------------------------+
 
                           [ Operator ]
-                     Browser / MobaXterm
+                       Browser / MobaXterm
                                |
                    HTTPS :443  |  SSH :22
                                |
 +------------------------------+------------------------------+
 |               TeamServer VPC (172.31.0.0/16)                |
-|                                                             |
 |   +-----------------------------------------------------+   |
 |   | guacamole                   Elastic IP: <pub>       |   |
-|   | 172.31.x.x   wg0: 10.100.0.2 [VPN]                  |   |
+|   | 172.31.x.x                                          |   |
 |   +--+----+----+----+-------------------------------+---+   |
 |      |    |    |    |   Guacamole-managed sessions  |       |
-|   SSH|  SSH|  SSH|  RDP                             |       |
+|     SSH  SSH  SSH  RDP                              |       |
 |      |    |    |    |                               |       |
-|   +--+  +-+  +-+  +-+--------+                      |       |
+|   +--+  +-+  +-+--+-+---------+                     |       |
 |   |     |    |    |           |                     |       |
 |   v     v    v    v           v                     |       |
 | +------++------++------+  +------------+            |       |
@@ -62,39 +61,28 @@
 +------------------------------+----------------------+-------+       
                                |                              
            VPC Peering: 172.31.0.0/16 <-> 10.60.0.0/16        
-           - C2 callbacks: Apache proxy -> teamservers        
-           - WireGuard: UDP :51820 [VPN]                      
+           - C2 callbacks: Apache proxy -> teamservers
                                |                               
 +------------------------------+------------------------------+
 |                Redirector VPC (10.60.0.0/16)                |
-|                                                             |
 |   +-----------------------------------------------------+   |
 |   | redirector                  Elastic IP: <pub>       |   |
 |   | 10.60.x.x                                           |   |
-|   | Apache :80/:443  (X-Request-ID + URI validation)    |   |
+|   | Apache :80/:443 (X-Request-ID + URI validation)     |   |
 |   | Decoy page served to unvalidated requests           |   |
-|   | wg0: 10.100.0.1 [VPN]                               |   |
-|   | tun0: <dynamic> [VPN]  (assigned by platform VPN)   |   |
 |   +-----------------------------------------------------+   |
-|                                                             |
 +------------------------------+------------------------------+
+                               ^
                                |
-                    OpenVPN (ext-vpn) [VPN]
+                    public internet / cloud DNS
                                |
                                v
-                    [ HTB / VL / PG Targets ]
-              10.10.0.0/16  10.13.0.0/16  10.129.0.0/16
-
-[VPN] = only active when enable_external_vpn = true
+          [ Public Internet Accessible Target Evironments ]
 
 Public Internet Environment (C2 Callback Flow):
   [target / implant] --HTTPS/HTTP--> public internet / cloud DNS
   --> redirector Elastic IP --> Apache (X-Request-ID + URI validation)
   --> VPC peering --> mythic / sliver / havoc (172.31.x.x)
-
-External VPN Environments (ExtVPN):
-  [teamserver / WIN-OPERATOR] --> TeamServer VPC route --> guacamole wg0 (MASQUERADE)
-  --> WireGuard UDP :51820 --> redirector wg0 --> tun0 (MASQUERADE) --> target
 ```
 
 > [!NOTE]
@@ -1690,9 +1678,9 @@ At the end of this deployment, you should have:
 ## External Target Environments (HTB/VL/PG)
 
 > [!NOTE]
-> **This section is for CTF/Pro Lab use only.** The default redStack deployment uses a public domain, trusted TLS certificate, and htaccess filtering. Only follow Part 8 if you are connecting to an isolated platform (HTB Pro Labs, THM, Proving Grounds) via OpenVPN where targets cannot reach the public internet.
+> **This section is for External VPN Environments (ExtVPN) only.** The default redStack deployment uses a public domain, trusted TLS certificate, and htaccess filtering. Only follow this section if you are connecting to an isolated platform (HTB Pro Labs, THM, Proving Grounds) via OpenVPN where targets cannot reach the public internet.
 
-### Objective: Connect Lab to External CTF Platforms
+### Objective: Connect Lab to External VPN Platforms
 
 Route traffic from your internal lab machines (Windows workstation, C2 servers) to external target environments like HackTheBox (HTB), VulnLabs (VL), or Proving Grounds (PG) through the Apache redirector's OpenVPN tunnel.
 
@@ -1700,7 +1688,7 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 
 ```text
 +----------------------------------------------------------------------+
-|                      VPN ROUTING ARCHITECTURE                        |
+|             EXTERNAL VPN ROUTING ARCHITECTURE                        |
 +----------------------------------------------------------------------+
 
 +--------------------------------------------------+
@@ -1710,7 +1698,7 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 |       \        |        /          /             |
 |        +-------+---------+--------+              |
 |                |                                 |
-|   (1) VPC route table -- CTF CIDRs:              |
+|   (1) VPC route table -- ExtVPN CIDRs:           |
 |       10.10.0.0/16  }                            |
 |       10.13.0.0/16  } -> guacamole ENI           |
 |       10.129.0.0/16 }   (same VPC, no drop)      |
@@ -1727,7 +1715,7 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
                           | (2) WireGuard UDP :51820
                           |     travels via VPC peering
                           |     frames dst: 10.60.x.x  <- passes peering
-                          |     CTF IP is payload, not dst <- not dropped
+                          |     ExtVPN target IP is payload, not dst <- not dropped
                           |
 +-------------------------|------------------------+
 |  Redirector VPC (10.60.0.0/16)                   |
@@ -1758,7 +1746,7 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
               lab network
                           |
                           v
-             [CTF Target Networks]
+             [ExtVPN Target Networks]
               10.10.0.0/16
               10.13.0.0/16
               10.129.0.0/16
@@ -1767,7 +1755,7 @@ Double NAT:
   teamserver src IP
     -> 10.100.0.2   (guacamole MASQUERADE on wg0)
     -> tun0 IP      (redirector MASQUERADE on tun0)
-  CTF target replies to tun0 IP; conntrack reverses both NATs on the way back.
+  ExtVPN target replies to tun0 IP; conntrack reverses both NATs on the way back.
 
 Why VPC peering alone cannot do this:
   AWS VPC peering only delivers packets whose dst falls inside either
@@ -1775,16 +1763,16 @@ Why VPC peering alone cannot do this:
   are silently dropped at the fabric; route tables, SGs, and
   source_dest_check=false make no difference.
   WireGuard frames are addressed to 10.60.x.x (redirector VPC IP),
-  so they pass peering cleanly. The CTF IP rides inside the payload.
+  so they pass peering cleanly. The ExtVPN target IP rides inside the payload.
 ```
 
 ### Why WireGuard?
 
-AWS VPC peering has a hard constraint: it will only deliver packets whose destination IP falls within one of the two peered VPC CIDR blocks. Attempting to route CTF target traffic (e.g. `10.13.38.33`) via a peering connection causes it to be silently dropped at the AWS fabric level. Correct route tables, security groups, and `source_dest_check=false` make no difference.
+AWS VPC peering has a hard constraint: it will only deliver packets whose destination IP falls within one of the two peered VPC CIDR blocks. Attempting to route ExtVPN target traffic (e.g. `10.13.38.33`) via a peering connection causes it to be silently dropped at the AWS fabric level. Correct route tables, security groups, and `source_dest_check=false` make no difference.
 
-WireGuard solves this by creating a Layer 3 encrypted tunnel directly between Guacamole (in the default VPC) and the redirector (in the redirector VPC). Guacamole receives CTF-bound packets from the teamservers via normal same-VPC routing, encapsulates them in WireGuard UDP frames, and sends those frames to the redirector over VPC peering. Because the WireGuard UDP frames are addressed to the redirector's VPC IP (`10.60.x.x`), not to the CTF target, they pass through VPC peering cleanly. The redirector decapsulates the packets and forwards them out `tun0` to the OpenVPN server.
+WireGuard solves this by creating a Layer 3 encrypted tunnel directly between Guacamole (in the default VPC) and the redirector (in the redirector VPC). Guacamole receives CTF-bound packets from the teamservers via normal same-VPC routing, encapsulates them in WireGuard UDP frames, and sends those frames to the redirector over VPC peering. Because the WireGuard UDP frames are addressed to the redirector's VPC IP (`10.60.x.x`), not to the ExtVPN target, they pass through VPC peering cleanly. The redirector decapsulates the packets and forwards them out `tun0` to the OpenVPN server.
 
-The result is a double-NAT path: Guacamole MASQUERADEs onto `wg0` (source becomes `10.100.0.2`), and the redirector's `ext-vpn` up-script MASQUERADEs onto `tun0` (source becomes the VPN-assigned IP). CTF targets see traffic from the redirector's `tun0` IP and reply normally.
+The result is a double-NAT path: Guacamole MASQUERADEs onto `wg0` (source becomes `10.100.0.2`), and the redirector's `ext-vpn` up-script MASQUERADEs onto `tun0` (source becomes the VPN-assigned IP). ExtVPN targets see traffic from the redirector's `tun0` IP and reply normally.
 
 **WireGuard configuration is fully automatic.** Guacamole generates both keypairs at boot, writes its own config, then SSHes into the redirector to push the server config and start the service. No pre-deployment key generation is required.
 
