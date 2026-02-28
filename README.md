@@ -187,35 +187,12 @@ curl -s ifconfig.me
 
 **Terraform does NOT create the SSH key pair - you must create it manually first.**
 
-### Option 1: AWS Console (Recommended)
-
-1. Open AWS Console → EC2 → Key Pairs
-2. Click "Create key pair"
-3. Name: `rs-rsa-key` (or your preferred name)
-4. Key type: RSA
-5. File format: `.pem` (for Linux/Mac/Windows OpenSSH)
-6. Click "Create key pair"
-7. **Save the downloaded .pem file** - you cannot download it again!
-8. Move to project folder and set permissions:
-
 **Windows (PowerShell):**
 
 ```powershell
-# Move key to project folder (adjust path as needed)
-Move-Item "$env:USERPROFILE\Downloads\rs-rsa-key.pem" ".\rs-rsa-key.pem"
-
-# Fix permissions (required: OpenSSH rejects keys with open permissions)
-icacls ".\rs-rsa-key.pem" /inheritance:r /grant:r "$($env:USERNAME):R"
+aws ec2 create-key-pair --key-name rs-rsa-key --query 'KeyMaterial' --output text | Out-File -Encoding ascii rs-rsa-key.pem
+icacls "rs-rsa-key.pem" /inheritance:r /grant:r "$($env:USERNAME):R"
 ```
-
-**Linux/Mac (bash):**
-
-```bash
-mv ~/Downloads/rs-rsa-key.pem ./
-chmod 400 ./rs-rsa-key.pem
-```
-
-### Option 2: AWS CLI
 
 **Linux/Mac (bash):**
 
@@ -224,20 +201,16 @@ aws ec2 create-key-pair --key-name rs-rsa-key --query 'KeyMaterial' --output tex
 chmod 400 ./rs-rsa-key.pem
 ```
 
-**Windows (PowerShell):**
-
-```powershell
-aws ec2 create-key-pair --key-name rs-rsa-key --query 'KeyMaterial' --output text | Out-File -Encoding ascii rs-rsa-key.pem
-icacls "rs-rsa-key.pem" /inheritance:r /grant:r "$($env:USERNAME):R"
-```
-
 **Verify key pair exists:**
 
-```bash
+```powershell
 aws ec2 describe-key-pairs --key-names rs-rsa-key
 ```
 
-**Checkpoint:** ✅ SSH key pair created and .pem file saved
+> [!NOTE]
+> You can also create the key pair in the AWS Console under EC2 → Key Pairs → Create key pair. Use RSA and .pem format. Move the downloaded file to your project folder and fix permissions with the `icacls` command above.
+
+**Checkpoint:** ✅ SSH key pair created and .pem file saved in project folder
 
 ---
 
