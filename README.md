@@ -43,7 +43,7 @@
 |               TeamServer VPC (172.31.0.0/16)                |
 |                                                             |
 |   +-----------------------------------------------------+  |
-|   | guacamole                          EIP: <pub>       |  |
+|   | guacamole                   Elastic IP: <pub>       |  |
 |   | 172.31.x.x   wg0: 10.100.0.2 [VPN]                 |  |
 |   +--+----+----+----+-------------------------------+---+  |
 |      |    |    |    |   Guacamole-managed sessions  |      |
@@ -67,7 +67,7 @@
 |                Redirector VPC (10.60.0.0/16)                |
 |                                                             |
 |   +-----------------------------------------------------+  |
-|   | redirector                         EIP: <pub>       |  |
+|   | redirector                  Elastic IP: <pub>       |  |
 |   | 10.60.x.x                                           |  |
 |   | Apache :80/:443  (X-Request-ID + URI validation)    |  |
 |   | Decoy page served to unvalidated requests           |  |
@@ -86,7 +86,7 @@
 [VPN] = only active when enable_external_vpn = true
 
 C2 Callback Flow:
-  [implant] --HTTPS/HTTP--> redirector EIP --> Apache
+  [implant] --HTTPS/HTTP--> redirector Elastic IP --> Apache
   --> X-Request-ID + URI prefix check --> proxy via VPC peering
   --> mythic / sliver / havoc (172.31.x.x)
 
@@ -97,13 +97,13 @@ CTF Target Flow (VPN mode):
 
 > [!NOTE]
 >
-> - All C2 servers have no public IPs — reachable only through the redirector via VPC peering
+> - All C2 servers have no public IPs. Reachable only through the redirector via VPC peering
 > - The redirector runs in its own isolated VPC, simulating an external provider
 > - Every lab machine has `/etc/hosts` entries so all hostnames resolve across the environment
 > - Requests without a valid `X-Request-ID` header receive a decoy CloudEdge CDN maintenance page
 > - Only requests with a matching URI prefix and the correct header token are proxied to the correct C2 server
 > - `redirect.rules` blocks AV vendors and TOR exits (403)
-> - WireGuard keys are generated automatically at boot — no pre-deployment setup needed
+> - WireGuard keys are generated automatically at boot. No pre-deployment setup needed
 > - Run `terraform output network_architecture` to see the diagram populated with your actual IPs
 
 ---
@@ -214,7 +214,7 @@ curl -s ifconfig.me
 # Move key to project folder (adjust path as needed)
 Move-Item "$env:USERPROFILE\Downloads\rs-rsa-key.pem" ".\rs-rsa-key.pem"
 
-# Fix permissions (required — OpenSSH rejects keys with open permissions)
+# Fix permissions (required: OpenSSH rejects keys with open permissions)
 icacls ".\rs-rsa-key.pem" /inheritance:r /grant:r "$($env:USERNAME):R"
 ```
 
@@ -265,7 +265,7 @@ nano terraform.tfvars   # Linux/Mac
 notepad terraform.tfvars  # Windows
 ```
 
-**Required Changes (no defaults — must be set):**
+**Required Changes (no defaults, must be set):**
 
 ```hcl
 localPub_ip          = "YOUR_IP/32"           # Replace with your IP + /32
@@ -276,7 +276,7 @@ ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Wind
 > [!NOTE]
 > **Default deployment uses a public domain with htaccess filtering enabled.** This is the standard mode for real-world use and is what the rest of this guide assumes. The closed environment option below is only for HTB/VL/PG Pro Labs and other isolated OpenVPN environments where no public DNS exists.
 >
-> **Open environment** (default — internet access, domain registered):
+> **Open environment** (default: internet access, domain registered):
 > Set `redirector_domain` to your domain. Complete Step 1.6 (DNS) and Step 3.1 (Certbot) to get a trusted TLS certificate. Agents call back using your domain over HTTPS. Scanner/AV blocking via `redirect.rules` is enabled by default.
 >
 > ```hcl
@@ -287,7 +287,7 @@ ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Wind
 > Leave `redirector_domain` empty and set the two CTF toggles below. The redirector uses its public Elastic IP as the server identity with a self-signed certificate. Scanner/AV blocking is disabled since it is not needed in lab environments. Skip Step 1.6 and Step 3.1. See Part 8 for the full CTF deployment workflow.
 >
 > ```hcl
-> # redirector_domain = ""                    # leave empty — redirector uses its public IP
+> # redirector_domain = ""                    # leave empty; redirector uses its public IP
 > enable_external_vpn                  = true  # enables OpenVPN client + VPC routing
 > enable_redirector_htaccess_filtering = false  # disables scanner/AV blocking (not needed in labs)
 > ```
@@ -295,7 +295,7 @@ ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Wind
 **Optional:** these have sensible defaults but affect callback URLs baked into payloads and VPN routing. Review before deploying:
 
 ```hcl
-# Instance types — adjust for budget/performance
+# Instance types: adjust for budget/performance
 sliver_instance_type = "t3.small"
 havoc_instance_type  = "t3.medium"
 
@@ -307,14 +307,14 @@ havoc_uri_prefix  = "/edge/cache/assets"
 
 # --- CTF/Pro Lab mode (HTB/VL/PG via OpenVPN) ---
 # Default is open-environment (public domain + htaccess on). Only change these for CTF/Pro Lab use.
-enable_external_vpn                  = false  # Set to true for HTB/VL/PG — enables OpenVPN client + VPC routing (see Part 8)
-enable_redirector_htaccess_filtering = true   # Set to false for HTB/VL/PG — scanner/AV blocking not needed in lab environments
+enable_external_vpn                  = false  # Set to true for HTB/VL/PG. Enables OpenVPN client + VPC routing (see Part 8)
+enable_redirector_htaccess_filtering = true   # Set to false for HTB/VL/PG. Scanner/AV blocking not needed in lab environments
 
 # C2 header validation is always enabled. These override the defaults:
 # c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
-# c2_header_value = ""              # Token value — leave empty to auto-generate (recommended)
+# c2_header_value = ""              # Token value. Leave empty to auto-generate (recommended)
 
-# Optional: custom tags applied to every AWS resource (instances, SGs, EIPs, etc.)
+# Optional: custom tags applied to every AWS resource (instances, SGs, Elastic IPs, etc.)
 # Useful for cost tracking and filtering resources in the AWS Console
 tags = {
   Owner      = "Operator"
@@ -576,7 +576,7 @@ ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 ```
 
 > [!NOTE]
-> **What is Certbot?** Certbot is a free, open-source tool from the Electronic Frontier Foundation (EFF) that automates obtaining and renewing TLS certificates from Let's Encrypt. Running it against the Apache server automatically provisions a trusted certificate, updates the HTTPS VirtualHost config, and sets up a cron job for auto-renewal — no manual certificate management required.
+> **What is Certbot?** Certbot is a free, open-source tool from the Electronic Frontier Foundation (EFF) that automates obtaining and renewing TLS certificates from Let's Encrypt. Running it against the Apache server automatically provisions a trusted certificate, updates the HTTPS VirtualHost config, and sets up a cron job for auto-renewal. No manual certificate management required.
 
 ```bash
 sudo certbot --apache -d yourdomain.tld
@@ -683,11 +683,11 @@ sudo /home/admin/test_redirector.sh
 ```
 
 > [!NOTE]
-> **Sliver and Havoc show FAILED** — This is expected. C2 listeners for Sliver and Havoc have not been started yet (covered in Parts 5 and 6). Mythic shows OK because its HTTP port is reachable before a listener is configured. Re-run this script after completing Parts 5 and 6 to confirm all three backends are reachable.
+> **Sliver and Havoc show FAILED.** This is expected. C2 listeners for Sliver and Havoc have not been started yet (covered in Parts 5 and 6). Mythic shows OK because its HTTP port is reachable before a listener is configured. Re-run this script after completing Parts 5 and 6 to confirm all three backends are reachable.
 >
-> **C2 routing WITH header returns 404** — The request was proxied to Mythic (header check passed) but Mythic has no listener running yet, so it returns 404. This is correct. If the decoy page is returned instead, the header value is wrong.
+> **C2 routing WITH header returns 404.** The request was proxied to Mythic (header check passed) but Mythic has no listener running yet, so it returns 404. This is correct. If the decoy page is returned instead, the header value is wrong.
 >
-> **C2 routing WITHOUT header returns 200** — The decoy page is served correctly when no valid header is present.
+> **C2 routing WITHOUT header returns 200.** The decoy page is served correctly when no valid header is present.
 
 **Checkpoint:** ✅ Apache active, required modules loaded, VirtualHosts on 80/443, decoy page and header validation working
 
@@ -771,7 +771,7 @@ terraform output deployment_info
 | `/cloud/storage/objects/` | Sliver | Prefix stripped → Sliver receives `/session` |
 | `/edge/cache/assets/` | Havoc | Full path preserved → Havoc receives `/edge/cache/assets/update` |
 
-Mythic and Sliver have the URI prefix stripped before forwarding. Havoc receives the full path including the prefix — this is required because Havoc's listener validates URIs against the same paths embedded in the demon.
+Mythic and Sliver have the URI prefix stripped before forwarding. Havoc receives the full path including the prefix. This is required because Havoc's listener validates URIs against the same paths embedded in the demon.
 
 **Checkpoint:** ✅ Understand header validation, URI routing, and scanner blocking
 
@@ -792,7 +792,7 @@ curl -sk -A "$UA" https://$TARGET/
 # Should get DECOY PAGE (wrong header value)
 curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://$TARGET/cdn/media/stream/test
 
-# Should be PROXIED to Mythic (connection refused/timeout if no listener running yet — that's expected)
+# Should be PROXIED to Mythic (connection refused/timeout if no listener running yet, expected)
 curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://$TARGET/cdn/media/stream/test
 ```
 
@@ -985,7 +985,7 @@ Two ways to get a shell on Sliver (pick one):
 | From Windows workstation | Open MobaXterm → **redStack Lab** → **Sliver C2 Server (SSH)** |
 
 > [!NOTE]
-> For a CLI-only experience from your host machine, SSH into the Guacamole instance using your AWS key (it has a public EIP) and use it as a jumpbox:
+> For a CLI-only experience from your host machine, SSH into the Guacamole instance using your AWS key (it has a public Elastic IP) and use it as a jumpbox:
 > `ssh -i rs-rsa-key.pem -J admin@<GUAC_PUBLIC_IP> admin@sliver`
 > Get the Guacamole IP from `terraform output deployment_info`.
 
@@ -1085,7 +1085,7 @@ For full documentation, refer to the [Havoc Framework docs](https://havocframewo
 
 ### Step 6.1: Build Havoc (run once after deployment)
 
-Unlike other C2 servers in the lab, Havoc is **not pre-built** — the Go compiler, Havoc source, and Qt5 client are compiled on first use. SSH and VNC are available shortly after boot; the build runs as a manual step.
+Unlike other C2 servers in the lab, Havoc is **not pre-built**. The Go compiler, Havoc source, and Qt5 client are compiled on first use. SSH and VNC are available shortly after boot; the build runs as a manual step.
 
 **Via Guacamole:** Click **"Havoc C2 Server (SSH)"**, then run:
 
@@ -1168,12 +1168,12 @@ havoc-client client
 | Field | Value |
 | ----- | ----- |
 | Payload | Http |
-| **Hosts** | `yourdomain.tld` (domain) or `<REDIR_PUBLIC_IP>` (IP-only/closed env) — click **Add** |
+| **Hosts** | `yourdomain.tld` (domain) or `<REDIR_PUBLIC_IP>` (IP-only/closed env), then click **Add** |
 | Host (Bind) | `0.0.0.0` |
 | PortBind | `80` |
 | **PortConn** | `80` |
-| **Uris** | `/edge/cache/assets/update` — click **Add** (add more if desired, all must start with `/edge/cache/assets/`) |
-| **Headers** | `X-Request-ID: <token>` — click **Add** (no quotes around token) |
+| **Uris** | `/edge/cache/assets/update`, then click **Add** (add more if desired, all must start with `/edge/cache/assets/`) |
+| **Headers** | `X-Request-ID: <token>`, then click **Add** (no quotes around token) |
 
 > The **Hosts** field is the callback address baked into the demon. The **Uris** and **Headers** are embedded in the demon so it sends them on every check-in. The redirector validates the URI prefix and header, then forwards the full path (prefix intact) as plain HTTP to Havoc on port 80.
 
@@ -1189,7 +1189,7 @@ havoc-client client
 3. Fill in the **Injection** section:
    - **Spawn64:** `C:\Windows\System32\notepad.exe`
    - **Spawn32:** `C:\Windows\SysWOW64\notepad.exe`
-4. Click **Generate** — the `.exe` is saved to `/home/admin/Desktop/demon.x64.exe`
+4. Click **Generate**. The `.exe` is saved to `/home/admin/Desktop/demon.x64.exe`
 
 **Transfer the demon to the Windows workstation:**
 
@@ -1222,7 +1222,7 @@ All three C2 servers (Mythic, Sliver, Havoc) have no public IPs and are unreacha
 **Verify Redirector CAN Reach All C2 Servers (run on the redirector via SSH):**
 
 ```bash
-# Use a browser User-Agent — curl is blocked by redirect.rules
+# Use a browser User-Agent; curl is blocked by redirect.rules
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
 # Test direct backend connectivity (hostnames resolve via /etc/hosts on the redirector)
@@ -1345,7 +1345,7 @@ curl -sk -A "$UA" https://$TARGET/
 # Should return DECOY PAGE (wrong header)
 curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://$TARGET/cdn/media/stream/test
 
-# Should proxy to Mythic (connection refused if no listener — expected)
+# Should proxy to Mythic (connection refused if no listener, expected)
 curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://$TARGET/cdn/media/stream/test
 ```
 
@@ -1568,7 +1568,7 @@ sudo -E /usr/local/go/bin/go build -o teamserver .
 ssh -i rs-rsa-key.pem admin@<GUAC_PUBLIC_IP>
 docker logs guacamole
 
-# Test RDP connectivity (run from Guacamole server — hostname resolves via /etc/hosts)
+# Test RDP connectivity (run from Guacamole server, hostname resolves via /etc/hosts)
 nc -zv win-operator 3389
 ```
 
@@ -1731,7 +1731,7 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 |  Redirector VPC (10.60.0.0/16)                   |
 |                         v                        |
 |   +------------------------------------------+  |
-|   | redirector (10.60.x.x)       EIP: <pub>  |  |
+|   | redirector (10.60.x.x) Elastic IP: <pub> |  |
 |   | wg0: 10.100.0.1/30 (server, UDP :51820)  |  |
 |   | (3) decapsulate / FORWARD wg0 -> tun0    |  |
 |   | (4) MASQUERADE on tun0 (src -> tun0 IP)  |  |
@@ -1740,13 +1740,13 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 +-------------------------|------------------------+
                           |
                           | (5) OpenVPN UDP (ext-vpn service)
-                          |     outbound from redirector EIP
+                          |     outbound from redirector Elastic IP
                           |
 +- - - - - - - - - - - - | - - - - - - - - - - - -+
 :         PUBLIC INTERNET / AWS CLOUD              :
 :                         |                        :
 :    OpenVPN tunnel (encrypted UDP)                :
-:    redirector EIP -> HTB/VL/PG VPN endpoint      :
+:    Elastic IP -> HTB/VL/PG VPN endpoint         :
 :                         |                        :
 +- - - - - - - - - - - - | - - - - - - - - - - - -+
                           |
@@ -1778,9 +1778,9 @@ Why VPC peering alone cannot do this:
 
 ### Why WireGuard?
 
-AWS VPC peering has a hard constraint: it will only deliver packets whose destination IP falls within one of the two peered VPC CIDR blocks. Attempting to route CTF target traffic (e.g. `10.13.38.33`) via a peering connection causes it to be silently dropped at the AWS fabric level — correct route tables, security groups, and `source_dest_check=false` make no difference.
+AWS VPC peering has a hard constraint: it will only deliver packets whose destination IP falls within one of the two peered VPC CIDR blocks. Attempting to route CTF target traffic (e.g. `10.13.38.33`) via a peering connection causes it to be silently dropped at the AWS fabric level. Correct route tables, security groups, and `source_dest_check=false` make no difference.
 
-WireGuard solves this by creating a Layer 3 encrypted tunnel directly between Guacamole (in the default VPC) and the redirector (in the redirector VPC). Guacamole receives CTF-bound packets from the teamservers via normal same-VPC routing, encapsulates them in WireGuard UDP frames, and sends those frames to the redirector over VPC peering. Because the WireGuard UDP frames are addressed to the redirector's VPC IP (`10.60.x.x`) — not to the CTF target — they pass through VPC peering cleanly. The redirector decapsulates the packets and forwards them out `tun0` to the OpenVPN server.
+WireGuard solves this by creating a Layer 3 encrypted tunnel directly between Guacamole (in the default VPC) and the redirector (in the redirector VPC). Guacamole receives CTF-bound packets from the teamservers via normal same-VPC routing, encapsulates them in WireGuard UDP frames, and sends those frames to the redirector over VPC peering. Because the WireGuard UDP frames are addressed to the redirector's VPC IP (`10.60.x.x`), not to the CTF target, they pass through VPC peering cleanly. The redirector decapsulates the packets and forwards them out `tun0` to the OpenVPN server.
 
 The result is a double-NAT path: Guacamole MASQUERADEs onto `wg0` (source becomes `10.100.0.2`), and the redirector's `ext-vpn` up-script MASQUERADEs onto `tun0` (source becomes the VPN-assigned IP). CTF targets see traffic from the redirector's `tun0` IP and reply normally.
 
@@ -1812,7 +1812,7 @@ external_vpn_cidrs = ["10.10.0.0/16", "10.13.0.0/16", "10.129.0.0/16"]
 ```
 
 > [!NOTE]
-> If you already deployed without `enable_external_vpn = true`, a full `terraform destroy` followed by a fresh `terraform apply` is required. The WireGuard setup runs as part of cloud-init at first boot — it cannot be triggered on a running instance by re-applying Terraform.
+> If you already deployed without `enable_external_vpn = true`, a full `terraform destroy` followed by a fresh `terraform apply` is required. The WireGuard setup runs as part of cloud-init at first boot. It cannot be triggered on a running instance by re-applying Terraform.
 
 ### Step 8.2: Deploy and Obtain Your .ovpn File
 
@@ -1822,13 +1822,13 @@ external_vpn_cidrs = ["10.10.0.0/16", "10.13.0.0/16", "10.129.0.0/16"]
 
 ### Step 8.3: Get the .ovpn File to the Redirector
 
-Drop any `.ovpn` file into `~/vpn/` on the redirector — the service picks up whichever file is there. Two ways to do it:
+Drop any `.ovpn` file into `~/vpn/` on the redirector. The service picks up whichever file is there. Two ways to do it:
 
 #### Option A: Guacamole sidebar upload (browser only)
 
 1. In Guacamole, open the **"Apache Redirector (SSH)"** connection
 2. Press `Ctrl+Alt+Shift` to open the sidebar
-3. Click **Devices** and upload your `.ovpn` file — it will land in `~`
+3. Click **Devices** and upload your `.ovpn` file. It will land in `~`
 4. Move it into the vpn directory:
 
 ```bash
@@ -1858,7 +1858,7 @@ ssh admin@<REDIR_PRIVATE_IP>
 sudo systemctl start ext-vpn
 ```
 
-The `ext-vpn` service runs openvpn in the foreground under systemd — no screen or tmux needed. It persists as long as the redirector instance is running, and stops cleanly with `systemctl stop`.
+The `ext-vpn` service runs openvpn in the foreground under systemd. No screen or tmux needed. It persists as long as the redirector instance is running, and stops cleanly with `systemctl stop`.
 
 **Stop the VPN:**
 
@@ -1889,7 +1889,7 @@ ip -4 addr show tun0 | grep -oP '(?<=inet\s)\d+(\.\d+)+'
 ```
 
 > [!NOTE]
-> This IP is only known after the VPN connects. Generate your C2 agents **after** running `sudo systemctl start ext-vpn` — not before. The IP changes each time you reconnect.
+> This IP is only known after the VPN connects. Generate your C2 agents **after** running `sudo systemctl start ext-vpn`. Not before. The IP changes each time you reconnect.
 
 **Use HTTP (port 80) for VPN-based callbacks.** The self-signed certificate on the redirector only has the public Elastic IP as a Subject Alternative Name, not the `tun0` IP. Using HTTP avoids certificate issues entirely. Traffic between the target and the redirector travels inside the encrypted OpenVPN tunnel, so it is already protected in transit.
 
@@ -1899,12 +1899,12 @@ ip -4 addr show tun0 | grep -oP '(?<=inet\s)\d+(\.\d+)+'
 | --------- | ---------------- |
 | Mythic | `callback_host = "http://<tun0-ip>"`, `callback_port = 80` |
 | Sliver | `--http http://<tun0-ip>/cloud/storage/objects/` |
-| Havoc | Hosts: `<tun0-ip>`, PortConn: `80` (HTTP — already the default in the listener config) |
+| Havoc | Hosts: `<tun0-ip>`, PortConn: `80` (HTTP, already the default in the listener config) |
 
 All other settings (URI prefix, `X-Request-ID` header) remain the same.
 
 > [!NOTE]
-> Apache is already listening on `0.0.0.0:80` and `0.0.0.0:443` — all interfaces. The VirtualHost configs use `<VirtualHost *:80>` and `<VirtualHost *:443>`, and UFW allows ports 80/443 on all interfaces. When tun0 comes up after `vpn.sh start`, Apache automatically handles traffic arriving on that IP with no reload or restart required. Header validation and URI routing apply to all requests regardless of which interface they arrive on.
+> Apache is already listening on `0.0.0.0:80` and `0.0.0.0:443` across all interfaces. The VirtualHost configs use `<VirtualHost *:80>` and `<VirtualHost *:443>`, and UFW allows ports 80/443 on all interfaces. When tun0 comes up after `vpn.sh start`, Apache automatically handles traffic arriving on that IP with no reload or restart required. Header validation and URI routing apply to all requests regardless of which interface they arrive on.
 >
 > If the target machine has outbound internet access (most HTB standalone boxes and many Pro Lab machines do), you can use the public Elastic IP with HTTPS (`https://<REDIR_PUBLIC_IP>/prefix/`) instead. The tun0 IP is only needed when targets are fully isolated from the internet and can only reach the VPN network.
 
@@ -1941,8 +1941,8 @@ This stops the OpenVPN process and removes the iptables MASQUERADE rules on `tun
 - **WireGuard is automatic.** Keys are generated on Guacamole at first boot. Guacamole then SSHes into the redirector to push the server config and start `wg-quick@wg0` on both ends. No pre-deployment key setup is needed.
 - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only CTF target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
 - **Only the configured CIDRs are routed.** Traffic to other destinations (internet, VPC peers) is unaffected. Add CIDRs to `external_vpn_cidrs` in `terraform.tfvars` if your platform uses different subnets.
-- **The .ovpn file persists across reboots** in `~/vpn/`. The VPN tunnel itself does not auto-start — run `sudo systemctl start ext-vpn` after a reboot. The WireGuard tunnel (`wg-quick@wg0`) is enabled at boot on both instances and comes up automatically.
-- **All internal machines can reach CTF targets.** Routing is configured at the VPC level — the Windows workstation, all C2 servers, and Guacamole can all reach targets through the tunnel.
+- **The .ovpn file persists across reboots** in `~/vpn/`. The VPN tunnel itself does not auto-start. Run `sudo systemctl start ext-vpn` after a reboot. The WireGuard tunnel (`wg-quick@wg0`) is enabled at boot on both instances and comes up automatically.
+- **All internal machines can reach CTF targets.** Routing is configured at the VPC level. The Windows workstation, all C2 servers, and Guacamole can all reach targets through the tunnel.
 - **tun0 IP is dynamic.** It changes with each VPN reconnect. Agents baked with the tun0 IP will stop working after a reconnect that assigns a different IP. Check the IP after each reconnect and regenerate agents if it changed.
 - **Callback address choice.** If targets have internet access, use the public Elastic IP (stable, no regeneration needed). If targets are isolated to the VPN network only, use the tun0 IP with HTTP (port 80).
 
