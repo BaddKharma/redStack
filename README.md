@@ -23,7 +23,7 @@
 - [Part 4: Mythic C2 Setup](#part-4-mythic-c2-setup)
 - [Part 5: Sliver C2 Setup](#part-5-sliver-c2-setup)
 - [Part 6: Havoc C2 Setup](#part-6-havoc-c2-setup)
-- [Troubleshooting](#troubleshooting)
+- [Part 7: Troubleshooting](#part-7-troubleshooting)
 - [Part 8: External Target Environments (HTB/VL/PG)](#part-8-external-target-environments-htbvlpg)
 
 ---
@@ -1149,7 +1149,7 @@ scp admin@havoc:/home/admin/Desktop/demon.x64.exe C:\Users\Administrator\Desktop
 
 ---
 
-## Troubleshooting
+## Part 7: Troubleshooting
 
 Reference this section if any component is not behaving as expected after deployment. Each subsection targets a specific failure mode with symptoms, root cause, and fix.
 
