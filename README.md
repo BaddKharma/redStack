@@ -1,6 +1,6 @@
 # redStack: A Boot-to-Breach Lab Environment for Red Team Operators
 
-![redStack Banner](assets/redStack_banner.png)
+![redStack Banner](assets/redStack-banner.png)
 
 > [!NOTE]
 > redStack is now feature complete and supports both public internet deployments and closed environments (HTB/VL/PG) that use OpenVPN. This is actively being tested and debugged, so please reach out with any issues or concerns.
