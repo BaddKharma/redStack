@@ -40,7 +40,7 @@
                    HTTPS :443  |  SSH :22
                                |
 +------------------------------+------------------------------+
-|            VPC A - Default VPC (172.31.0.0/16)             |
+|               TeamServer VPC (172.31.0.0/16)                |
 |                                                             |
 |   +-----------------------------------------------------+  |
 |   | guacamole                          EIP: <pub>       |  |
@@ -64,7 +64,7 @@
            - WireGuard: UDP :51820 [VPN]                     |
                                |
 +------------------------------+------------------------------+
-|            VPC B - Redirector VPC (10.60.0.0/16)           |
+|                Redirector VPC (10.60.0.0/16)                |
 |                                                             |
 |   +-----------------------------------------------------+  |
 |   | redirector                         EIP: <pub>       |  |
@@ -91,7 +91,7 @@ C2 Callback Flow:
   --> mythic / sliver / havoc (172.31.x.x)
 
 CTF Target Flow (VPN mode):
-  [teamserver / WIN-OPERATOR] --> VPC A route --> guacamole wg0 (MASQUERADE)
+  [teamserver / WIN-OPERATOR] --> TeamServer VPC route --> guacamole wg0 (MASQUERADE)
   --> WireGuard UDP :51820 --> redirector wg0 --> tun0 (MASQUERADE) --> target
 ```
 
@@ -1702,13 +1702,13 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 +----------------------------------------------------------------------+
 
 +--------------------------------------------------+
-|  VPC A - Default VPC (172.31.0.0/16)             |
+|  TeamServer VPC (172.31.0.0/16)                  |
 |                                                  |
 |  [mythic]  [sliver]  [havoc]  [WIN-OPERATOR]     |
 |       \        |        /          /             |
 |        +-------+---------+--------+              |
 |                |                                 |
-|   (1) VPC A route table -- CTF CIDRs:            |
+|   (1) VPC route table -- CTF CIDRs:              |
 |       10.10.0.0/16  }                            |
 |       10.13.0.0/16  } -> guacamole ENI           |
 |       10.129.0.0/16 }   (same VPC, no drop)      |
@@ -1723,41 +1723,54 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 +-------------------------|------------------------+
                           |
                           | (2) WireGuard UDP :51820
-                          |     encrypted tunnel via VPC peering
-                          |     WG frames dst: 10.60.x.x  <- passes peering
+                          |     travels via VPC peering
+                          |     frames dst: 10.60.x.x  <- passes peering
                           |     CTF IP is payload, not dst <- not dropped
                           |
 +-------------------------|------------------------+
-|  VPC B - Redirector VPC (10.60.0.0/16)           |
+|  Redirector VPC (10.60.0.0/16)                   |
 |                         v                        |
 |   +------------------------------------------+  |
-|   | redirector (10.60.x.x)                   |  |
-|   | wg0: 10.100.0.1/30  (server, UDP :51820) |  |
-|   | (3) decapsulate WG / FORWARD wg0 -> tun0 |  |
-|   | tun0: <dynamic>  (assigned by platform)  |  |
-|   | (4) MASQUERADE on tun0                   |  |
-|   |     src -> tun0 IP                       |  |
+|   | redirector (10.60.x.x)       EIP: <pub>  |  |
+|   | wg0: 10.100.0.1/30 (server, UDP :51820)  |  |
+|   | (3) decapsulate / FORWARD wg0 -> tun0    |  |
+|   | (4) MASQUERADE on tun0 (src -> tun0 IP)  |  |
+|   | tun0: <dynamic>                          |  |
 |   +------------------------------------------+  |
 +-------------------------|------------------------+
                           |
-                          | (5) OpenVPN (ext-vpn service)
+                          | (5) OpenVPN UDP (ext-vpn service)
+                          |     outbound from redirector EIP
+                          |
++- - - - - - - - - - - - | - - - - - - - - - - - -+
+:         PUBLIC INTERNET / AWS CLOUD              :
+:                         |                        :
+:    OpenVPN tunnel (encrypted UDP)                :
+:    redirector EIP -> HTB/VL/PG VPN endpoint      :
+:                         |                        :
++- - - - - - - - - - - - | - - - - - - - - - - - -+
                           |
                           v
-                [HTB / VL / PG Targets]
-                10.10.0.0/16
-                10.13.0.0/16
-                10.129.0.0/16
+             [HTB / VL / PG VPN Server]
+              assigns tun0 IP, routes into
+              lab network
+                          |
+                          v
+             [CTF Target Networks]
+              10.10.0.0/16
+              10.13.0.0/16
+              10.129.0.0/16
 
 Double NAT:
   teamserver src IP
-    -> 10.100.0.2     (guacamole MASQUERADE on wg0)
-    -> tun0 IP        (redirector MASQUERADE on tun0)
+    -> 10.100.0.2   (guacamole MASQUERADE on wg0)
+    -> tun0 IP      (redirector MASQUERADE on tun0)
   CTF target replies to tun0 IP; conntrack reverses both NATs on the way back.
 
 Why VPC peering alone cannot do this:
   AWS VPC peering only delivers packets whose dst falls inside either
   VPC's CIDR (172.31.0.0/16 or 10.60.0.0/16). Packets to 10.13.38.33
-  are silently dropped at the fabric — route tables, SGs, and
+  are silently dropped at the fabric; route tables, SGs, and
   source_dest_check=false make no difference.
   WireGuard frames are addressed to 10.60.x.x (redirector VPC IP),
   so they pass peering cleanly. The CTF IP rides inside the payload.
