@@ -388,25 +388,15 @@ terraform output deployment_info
 
 Look for the **APACHE REDIRECTOR** section. The `Public IP` field is what you need.
 
-**Create a DNS A Record:**
+**Create DNS A Records:**
 
-Log into your domain registrar or DNS provider (e.g., Namecheap, Cloudflare, Route53) and create an A record pointing to the redirector's Elastic IP. Use whichever form matches how you set `redirector_domain` in `terraform.tfvars`:
+Log into your domain registrar or DNS provider (e.g., Namecheap, Cloudflare, Route53) and create A records pointing to the redirector's Elastic IP. Use whichever host matches how you set `redirector_domain` in `terraform.tfvars`:
 
-| Host/Name | Record | Points to |
-| --------- | ------ | --------- |
-| `@` | A | Redirector Elastic IP |
-| `www` | A | Redirector Elastic IP |
-| `sub` | A | Redirector Elastic IP |
-
-**Examples:**
-
-```text
-yourdomain.tld      ->  <Redirector Elastic IP>
-www.yourdomain.tld  ->  <Redirector Elastic IP>
-sub.yourdomain.tld  ->  <Redirector Elastic IP>
-```
-
-Set the TTL to 300 (5 minutes) or the lowest available.
+| Type | Host | Value | TTL |
+| ---- | ---- | ----- | --- |
+| A Record | `@` | `<Redirector Elastic IP>` | Automatic |
+| A Record | `www` | `<Redirector Elastic IP>` | Automatic |
+| A Record | `sub` | `<Redirector Elastic IP>` | Automatic |
 
 **Verify DNS Propagation** (substitute your actual `redirector_domain` value from `terraform.tfvars`):
 
