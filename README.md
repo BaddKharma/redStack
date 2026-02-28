@@ -390,17 +390,23 @@ Look for the **APACHE REDIRECTOR** section. The `Public IP` field is what you ne
 
 **Create a DNS A Record:**
 
-1. Log into your domain registrar or DNS provider (e.g., Namecheap, Cloudflare, Route53)
-2. Navigate to DNS settings for your domain
-3. Create an **A record** pointing to the redirector's Elastic IP:
+Log into your domain registrar or DNS provider (e.g., Namecheap, Cloudflare, Route53) and create an A record pointing to the redirector's Elastic IP. Use whichever form matches how you set `redirector_domain` in `terraform.tfvars`:
 
-| Domain type | Host/Name field | Example |
-| ----------- | --------------- | ------- |
-| Apex domain | `@` | `yourdomain.tld` → redirector IP |
-| Subdomain | subdomain only (e.g., `sub`) | `sub.yourdomain.tld` → redirector IP |
+| Host/Name | Record | Points to |
+| --------- | ------ | --------- |
+| `@` | A | Redirector Elastic IP |
+| `www` | A | Redirector Elastic IP |
+| `sub` | A | Redirector Elastic IP |
 
-- **Value/Points to:** The redirector's Elastic IP from the command above
-- **TTL:** 300 (5 minutes) or lowest available
+**Examples:**
+
+```text
+yourdomain.tld      ->  <Redirector Elastic IP>
+www.yourdomain.tld  ->  <Redirector Elastic IP>
+sub.yourdomain.tld  ->  <Redirector Elastic IP>
+```
+
+Set the TTL to 300 (5 minutes) or the lowest available.
 
 **Verify DNS Propagation** (substitute your actual `redirector_domain` value from `terraform.tfvars`):
 
