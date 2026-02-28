@@ -23,8 +23,8 @@
 - [Part 4: Mythic C2 Setup](#part-4-mythic-c2-setup)
 - [Part 5: Sliver C2 Setup](#part-5-sliver-c2-setup)
 - [Part 6: Havoc C2 Setup](#part-6-havoc-c2-setup)
-- [External Target Environments (HTB/VL/PG)](#external-target-environments-htbvlpg)
 - [Troubleshooting](#troubleshooting)
+- [External Target Environments (HTB/VL/PG)](#external-target-environments-htbvlpg)
 
 ---
 
