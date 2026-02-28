@@ -24,7 +24,7 @@
 - [Part 5: Sliver C2 Setup](#part-5-sliver-c2-setup)
 - [Part 6: Havoc C2 Setup](#part-6-havoc-c2-setup)
 - [Troubleshooting](#troubleshooting)
-- [External Target Environments (HTB/VL/PG)](#external-target-environments-htbvlpg)
+- [Part 8: External Target Environments (HTB/VL/PG)](#part-8-external-target-environments-htbvlpg)
 
 ---
 
@@ -76,7 +76,7 @@
                     public internet / cloud DNS
                                |
                                v
-          [ Public Internet Accessible Target Evironments ]
+          [ Public Internet Accessible Target Environments ]
 
 Public Internet Environment (C2 Callback Flow):
   [target / implant] --HTTPS/HTTP--> public internet / cloud DNS
@@ -637,9 +637,9 @@ sudo /home/admin/test_redirector.sh
   Header:  X-Request-ID: <your-token>
 
 [*] URI routing (requires correct header):
-  /cdn/media/stream/ -> Mythic  (10.50.x.x)
-  /cloud/storage/objects/ -> Sliver  (10.50.x.x)
-  /edge/cache/assets/ -> Havoc   (10.50.x.x)
+  /cdn/media/stream/ -> Mythic  (172.31.x.x)
+  /cloud/storage/objects/ -> Sliver  (172.31.x.x)
+  /edge/cache/assets/ -> Havoc   (172.31.x.x)
 ```
 
 > [!NOTE]
@@ -1304,7 +1304,7 @@ Each Guacamole SSH connection should connect without a password prompt and land 
 4. Click **"Sliver C2 Server (SSH)"** → prompt: `admin@sliver:~$`
 5. Click **"Havoc C2 Server (SSH)"** → prompt: `admin@havoc:~$`
 
-**SSH security model:** All Linux servers allow password auth from within the C2 VPC (10.50.0.0/16) but require SSH keys from public IPs. This lets Guacamole connect with passwords while keeping public SSH key-only.
+**SSH security model:** All Linux servers allow password auth from within the C2 VPC (172.31.0.0/16) but require SSH keys from public IPs. This lets Guacamole connect with passwords while keeping public SSH key-only.
 
 ---
 
@@ -1594,7 +1594,7 @@ At the end of this deployment, you should have:
 
 ---
 
-## External Target Environments (HTB/VL/PG)
+## Part 8: External Target Environments (HTB/VL/PG)
 
 > [!NOTE]
 > **This section is for External VPN Environments (ExtVPN) only.** The default redStack deployment uses a public domain, trusted TLS certificate, and htaccess filtering. Only follow this section if you are connecting to an isolated platform (HTB Pro Labs, THM, Proving Grounds) via OpenVPN where targets cannot reach the public internet.
