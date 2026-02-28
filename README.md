@@ -736,30 +736,7 @@ Mythic and Sliver have the URI prefix stripped before forwarding. Havoc receives
 
 **Checkpoint:** ✅ Understand header validation, URI routing, and scanner blocking
 
-### Step 3.5: Test the Security Layers
-
-> [!IMPORTANT]
-> `curl` is blocked by redirect.rules (it's in the suspicious User-Agent list). All manual tests must use a browser-like User-Agent with `-A`.
-
-```bash
-# Set a browser User-Agent for testing
-UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-HEADER_VALUE="<token from terraform output deployment_info>"
-TARGET="yourdomain.tld"          # or <REDIR_PUBLIC_IP> for IP-only/closed environments
-
-# Should get DECOY PAGE (no header)
-curl -sk -A "$UA" https://$TARGET/
-
-# Should get DECOY PAGE (wrong header value)
-curl -sk -A "$UA" -H "X-Request-ID: wrong-value" https://$TARGET/cdn/media/stream/test
-
-# Should be PROXIED to Mythic (connection refused/timeout if no listener running yet, expected)
-curl -sk -A "$UA" -H "X-Request-ID: $HEADER_VALUE" https://$TARGET/cdn/media/stream/test
-```
-
-**Checkpoint:** ✅ Security layers verified
-
-### Step 3.6: Review Logs
+### Step 3.5: Review Logs
 
 All C2 traffic is logged to separate access/error log files:
 
