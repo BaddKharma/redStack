@@ -1697,51 +1697,70 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 ### How It Works
 
 ```text
-+---------------------------------------------------------------------+
-|                     VPN ROUTING ARCHITECTURE                        |
-+---------------------------------------------------------------------+
++----------------------------------------------------------------------+
+|                      VPN ROUTING ARCHITECTURE                        |
++----------------------------------------------------------------------+
 
-VPC A - Team Server Infrastructure (Default VPC / 172.31.0.0/16)
-+-- WIN-OPERATOR - Windows Workstation
-+-- mythic       - Mythic C2 Server           } all target traffic
-+-- sliver       - Sliver C2 Server           } -> VPC A route table
-+-- havoc        - Havoc C2 Server            } -> guacamole ENI
-+-- guacamole    - Access Gateway + WireGuard Client
-                   wg0: 10.100.0.2/30
-                   MASQUERADE on wg0 (src -> 10.100.0.2)
++--------------------------------------------------+
+|  VPC A - Default VPC (172.31.0.0/16)             |
+|                                                  |
+|  [mythic]  [sliver]  [havoc]  [WIN-OPERATOR]     |
+|       \        |        /          /             |
+|        +-------+---------+--------+              |
+|                |                                 |
+|   (1) VPC A route table -- CTF CIDRs:            |
+|       10.10.0.0/16  }                            |
+|       10.13.0.0/16  } -> guacamole ENI           |
+|       10.129.0.0/16 }   (same VPC, no drop)      |
+|                |                                 |
+|                v                                 |
+|   +------------------------------------------+  |
+|   | guacamole (172.31.x.x)                   |  |
+|   | wg0: 10.100.0.2/30                       |  |
+|   | (2) MASQUERADE on wg0                    |  |
+|   |     src -> 10.100.0.2                    |  |
+|   +------------------------------------------+  |
++-------------------------|------------------------+
+                          |
+                          | (2) WireGuard UDP :51820
+                          |     encrypted tunnel via VPC peering
+                          |     WG frames dst: 10.60.x.x  <- passes peering
+                          |     CTF IP is payload, not dst <- not dropped
+                          |
++-------------------------|------------------------+
+|  VPC B - Redirector VPC (10.60.0.0/16)           |
+|                         v                        |
+|   +------------------------------------------+  |
+|   | redirector (10.60.x.x)                   |  |
+|   | wg0: 10.100.0.1/30  (server, UDP :51820) |  |
+|   | (3) decapsulate WG / FORWARD wg0 -> tun0 |  |
+|   | tun0: <dynamic>  (assigned by platform)  |  |
+|   | (4) MASQUERADE on tun0                   |  |
+|   |     src -> tun0 IP                       |  |
+|   +------------------------------------------+  |
++-------------------------|------------------------+
+                          |
+                          | (5) OpenVPN (ext-vpn service)
+                          |
+                          v
+                [HTB / VL / PG Targets]
+                10.10.0.0/16
+                10.13.0.0/16
+                10.129.0.0/16
 
-VPC B - Redirector Infrastructure (10.60.0.0/16)
-+-- redirector   - Apache Redirector + WireGuard Server + OpenVPN Client
-                   wg0: 10.100.0.1/30  (WireGuard server, listens UDP 51820)
-                   tun0: <dynamic>     (assigned by HTB/VL/PG OpenVPN server)
-                   MASQUERADE on tun0  (src -> tun0 IP)
+Double NAT:
+  teamserver src IP
+    -> 10.100.0.2     (guacamole MASQUERADE on wg0)
+    -> tun0 IP        (redirector MASQUERADE on tun0)
+  CTF target replies to tun0 IP; conntrack reverses both NATs on the way back.
 
-VPC Peering: VPC A <-> VPC B
-  Used for: C2 callback proxying (Apache -> teamservers) and WireGuard UDP transport
-
-Why WireGuard bridges the VPCs:
-  AWS VPC peering only delivers packets whose destination IP falls inside
-  either VPC's CIDR block. CTF target IPs (e.g. 10.13.38.33) are outside
-  both VPCs, so packets routed via peering are silently dropped.
-  Routing from Guacamole (same VPC as teamservers) avoids the peering
-  restriction entirely, and WireGuard carries those packets across to
-  the redirector's OpenVPN tunnel.
-
-Route Tables:
-  VPC A: 10.10.0.0/16, 10.13.0.0/16, 10.129.0.0/16 -> guacamole ENI
-         (same VPC delivery - no peering restriction)
-
-WireGuard Tunnel (auto-configured at boot, no pre-deployment keys needed):
-  guacamole (10.100.0.2) <-> redirector (10.100.0.1) via UDP 51820
-
-Traffic Flow (CTF/Pro Lab mode):
-[WIN-OPERATOR / mythic / sliver / havoc]
-  -> VPC A route table      (CTF CIDRs -> guacamole ENI, same VPC)
-  -> guacamole wg0          (MASQUERADE: src -> 10.100.0.2)
-  -> WireGuard UDP 51820    (encrypted tunnel via VPC peering to redirector)
-  -> redirector wg0         (decapsulate, forward to tun0)
-  -> redirector tun0        (MASQUERADE: src -> tun0 IP, OpenVPN to HTB/VL/PG)
-  -> CTF target
+Why VPC peering alone cannot do this:
+  AWS VPC peering only delivers packets whose dst falls inside either
+  VPC's CIDR (172.31.0.0/16 or 10.60.0.0/16). Packets to 10.13.38.33
+  are silently dropped at the fabric — route tables, SGs, and
+  source_dest_check=false make no difference.
+  WireGuard frames are addressed to 10.60.x.x (redirector VPC IP),
+  so they pass peering cleanly. The CTF IP rides inside the payload.
 ```
 
 ### Why WireGuard?
