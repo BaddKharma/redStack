@@ -159,7 +159,7 @@ aws sts get-caller-identity
 terraform --version
 
 # Get your public IP
-(Invoke-WebRequest -Uri "https://ifconfig.me" -UseBasicParsing).Content.Trim()
+curl -s ifconfig.me
 ```
 
 **Linux/Mac (bash):**
