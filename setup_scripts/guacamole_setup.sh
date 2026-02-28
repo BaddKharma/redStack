@@ -1,11 +1,10 @@
 #!/bin/bash
-# guacamole_setup.sh - User data script for Guacamole server initialization
+# guacamole_setup.sh - Main setup for Guacamole server (decoded and run by guacamole_userdata.sh)
 
 set -e
 
-# Logging
-exec > >(tee /var/log/user-data.log)
-exec 2>&1
+# Logging (append to log started by bootstrap)
+exec >> /var/log/user-data.log 2>&1
 
 echo "===== Guacamole Server Setup Started $(date) ====="
 
@@ -20,23 +19,6 @@ REDIRECTOR_PRIVATE_IP="${redirector_private_ip}"
 SLIVER_PRIVATE_IP="${sliver_private_ip}"
 HAVOC_PRIVATE_IP="${havoc_private_ip}"
 GUACAMOLE_PRIVATE_IP="${guacamole_private_ip}"
-
-# Set hostname
-echo "[*] Setting hostname..."
-hostnamectl set-hostname guac
-
-# Configure /etc/hosts for lab machines
-echo "[*] Configuring /etc/hosts..."
-cat >> /etc/hosts << HOSTS
-
-# redStack lab hosts
-$GUACAMOLE_PRIVATE_IP    guac
-$MYTHIC_PRIVATE_IP       mythic
-$SLIVER_PRIVATE_IP       sliver
-$HAVOC_PRIVATE_IP        havoc
-$REDIRECTOR_PRIVATE_IP   redirector
-$WINDOWS_PRIVATE_IP      win-operator
-HOSTS
 
 # Update system
 echo "[*] Updating system packages..."
@@ -61,28 +43,6 @@ systemctl start docker
 
 # Add admin user to docker group
 usermod -aG docker admin
-
-# Configure SSH password authentication for Guacamole access only
-# Public IP access still requires SSH keys, only localhost/VPC can use passwords
-echo "[*] Configuring SSH authentication (keys for public, passwords for VPC)..."
-echo "admin:$SSH_PASSWORD" | chpasswd
-mkdir -p /home/admin
-chown admin:admin /home/admin
-usermod -d /home/admin -s /bin/bash admin
-
-# Configure SSH: default requires keys, localhost/VPC IPs can use passwords
-cat >> /etc/ssh/sshd_config << 'SSHCONF'
-
-# Default: require SSH keys
-PasswordAuthentication no
-PubkeyAuthentication yes
-
-# Allow password auth from localhost, Docker bridge networks, and private VPCs
-Match Address 127.0.0.1,::1,172.16.0.0/12,10.0.0.0/8
-    PasswordAuthentication yes
-SSHCONF
-
-systemctl restart sshd
 
 # Create Guacamole directory structure
 echo "[*] Setting up Guacamole directory structure..."
@@ -420,3 +380,99 @@ fi
 echo "===== Guacamole Server Setup Completed $(date) ====="
 echo "===== Access Guacamole at https://$PUBLIC_IP/guacamole ====="
 echo "===== Default credentials: guacadmin / $GUAC_ADMIN_PASSWORD ====="
+
+%{ if enable_external_vpn }
+# ============================================================================
+# WireGuard Tunnel Setup
+# Generates keypairs on-box and configures both ends of the tunnel via SSH.
+# Guacamole (10.100.0.2) is the WireGuard client and routing gateway.
+# Redirector (10.100.0.1) is the WireGuard server, forwarding to tun0 (OpenVPN).
+# ============================================================================
+echo "[*] Setting up WireGuard tunnel..."
+
+apt-get install -y wireguard sshpass
+
+echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
+sysctl -w net.ipv4.ip_forward=1
+
+# Generate keypairs on this instance at boot — no pre-deployment key management needed
+WG_SERVER_PRIV=$(wg genkey)
+WG_SERVER_PUB=$(echo "$WG_SERVER_PRIV" | wg pubkey)
+WG_CLIENT_PRIV=$(wg genkey)
+WG_CLIENT_PUB=$(echo "$WG_CLIENT_PRIV" | wg pubkey)
+echo "[*] WireGuard keypairs generated"
+
+# Write Guacamole (client) wg0.conf
+cat > /etc/wireguard/wg0.conf << WGEOF
+[Interface]
+Address = 10.100.0.2/30
+PrivateKey = $WG_CLIENT_PRIV
+PostUp   = iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE; iptables -A FORWARD -i ens5 -o wg0 -j ACCEPT; iptables -A FORWARD -i wg0 -o ens5 -j ACCEPT
+PostDown = iptables -t nat -D POSTROUTING -o wg0 -j MASQUERADE; iptables -D FORWARD -i ens5 -o wg0 -j ACCEPT; iptables -D FORWARD -i wg0 -o ens5 -j ACCEPT
+
+[Peer]
+# Redirector (WireGuard server)
+PublicKey = $WG_SERVER_PUB
+Endpoint = ${redirector_private_ip}:51820
+AllowedIPs = ${join(",", external_vpn_cidrs)}
+PersistentKeepalive = 25
+WGEOF
+
+chmod 600 /etc/wireguard/wg0.conf
+
+# Wait for redirector SSH to become available
+echo "[*] Waiting for redirector SSH at ${redirector_private_ip}..."
+until sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    -o ConnectTimeout=5 \
+    admin@${redirector_private_ip} "echo ok" 2>/dev/null; do
+    echo "    ... retrying in 10s"
+    sleep 10
+done
+echo "[+] Redirector SSH is up"
+
+# Wait for redirector apt lock to clear (redirector cloud-init may still be running)
+echo "[*] Waiting for redirector package manager to be free..."
+sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    admin@${redirector_private_ip} \
+    "while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done"
+
+# Install WireGuard on redirector
+sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    admin@${redirector_private_ip} \
+    "sudo apt-get install -y wireguard"
+
+# Push server wg0.conf to redirector
+sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    admin@${redirector_private_ip} \
+    "sudo tee /etc/wireguard/wg0.conf > /dev/null" << WG_SERVER_CONF
+[Interface]
+Address = 10.100.0.1/30
+PrivateKey = $WG_SERVER_PRIV
+ListenPort = 51820
+
+[Peer]
+# Guacamole (WireGuard client / routing gateway for default VPC)
+PublicKey = $WG_CLIENT_PUB
+AllowedIPs = 10.100.0.2/32
+WG_SERVER_CONF
+
+# Secure config and start WireGuard server on redirector
+sshpass -p "$SSH_PASSWORD" ssh \
+    -o StrictHostKeyChecking=no \
+    admin@${redirector_private_ip} \
+    "sudo chmod 600 /etc/wireguard/wg0.conf && \
+     sudo iptables -A FORWARD -i wg0 -o tun0 -j ACCEPT && \
+     sudo iptables -A FORWARD -i tun0 -o wg0 -j ACCEPT && \
+     sudo systemctl enable wg-quick@wg0 && \
+     sudo systemctl start wg-quick@wg0"
+echo "[+] WireGuard server started on redirector (10.100.0.1)"
+
+# Start WireGuard client on Guacamole
+systemctl enable wg-quick@wg0
+systemctl start wg-quick@wg0
+echo "[+] WireGuard client started — tunnel: guac (10.100.0.2) <-> redirector (10.100.0.1)"
+%{ endif }
