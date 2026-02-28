@@ -8,6 +8,9 @@
 **Purpose:** Step-by-step guide to deploy and verify your boot-to-breach lab environment
 **Difficulty:** Intermediate to Advanced
 
+> [!IMPORTANT]
+> redStack is not a tutorial on how to use C2 frameworks. It is an environment that removes the infrastructure hurdle so you can focus on learning. The lab gives you a fully configured, production-style red team setup out of the box. What you do with it is up to you.
+
 ---
 
 ## Table of Contents
