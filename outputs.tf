@@ -137,7 +137,7 @@ output "network_architecture" {
 
 ${var.enable_external_vpn ? <<-VPNARCH
 
-  External VPN Routing (HTB/THM/VulnLabs):
+  External VPN Routing (HTB/VL/PG):
     [Internal Machine] -> Guacamole (wg0: 10.100.0.2) -> WireGuard (UDP 51820)
                       -> Redirector (wg0: 10.100.0.1) -> tun0 (OpenVPN) -> [CTF Targets]
     Routed CIDRs: ${join(", ", var.external_vpn_cidrs)}

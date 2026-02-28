@@ -82,7 +82,7 @@ resource "aws_route" "teamserver_to_redirector" {
 }
 
 # ============================================================================
-# EXTERNAL VPN ROUTING (Optional - for HTB/THM/VulnLabs access)
+# EXTERNAL VPN ROUTING (Optional - for HTB/VL/PG access)
 # ============================================================================
 
 # Route VPN target CIDRs from main VPC to Guacamole ENI (WireGuard gateway)
