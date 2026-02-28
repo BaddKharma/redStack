@@ -1,11 +1,10 @@
 #!/bin/bash
-# guacamole_setup.sh - User data script for Guacamole server initialization
+# guacamole_setup.sh - Main setup for Guacamole server (decoded and run by guacamole_userdata.sh)
 
 set -e
 
-# Logging
-exec > >(tee /var/log/user-data.log)
-exec 2>&1
+# Logging (append to log started by bootstrap)
+exec >> /var/log/user-data.log 2>&1
 
 echo "===== Guacamole Server Setup Started $(date) ====="
 
@@ -20,23 +19,6 @@ REDIRECTOR_PRIVATE_IP="${redirector_private_ip}"
 SLIVER_PRIVATE_IP="${sliver_private_ip}"
 HAVOC_PRIVATE_IP="${havoc_private_ip}"
 GUACAMOLE_PRIVATE_IP="${guacamole_private_ip}"
-
-# Set hostname
-echo "[*] Setting hostname..."
-hostnamectl set-hostname guac
-
-# Configure /etc/hosts for lab machines
-echo "[*] Configuring /etc/hosts..."
-cat >> /etc/hosts << HOSTS
-
-# redStack lab hosts
-$GUACAMOLE_PRIVATE_IP    guac
-$MYTHIC_PRIVATE_IP       mythic
-$SLIVER_PRIVATE_IP       sliver
-$HAVOC_PRIVATE_IP        havoc
-$REDIRECTOR_PRIVATE_IP   redirector
-$WINDOWS_PRIVATE_IP      win-operator
-HOSTS
 
 # Update system
 echo "[*] Updating system packages..."
@@ -61,28 +43,6 @@ systemctl start docker
 
 # Add admin user to docker group
 usermod -aG docker admin
-
-# Configure SSH password authentication for Guacamole access only
-# Public IP access still requires SSH keys, only localhost/VPC can use passwords
-echo "[*] Configuring SSH authentication (keys for public, passwords for VPC)..."
-echo "admin:$SSH_PASSWORD" | chpasswd
-mkdir -p /home/admin
-chown admin:admin /home/admin
-usermod -d /home/admin -s /bin/bash admin
-
-# Configure SSH: default requires keys, localhost/VPC IPs can use passwords
-cat >> /etc/ssh/sshd_config << 'SSHCONF'
-
-# Default: require SSH keys
-PasswordAuthentication no
-PubkeyAuthentication yes
-
-# Allow password auth from localhost, Docker bridge networks, and private VPCs
-Match Address 127.0.0.1,::1,172.16.0.0/12,10.0.0.0/8
-    PasswordAuthentication yes
-SSHCONF
-
-systemctl restart sshd
 
 # Create Guacamole directory structure
 echo "[*] Setting up Guacamole directory structure..."

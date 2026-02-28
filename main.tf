@@ -252,20 +252,29 @@ resource "aws_instance" "guacamole" {
     encrypted             = true
   }
 
-  user_data = templatefile("${path.module}/setup_scripts/guacamole_setup.sh", {
-    guac_admin_password   = random_password.lab.result
-    windows_private_ip    = aws_network_interface.windows.private_ip
-    windows_username      = "Administrator"
-    windows_password_b64  = base64encode(try(rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)), ""))
+  user_data = replace(templatefile("${path.module}/setup_scripts/guacamole_userdata.sh", {
     ssh_password          = random_password.lab.result
+    guacamole_private_ip  = aws_network_interface.guacamole.private_ip
     mythic_private_ip     = aws_network_interface.mythic.private_ip
-    redirector_private_ip = aws_network_interface.redirector.private_ip
     sliver_private_ip     = aws_network_interface.sliver.private_ip
     havoc_private_ip      = aws_network_interface.havoc.private_ip
-    guacamole_private_ip  = aws_network_interface.guacamole.private_ip
-    enable_external_vpn   = var.enable_external_vpn
-    external_vpn_cidrs    = var.external_vpn_cidrs
-  })
+    redirector_private_ip = aws_network_interface.redirector.private_ip
+    windows_private_ip    = aws_network_interface.windows.private_ip
+    setup_script_b64 = base64gzip(replace(templatefile("${path.module}/setup_scripts/guacamole_setup.sh", {
+      guac_admin_password   = random_password.lab.result
+      windows_private_ip    = aws_network_interface.windows.private_ip
+      windows_username      = "Administrator"
+      windows_password_b64  = base64encode(try(rsadecrypt(aws_instance.windows.password_data, file(var.ssh_private_key_path)), ""))
+      ssh_password          = random_password.lab.result
+      mythic_private_ip     = aws_network_interface.mythic.private_ip
+      redirector_private_ip = aws_network_interface.redirector.private_ip
+      sliver_private_ip     = aws_network_interface.sliver.private_ip
+      havoc_private_ip      = aws_network_interface.havoc.private_ip
+      guacamole_private_ip  = aws_network_interface.guacamole.private_ip
+      enable_external_vpn   = var.enable_external_vpn
+      external_vpn_cidrs    = var.external_vpn_cidrs
+    }), "\r", ""))
+  }), "\r", "")
 
   depends_on = [aws_instance.windows]
 
