@@ -44,7 +44,7 @@
 +------------------------------+------------------------------+
 |               TeamServer VPC (172.31.0.0/16)                |
 |   +-----------------------------------------------------+   |
-|   | guacamole                   Elastic IP: <Public IP>     |   |
+|   | guacamole               Elastic IP: <Public IP>     |   |
 |   | 172.31.x.x                                          |   |
 |   +--+----+----+----+-------------------------------+---+   |
 |      |    |    |    |   Guacamole-managed sessions  |       |
@@ -66,7 +66,7 @@
 +------------------------------+------------------------------+
 |                Redirector VPC (10.60.0.0/16)                |
 |   +-----------------------------------------------------+   |
-|   | redirector                  Elastic IP: <Public IP>     |   |
+|   | redirector              Elastic IP: <Public IP>     |   |
 |   | 10.60.x.x                                           |   |
 |   | Apache :80/:443 (X-Request-ID + URI validation)     |   |
 |   | Decoy page served to unvalidated requests           |   |
@@ -1721,7 +1721,7 @@ Route traffic from your internal lab machines (Windows workstation, C2 servers) 
 |  Redirector VPC (10.60.0.0/16)                   |
 |                         v                        |
 |   +------------------------------------------+   |
-|   | redirector (10.60.x.x) Elastic IP: <Public IP> |   |
+|   | redirector (10.60.x.x) ELST IP: <Pub.IP> |   |
 |   | wg0: 10.100.0.1/30 (server, UDP :51820)  |   |
 |   | (3) decapsulate / FORWARD wg0 -> tun0    |   |
 |   | (4) MASQUERADE on tun0 (src -> tun0 IP)  |   |
