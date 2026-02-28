@@ -359,15 +359,17 @@ Apply complete! Resources: 50+ added, 0 changed, 0 destroyed.
 
 **Checkpoint:** ✅ Terraform apply completed successfully
 
-### Step 1.5: Save Deployment Information
+### Step 1.5: Review Deployment Information
+
+There are two outputs: `deployment_info` (all IPs, credentials, SSH commands) and `network_architecture` (diagram with actual IPs).
 
 ```bash
 terraform output deployment_info
 terraform output network_architecture
 ```
 
-> [!NOTE]
-> There are two outputs: `deployment_info` (all IPs, credentials, SSH commands) and `network_architecture` (diagram with actual IPs). All connection details you need for the rest of this guide are in `deployment_info`. Save it to a file:
+> [!TIP]
+> Save `deployment_info` to a file for quick offline reference — you will need the IPs, credentials, and C2 header throughout this guide.
 >
 > **Windows (PowerShell):**
 >
@@ -381,7 +383,7 @@ terraform output network_architecture
 > terraform output deployment_info > deployment_info.txt
 > ```
 
-**Checkpoint:** ✅ Output saved, network diagram displayed
+**Checkpoint:** ✅ Deployment info reviewed, IPs and credentials noted
 
 ### Step 1.6: Point Domain to Redirector
 
