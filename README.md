@@ -322,6 +322,22 @@ terraform output deployment_info
 >
 > For full command reference, see the [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli/commands).
 
+---
+
+> [!NOTE]
+> **AWS EC2 Dashboard Primer**
+>
+> The [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) is your primary visibility tool for what Terraform has built (or destroyed) in AWS. You will use it to verify deployments and confirm clean teardowns. Key sections:
+>
+> | Section | Where to find it | What to check |
+> | --- | --- | --- |
+> | **Instances** | EC2 → Instances → Instances | All 6 redStack instances should show `running` after `terraform apply`. After `terraform destroy`, all should show `terminated`. |
+> | **Elastic IPs** | EC2 → Network & Security → Elastic IPs | Two EIPs are allocated at deploy time (Guacamole, Redirector). After `terraform destroy`, both should be released (not listed). Unreleased EIPs incur charges. |
+> | **Key Pairs** | EC2 → Network & Security → Key Pairs | Confirm `rs-rsa-key` exists before deploying. Terraform does not create this — it must be present or `terraform apply` will fail. |
+> | **VPCs** | VPC → Your VPCs | Two VPCs are created: TeamServer VPC (`172.31.0.0/16`) and Redirector VPC (`10.60.0.0/16`). After destroy, both should be gone. |
+>
+> **Quick region check:** Make sure the AWS Console region (top-right dropdown) matches the region in your `terraform.tfvars` (`us-east-1` by default). Resources created in one region are invisible when viewing another.
+
 ### Step 1.2: Initialize Terraform
 
 ```bash
