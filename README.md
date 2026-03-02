@@ -411,6 +411,20 @@ terraform output network_architecture
 
 After deployment, you need to point your domain's DNS to the redirector's Elastic IP so that Certbot can obtain a valid SSL certificate.
 
+> [!NOTE]
+> **Domain Registrar Primer**
+>
+> A domain registrar is where you purchase and manage your domain name. The DNS records you create there tell the internet which IP address your domain points to. You need a domain registered with one of these providers before proceeding:
+>
+> | Registrar | Notes |
+> | --- | --- |
+> | [GoDaddy](https://www.godaddy.com) | Popular general-purpose registrar. Manage DNS under **My Products → DNS**. |
+> | [Namecheap](https://www.namecheap.com) | Budget-friendly, clean UI. Manage DNS under **Dashboard → Manage → Advanced DNS**. |
+> | [Cloudflare](https://www.cloudflare.com) | Free DNS management after transferring or registering your domain. Manage DNS under **your domain → DNS → Records**. Also provides DDoS protection and CDN. Note: disable the orange-cloud proxy for A records used for C2 — proxied records will break direct IP resolution. |
+> | [Route 53](https://aws.amazon.com/route53/) | AWS-native registrar. Manage DNS under **Hosted Zones → your domain → Create record**. Convenient if you want everything in one AWS account. |
+>
+> If you do not have a domain yet, purchase one from any of the above before continuing. Domains typically cost $10-15/year. For C2 infrastructure, pick something that looks generic and legitimate (e.g., a CDN, cloud storage, or SaaS-style name).
+
 **Get the Redirector IP:**
 
 ```bash
