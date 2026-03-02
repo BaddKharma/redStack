@@ -336,6 +336,18 @@ terraform output deployment_info
 >
 > **Quick region check:** Make sure the AWS Console region (top-right dropdown) matches the region in your `terraform.tfvars` (`us-east-1` by default). Resources created in one region are invisible when viewing another.
 
+---
+
+> [!CAUTION]
+> **AWS Cost Warning: Unattended Instances**
+>
+> Running EC2 instances accrue charges 24/7 whether you are actively using them or not. Forgetting about a deployed lab is one of the most common causes of unexpected AWS bills. A few things to keep in mind:
+>
+> - **Shut down the lab when not in use.** You can stop all instances from the EC2 Dashboard (select all → Instance State → Stop) to pause compute charges without destroying the environment.
+> - **Stopped instances still cost money.** EBS storage volumes attached to stopped instances continue to incur charges. For a full redStack deployment this is typically small, but it adds up over time.
+> - **The only way to eliminate all charges is `terraform destroy`.** This terminates instances, releases Elastic IPs, and removes all billable resources. Do this when you are done with a training session and do not need to preserve state.
+> - **Set a billing alarm.** In the [AWS Billing Console](https://console.aws.amazon.com/billing/home), create a CloudWatch billing alarm to alert you if monthly charges exceed a threshold you set. This is the best safeguard against runaway costs from forgotten resources.
+
 ### Step 1.2: Initialize Terraform
 
 ```bash
