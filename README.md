@@ -318,7 +318,7 @@ terraform output deployment_info
 > | `terraform init` | Downloads provider plugins and initializes the working directory. Run once before anything else, or after adding new providers. |
 > | `terraform plan` | Dry run. Shows exactly what Terraform will create, change, or destroy — no changes are made. |
 > | `terraform apply` | Provisions the infrastructure defined in your `.tf` files. Terraform will print the plan and prompt you to type `yes` before making any changes. |
-> | `terraform destroy` | Tears down **all** infrastructure managed by Terraform in this directory. You will be prompted to confirm. Use this when you are done with the lab to avoid ongoing AWS charges. |
+> | `terraform destroy` | Tears down **all** infrastructure managed by Terraform in this directory. You will be prompted to confirm. Use this when you are done with the lab to avoid ongoing AWS charges. Before redeploying, verify the destroy completed cleanly by checking your [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) — all redStack instances should show as terminated and no Elastic IPs should remain allocated. |
 >
 > For full command reference, see the [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli/commands).
 
