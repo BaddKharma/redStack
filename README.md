@@ -308,6 +308,20 @@ terraform output deployment_info
 
 **Checkpoint:** ✅ File saved with your actual values
 
+> [!NOTE]
+> **Terraform Primer**
+>
+> If you are new to Terraform, here is a quick overview of the four commands used in this guide:
+>
+> | Command | What it does |
+> | --- | --- |
+> | `terraform init` | Downloads provider plugins and initializes the working directory. Run once before anything else, or after adding new providers. |
+> | `terraform plan` | Dry run. Shows exactly what Terraform will create, change, or destroy — no changes are made. |
+> | `terraform apply` | Provisions the infrastructure defined in your `.tf` files. Terraform will print the plan and prompt you to type `yes` before making any changes. |
+> | `terraform destroy` | Tears down **all** infrastructure managed by Terraform in this directory. You will be prompted to confirm. Use this when you are done with the lab to avoid ongoing AWS charges. |
+>
+> For full command reference, see the [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli/commands).
+
 ### Step 1.2: Initialize Terraform
 
 ```bash
