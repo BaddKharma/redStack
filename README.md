@@ -316,13 +316,11 @@ terraform output deployment_info
 > | Command | What it does |
 > | --- | --- |
 > | `terraform init` | Downloads provider plugins and initializes the working directory. Run once before anything else, or after adding new providers. |
-> | `terraform plan` | Dry run. Shows exactly what Terraform will create, change, or destroy — no changes are made. |
+> | `terraform plan` | Dry run. Shows exactly what Terraform will create, change, or destroy: no changes are made. This is also used to hunt for any syntax or provisioning errors, that can be resolved prior to a full deployment with 'terraform apply' |
 > | `terraform apply` | Provisions the infrastructure defined in your `.tf` files. Terraform will print the plan and prompt you to type `yes` before making any changes. |
 > | `terraform destroy` | Tears down **all** infrastructure managed by Terraform in this directory. You will be prompted to confirm. Use this when you are done with the lab to avoid ongoing AWS charges. Before redeploying, verify the destroy completed cleanly by checking your [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) — all redStack instances should show as terminated and no Elastic IPs should remain allocated. |
 >
 > For full command reference, see the [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli/commands).
-
----
 
 > [!NOTE]
 > **AWS EC2 Dashboard Primer**
@@ -410,20 +408,6 @@ terraform output network_architecture
 > **Closed environment (no DNS):** Skip this step entirely. No domain or DNS record is needed. Proceed to Part 2.
 
 After deployment, you need to point your domain's DNS to the redirector's Elastic IP so that Certbot can obtain a valid SSL certificate.
-
-> [!NOTE]
-> **Domain Registrar Primer**
->
-> A domain registrar is where you purchase and manage your domain name. The DNS records you create there tell the internet which IP address your domain points to. You need a domain registered with one of these providers before proceeding:
->
-> | Registrar | Notes |
-> | --- | --- |
-> | [GoDaddy](https://www.godaddy.com) | Popular general-purpose registrar. Manage DNS under **My Products → DNS**. |
-> | [Namecheap](https://www.namecheap.com) | Budget-friendly, clean UI. Manage DNS under **Dashboard → Manage → Advanced DNS**. |
-> | [Cloudflare](https://www.cloudflare.com) | Free DNS management after transferring or registering your domain. Manage DNS under **your domain → DNS → Records**. Also provides DDoS protection and CDN. Note: disable the orange-cloud proxy for A records used for C2 — proxied records will break direct IP resolution. |
-> | [Route 53](https://aws.amazon.com/route53/) | AWS-native registrar. Manage DNS under **Hosted Zones → your domain → Create record**. Convenient if you want everything in one AWS account. |
->
-> If you do not have a domain yet, purchase one from any of the above before continuing. Domains typically cost $10-15/year. For C2 infrastructure, pick something that looks generic and legitimate (e.g., a CDN, cloud storage, or SaaS-style name).
 
 **Get the Redirector IP:**
 
