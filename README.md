@@ -322,7 +322,7 @@ terraform output deployment_info
 >
 > For full command reference, see the [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli/commands).
 
-> [!NOTE]
+> [!WARNING]
 > **AWS EC2 Dashboard Primer**
 >
 > The [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) is your primary visibility tool for what Terraform has built (or destroyed) in AWS. You will use it to verify deployments and confirm clean teardowns. Key sections:
