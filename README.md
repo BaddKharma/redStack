@@ -308,7 +308,7 @@ terraform output deployment_info
 
 **Checkpoint:** ✅ File saved with your actual values
 
-> [!NOTE]
+> [!TIP]
 > **Terraform Primer**
 >
 > If you are new to Terraform, here is a quick overview of the four commands used in this guide:
