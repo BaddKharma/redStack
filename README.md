@@ -176,16 +176,17 @@ cd redStack
 aws configure
 ```
 
-You will be prompted for:
+<details>
+<summary>aws configure prompts</summary>
 
 - **AWS Access Key ID** - from IAM Console → Users → Security credentials
 - **AWS Secret Access Key** - shown once when creating the access key
 - **Default region name** - `us-east-1` (or your preferred region)
 - **Default output format** - `json`
 
-> [!NOTE]
-> If you don't have an access key yet, create one in the AWS Console:
-> IAM → Users → [your user] → Security credentials → Create access key → CLI use case
+If you don't have an access key: IAM → Users → [your user] → Security credentials → Create access key → CLI use case
+
+</details>
 
 **Install Terraform:**
 
@@ -599,8 +600,12 @@ ssh -i ".\rs-rsa-key.pem" admin@<REDIR_PUBLIC_IP>
 ssh -i rs-rsa-key.pem admin@<REDIR_PUBLIC_IP>
 ```
 
-> [!NOTE]
-> **What is Certbot?** Certbot is a free, open-source tool from the Electronic Frontier Foundation (EFF) that automates obtaining and renewing TLS certificates from Let's Encrypt. Running it against the Apache server automatically provisions a trusted certificate, updates the HTTPS VirtualHost config, and sets up a cron job for auto-renewal. No manual certificate management required.
+<details>
+<summary>What is Certbot?</summary>
+
+Certbot is a free, open-source tool from the EFF that automates obtaining and renewing TLS certificates from Let's Encrypt. It updates the HTTPS VirtualHost config and sets up auto-renewal automatically.
+
+</details>
 
 ```bash
 sudo certbot --apache -d yourdomain.tld
@@ -1021,7 +1026,7 @@ sliver > http --lhost 0.0.0.0 --lport 80
 This starts a plain HTTP listener on port 80. The implant connects over HTTPS to the redirector, which terminates SSL and forwards plain HTTP internally to Sliver on port 80.
 
 > [!WARNING]
-> SSL is handled entirely by the Apache redirector. Sliver never sees TLS. The redirector proxies to Sliver on port 80 (plain HTTP) internally. The implant's callback URL is still `https://yourdomain/...` so from the target's perspective all traffic is encrypted. If your redirector and team servers are not co-located or connected via private VPC peering, consider tunneling internal C2 traffic over SSH to protect it in transit. Plain HTTP between the redirector and Sliver could be intercepted if routed over untrusted infrastructure.
+> SSL terminates at the Apache redirector. Sliver receives plain HTTP on port 80 internally — the implant callback URL remains `https://yourdomain/...` so traffic is encrypted from the target's perspective.
 
 **Checkpoint:** ✅ Sliver HTTP listener running on port 80
 
@@ -1931,15 +1936,13 @@ nmap -sC -sV 10.10.10.2
 ping 10.10.10.2
 ```
 
-Traffic from any internal machine destined for the ExtVPN target CIDRs is automatically routed through the redirector's VPN tunnel.
-
 ### Step 8.6: Stop the VPN
 
 ```bash
 sudo systemctl stop ext-vpn
 ```
 
-This stops the OpenVPN process and removes the iptables MASQUERADE rules on `tun0`. The `.ovpn` file is preserved in `~/vpn/` so you can restart without re-uploading. The WireGuard tunnel (`wg-quick@wg0`) stays up and will reconnect automatically when `ext-vpn` restarts.
+This stops the OpenVPN process and removes the iptables MASQUERADE rules on `tun0`. The `.ovpn` file is preserved in `~/vpn/` so you can restart without re-uploading.
 
 **Checkpoint:** ✅ VPN stopped, lab C2 operations unaffected
 
