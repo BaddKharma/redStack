@@ -1227,7 +1227,8 @@ scp admin@havoc:/home/admin/Desktop/demon.x64.exe C:\Users\Administrator\Desktop
 
 Reference this section if any component is not behaving as expected after deployment. Each subsection targets a specific failure mode with symptoms, root cause, and fix.
 
-### Connectivity Checks
+<details>
+<summary>Connectivity Checks</summary>
 
 #### C2 Server Isolation
 
@@ -1260,7 +1261,12 @@ URI prefixes in the logs identify which C2 is receiving traffic:
 /edge/cache/assets/     = Havoc
 ```
 
-### Component Health Checks
+</details>
+
+---
+
+<details>
+<summary>Component Health Checks</summary>
 
 Use these checks if something isn't working as expected after deployment.
 
@@ -1379,6 +1385,8 @@ Each Guacamole SSH connection should connect without a password prompt and land 
 5. Click **"Havoc C2 Server (SSH)"** → prompt: `admin@havoc:~$`
 
 **SSH security model:** All Linux servers allow password auth from within the C2 VPC (172.31.0.0/16) but require SSH keys from public IPs. This lets Guacamole connect with passwords while keeping public SSH key-only.
+
+</details>
 
 ---
 
