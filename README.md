@@ -5,11 +5,6 @@
 > [!NOTE]
 > redStack is now feature complete and supports both public internet deployments and closed environments (HTB/VL/PG) that use OpenVPN. This is actively being tested and debugged, so please reach out with any issues or concerns.
 
-## Complete Deployment Walkthrough
-
-**Purpose:** Step-by-step guide to deploy and verify your boot-to-breach lab environment
-**Difficulty:** Intermediate to Advanced
-
 > [!IMPORTANT]
 > redStack is not a tutorial on how to use C2 frameworks. It is an environment that removes the infrastructure hurdle so you can focus on learning. The lab gives you a fully configured, production-style red team setup out of the box (Boot-to-Breach). What you do with it is up to you.
 
@@ -18,7 +13,7 @@
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
-- [Pre-Deployment Checklist](#pre-deployment-checklist)
+- [Part 0: Pre-Deployment Checklist](#part-0-pre-deployment-checklist)
   - [Prerequisites](#prerequisites)
   - [Step 0.1: Clone Repository & Install Tools](#step-01-clone-repository--install-tools)
   - [Step 0.2: Verification Commands](#step-02-verification-commands)
@@ -155,7 +150,7 @@ Public Internet Environment (C2 Callback Flow):
 
 ---
 
-## Pre-Deployment Checklist
+## Part 0: Pre-Deployment Checklist
 
 ### Prerequisites
 
@@ -283,9 +278,7 @@ aws ec2 describe-key-pairs --key-names rs-rsa-key
 
 ## Part 1: Initial Deployment
 
-### Objective: AWS Infrastructure Deployment
-
-Deploy all AWS infrastructure using Terraform: VPCs, security groups, EC2 instances (Mythic, Sliver, Havoc, Guacamole, Windows, Apache redirector).
+_Deploy all AWS infrastructure using Terraform: VPCs, security groups, EC2 instances (Mythic, Sliver, Havoc, Guacamole, Windows, Apache redirector)._
 
 ### Step 1.1: Configure Terraform Variables
 
@@ -364,32 +357,37 @@ terraform output deployment_info
 
 **Checkpoint:** ✅ File saved with your actual values
 
-> [!TIP]
-> **Terraform Primer**
->
-> If you are new to Terraform, here is a quick overview of the four commands used in this guide:
->
-> | Command | What it does |
-> | --- | --- |
-> | `terraform init` | Downloads provider plugins and initializes the working directory. Run once before anything else, or after adding new providers. |
-> | `terraform plan` | Dry run. Shows exactly what Terraform will create, change, or destroy: no changes are made. This is also used to hunt for any syntax or provisioning errors, that can be resolved prior to a full deployment with 'terraform apply' |
-> | `terraform apply` | Provisions the infrastructure defined in your `.tf` files. Terraform will print the plan and prompt you to type `yes` before making any changes. |
-> | `terraform destroy` | Tears down **all** infrastructure managed by Terraform in this directory. You will be prompted to confirm. Use this when you are done with the lab to avoid ongoing AWS charges. Before redeploying, verify the destroy completed cleanly by checking your [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) — all redStack instances should show as terminated and no Elastic IPs should remain allocated. |
->
-> For full command reference, see the [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli/commands).
-> [!WARNING]
-> **AWS EC2 Dashboard Primer**
->
-> The [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) is your primary visibility tool for what Terraform has built (or destroyed) in AWS. You will use it to verify deployments and confirm clean teardowns. Key sections:
->
-> | Section | Where to find it | What to check |
-> | --- | --- | --- |
-> | **Instances** | EC2 → Instances → Instances | All 6 redStack instances should show `running` after `terraform apply`. After `terraform destroy`, all should show `terminated`. |
-> | **Elastic IPs** | EC2 → Network & Security → Elastic IPs | Two EIPs are allocated at deploy time (Guacamole, Redirector). After `terraform destroy`, both should be released (not listed). Unreleased EIPs incur charges. |
-> | **Key Pairs** | EC2 → Network & Security → Key Pairs | Confirm `rs-rsa-key` exists before deploying. Terraform does not create this — it must be present or `terraform apply` will fail. |
-> | **VPCs** | VPC → Your VPCs | Two VPCs are created: TeamServer VPC (`172.31.0.0/16`) and Redirector VPC (`10.60.0.0/16`). After destroy, both should be gone. |
->
-> **Quick region check:** Make sure the AWS Console region (top-right dropdown) matches the region in your `terraform.tfvars` (`us-east-1` by default). Resources created in one region are invisible when viewing another.
+<details>
+<summary><strong>Terraform Primer:</strong> new to Terraform? Click to expand.</summary>
+
+If you are new to Terraform, here is a quick overview of the four commands used in this guide:
+
+| Command | What it does |
+| --- | --- |
+| `terraform init` | Downloads provider plugins and initializes the working directory. Run once before anything else, or after adding new providers. |
+| `terraform plan` | Dry run. Shows exactly what Terraform will create, change, or destroy — no changes are made. Also useful for catching syntax or provisioning errors before a full `terraform apply`. |
+| `terraform apply` | Provisions the infrastructure defined in your `.tf` files. Terraform will print the plan and prompt you to type `yes` before making any changes. |
+| `terraform destroy` | Tears down **all** infrastructure managed by Terraform in this directory. You will be prompted to confirm. Use this when you are done with the lab to avoid ongoing AWS charges. Before redeploying, verify the destroy completed cleanly by checking your [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) — all redStack instances should show as terminated and no Elastic IPs should remain allocated. |
+
+For full command reference, see the [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli/commands).
+
+</details>
+
+<details>
+<summary><strong>AWS EC2 Dashboard Primer:</strong> not familiar with the AWS Console? Click to expand.</summary>
+
+The [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) is your primary visibility tool for what Terraform has built (or destroyed) in AWS. You will use it to verify deployments and confirm clean teardowns. Key sections:
+
+| Section | Where to find it | What to check |
+| --- | --- | --- |
+| **Instances** | EC2 → Instances → Instances | All 6 redStack instances should show `running` after `terraform apply`. After `terraform destroy`, all should show `terminated`. |
+| **Elastic IPs** | EC2 → Network & Security → Elastic IPs | Two EIPs are allocated at deploy time (Guacamole, Redirector). After `terraform destroy`, both should be released (not listed). Unreleased EIPs incur charges. |
+| **Key Pairs** | EC2 → Network & Security → Key Pairs | Confirm `rs-rsa-key` exists before deploying. Terraform does not create this — it must be present or `terraform apply` will fail. |
+| **VPCs** | VPC → Your VPCs | Two VPCs are created: TeamServer VPC (`172.31.0.0/16`) and Redirector VPC (`10.60.0.0/16`). After destroy, both should be gone. |
+
+**Quick region check:** Make sure the AWS Console region (top-right dropdown) matches the region in your `terraform.tfvars` (`us-east-1` by default). Resources created in one region are invisible when viewing another.
+
+</details>
 
 ---
 
@@ -517,25 +515,20 @@ dig +short yourdomain.tld
 
 **Checkpoint:** ✅ Domain pointed to redirector IP, DNS verified
 
-### Wait Time: 5-10 Minutes
-
-**Why:** User data scripts are installing software on multiple servers
-
-**What's Happening:**
-
-- All hosts: Setting descriptive hostnames and populating /etc/hosts for cross-host name resolution
-- Mythic (`mythic`): Installing Docker, cloning Mythic, starting ~10 containers (Debian 12)
-- Sliver (`sliver`): Installing Sliver C2 server binary, configuring firewall (Debian 12)
-- Havoc (`havoc`): Installing Go, cloning and building Havoc teamserver from source (Debian 12)
-- Guacamole (`guac`): Setting up PostgreSQL, Nginx, Docker containers (Debian 12)
-- Windows (`WIN-OPERATOR`): Disabling Defender/Firewall, enabling RDP, installing tools (Chromium, VS Code, MobaXterm, 7-Zip)
-- Redirector (`redirector`): Installing Apache with mod_rewrite/proxy, configuring header+URI validation, downloading redirect.rules, setting up SSL and decoy page (Debian 12, fully automated)
+> [!NOTE]
+> **Wait 5-10 minutes before proceeding to Part 2.** User data scripts are installing software on all servers:
+>
+> - All hosts: Setting descriptive hostnames and populating `/etc/hosts` for cross-host name resolution
+> - Mythic (`mythic`): Installing Docker, cloning Mythic, starting ~10 containers (Debian 12)
+> - Sliver (`sliver`): Installing Sliver C2 server binary, configuring firewall (Debian 12)
+> - Havoc (`havoc`): Installing Go, cloning and building Havoc teamserver from source (Debian 12)
+> - Guacamole (`guac`): Setting up PostgreSQL, Nginx, Docker containers (Debian 12)
+> - Windows (`WIN-OPERATOR`): Disabling Defender/Firewall, enabling RDP, installing tools (Chromium, VS Code, MobaXterm, 7-Zip)
+> - Redirector (`redirector`): Installing Apache with mod_rewrite/proxy, configuring header+URI validation, downloading redirect.rules, setting up SSL and decoy page (Debian 12, fully automated)
 
 ---
 
 ## Part 2: Verification
-
-### Objective: Confirm Lab is Operational
 
 Verify all components are accessible before moving to C2 setup. All credentials and IPs come from:
 
@@ -600,8 +593,6 @@ ping guac
 ---
 
 ## Part 3: Apache Redirector Configuration
-
-### Objective: Configure and Understand the Redirector
 
 This section covers the one manual step required after deployment (SSL certificate), then walks through the pre-configured security layers.
 
@@ -809,7 +800,7 @@ curl -sL "https://raw.githubusercontent.com/BaddKharma/redRules/main/redirect.ru
 sudo systemctl reload apache2
 ```
 
-### Layer 2: Header Validation
+#### Layer 2: Header Validation
 
 Requests must include the correct `X-Request-ID` header. Without it, Apache serves the CloudEdge CDN decoy page instead of proxying to C2 backends.
 
@@ -820,7 +811,7 @@ terraform output deployment_info
 # Look for: C2 Header: X-Request-ID: <token>
 ```
 
-### Layer 3: URI Prefix Routing
+#### Layer 3: URI Prefix Routing
 
 | URI Prefix | Backend | Forwarded as |
 | ---------- | ------- | ------------ |
@@ -858,11 +849,7 @@ sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 > [!IMPORTANT]
 > Mythic is a collaborative C2 framework built by Cody Thomas with a modern web-based GUI accessible through a browser. It uses a modular architecture where agents (called "payloads") and communication profiles are installed separately as Docker containers, making it highly extensible. Mythic is GUI-driven and includes a built-in task manager, file browser, and credential storage, making it well suited for multi-operator engagements.
 
-### Objective: Mythic Proof-of-Function
-
-The goal here is not to learn Mythic. It's to confirm the environment works end-to-end by getting a Windows `.exe` beacon to call back through the redirector. Once you have a callback, the lab is proven functional.
-
-For full documentation on Mythic's capabilities, refer to the [official Mythic docs](https://docs.mythic-c2.net).
+The goal here is not to learn Mythic. Confirm the environment works end-to-end by getting a Windows `.exe` beacon to call back through the redirector. Once you have a callback, the lab is proven functional. For full documentation, refer to the [official Mythic docs](https://docs.mythic-c2.net).
 
 ### Step 4.0: Verify Pre-Installed Profiles and Agents
 
@@ -1003,11 +990,7 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 > [!IMPORTANT]
 > Sliver is an open-source C2 framework developed by BishopFox, designed as a modern alternative to Cobalt Strike for red team operations. It supports multiple communication protocols (HTTP/S, DNS, mTLS, WireGuard) and cross-compiles implants for Windows, Linux, and macOS. Sliver is primarily CLI-driven through an interactive console, with multiplayer support allowing multiple operators to connect to a shared server daemon simultaneously.
 
-### Objective: Sliver Proof-of-Function
-
-Same goal as Part 4: get a Windows `.exe` implant calling back through the redirector to confirm Sliver is working. This is a proof-of-function run, not a Sliver deep-dive.
-
-For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/sliver/wiki).
+Same goal as Part 4: get a Windows `.exe` implant calling back through the redirector to confirm Sliver is working. This is a proof-of-function run, not a Sliver deep-dive. For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/sliver/wiki).
 
 ### Step 5.1: Access Sliver Server
 
@@ -1111,11 +1094,7 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 >
 > **Access model:** The Havoc client GUI runs directly on the Havoc server inside an XFCE4 desktop. Operators access it through Guacamole via VNC with no local client install required.
 
-### Objective: Havoc Proof-of-Function
-
-Same goal: get a Windows `.exe` demon calling back through the redirector to confirm Havoc is working. Not a Havoc tutorial.
-
-For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
+Same goal: get a Windows `.exe` demon calling back through the redirector to confirm Havoc is working. Not a Havoc tutorial. For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
 
 ### Step 6.1: Build Havoc (run once after deployment)
 
@@ -1695,8 +1674,6 @@ At the end of this deployment, you should have:
 
 > [!NOTE]
 > **This section is for External VPN Environments (ExtVPN) only.** The default redStack deployment uses a public domain, trusted TLS certificate, and htaccess filtering. Only follow this section if you are connecting to an isolated platform (HTB Pro Labs, THM, Proving Grounds) via OpenVPN where targets cannot reach the public internet.
-
-### Objective: Connect Lab to External VPN Platforms
 
 Route traffic from your internal lab machines (Windows workstation, C2 servers) to external target environments like HackTheBox (HTB), VulnLabs (VL), or Proving Grounds (PG) through the Apache redirector's OpenVPN tunnel.
 
