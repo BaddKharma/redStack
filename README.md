@@ -984,7 +984,7 @@ Sliver is an open-source C2 framework developed by BishopFox, designed as a mode
 
 </details>
 
-Same goal as Part 4: get a Windows `.exe` implant calling back through the redirector to confirm Sliver is working. This is a proof-of-function run, not a Sliver deep-dive. For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/sliver/wiki).
+The goal here is not to learn Sliver. Confirm the environment works end-to-end by getting a Windows `.exe` implant to call back through the redirector. Once you have a callback, the lab is proven functional. For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/sliver/wiki).
 
 ### Step 5.1: Access Sliver Server
 
@@ -1092,7 +1092,7 @@ Havoc is a modern open-source C2 framework developed by Paul Ungur (5pider) with
 
 </details>
 
-Same goal: get a Windows `.exe` demon calling back through the redirector to confirm Havoc is working. Not a Havoc tutorial. For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
+The goal here is not to learn Havoc. Confirm the environment works end-to-end by getting a Windows `.exe` demon to call back through the redirector. Once you have a callback, the lab is proven functional. For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
 
 ### Step 6.1: Build Havoc (run once after deployment)
 
