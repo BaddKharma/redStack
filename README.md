@@ -321,7 +321,6 @@ terraform output deployment_info
 > | `terraform destroy` | Tears down **all** infrastructure managed by Terraform in this directory. You will be prompted to confirm. Use this when you are done with the lab to avoid ongoing AWS charges. Before redeploying, verify the destroy completed cleanly by checking your [AWS EC2 Dashboard](https://console.aws.amazon.com/ec2/home) — all redStack instances should show as terminated and no Elastic IPs should remain allocated. |
 >
 > For full command reference, see the [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli/commands).
-
 > [!WARNING]
 > **AWS EC2 Dashboard Primer**
 >
