@@ -54,22 +54,11 @@
 - [Part 7: Troubleshooting](#part-7-troubleshooting)
   - [Connectivity Checks](#connectivity-checks)
   - [Component Health Checks](#component-health-checks)
-  - [redirect.rules Download Fails](#redirectrules-download-fails)
-  - [Mythic nginx SSL Certificate Missing](#mythic-nginx-ssl-certificate-missing)
-  - [Guacamole Connections Not Auto-Created](#guacamole-connections-not-auto-created)
-  - [Mythic Not Starting](#mythic-not-starting)
-  - [Sliver Not Installed](#sliver-not-installed)
-  - [Havoc Build Failed](#havoc-build-failed)
-  - [Guacamole RDP Fails](#guacamole-rdp-fails)
-  - [Agent Won't Callback](#agent-wont-callback)
-  - [Terraform Errors](#terraform-errors)
 - [Post-Deployment Actions](#post-deployment-actions)
   - [Cleanup (When Done)](#cleanup-when-done)
   - [Cost Management](#cost-management)
 - [Success Criteria](#success-criteria)
 - [Part 8: External Target Environments (HTB/VL/PG)](#part-8-external-target-environments-htbvlpg)
-  - [How It Works](#how-it-works)
-  - [Why WireGuard?](#why-wireguard)
   - [Step 8.1: Configure terraform.tfvars](#step-81-configure-terraformtfvars)
   - [Step 8.2: Deploy and Obtain Your .ovpn File](#step-82-deploy-and-obtain-your-ovpn-file)
   - [Step 8.3: Get the .ovpn File to the Redirector](#step-83-get-the-ovpn-file-to-the-redirector)
@@ -632,6 +621,9 @@ sudo certbot --apache -d yourdomain.tld
 
 Certbot will walk you through a few prompts:
 
+<details>
+<summary>Certbot walkthrough and expected output</summary>
+
 ```text
 Saving debug log to /var/log/letsencrypt/letsencrypt.log
 Enter email address (used for urgent renewal and security notices)
@@ -668,6 +660,8 @@ Added an HTTP->HTTPS rewrite in addition to other RewriteRules; you may wish to 
 Congratulations! You have successfully enabled HTTPS on https://yourdomain.tld
 ```
 
+</details>
+
 Certbot automatically updates the Apache HTTPS config and configures auto-renewal.
 
 ```bash
@@ -684,7 +678,8 @@ A pre-installed script checks the full redirector stack in one command:
 sudo /home/admin/test_redirector.sh
 ```
 
-**Key sections of expected output:**
+<details>
+<summary>Key sections of expected output</summary>
 
 ```text
 ===== Redirector Connectivity Test =====
@@ -730,6 +725,8 @@ sudo /home/admin/test_redirector.sh
   /edge/cache/assets/ -> Havoc   (172.31.x.x)
 ```
 
+</details>
+
 > [!NOTE]
 > **Sliver and Havoc show FAILED.** This is expected. C2 listeners for Sliver and Havoc have not been started yet (covered in Parts 5 and 6). Mythic shows OK because its HTTP port is reachable before a listener is configured. Re-run this script after completing Parts 5 and 6 to confirm all three backends are reachable.
 >
@@ -767,11 +764,7 @@ sudo cat /etc/apache2/sites-available/redirector-http.conf
 sudo cat /etc/apache2/sites-available/redirector-https.conf
 ```
 
-Each VirtualHost uses three security layers before proxying traffic:
-
-1. **redirect.rules**: Blocks known AV vendors, cloud sandboxes, security scanners, and TOR exit nodes (returns 403)
-2. **Header validation**: Requires `X-Request-ID` header with a specific token value
-3. **URI prefix routing**: Only matching URI prefixes are proxied to C2 backends
+Each VirtualHost uses three security layers before proxying traffic. Step 3.4 covers each layer in detail.
 
 **Checkpoint:** ✅ Understand the three-layer security model
 
@@ -846,8 +839,12 @@ sudo tail -50 /var/log/apache2/redirector-ssl-error.log
 
 ## Part 4: Mythic C2 Setup
 
-> [!IMPORTANT]
-> Mythic is a collaborative C2 framework built by Cody Thomas with a modern web-based GUI accessible through a browser. It uses a modular architecture where agents (called "payloads") and communication profiles are installed separately as Docker containers, making it highly extensible. Mythic is GUI-driven and includes a built-in task manager, file browser, and credential storage, making it well suited for multi-operator engagements.
+<details>
+<summary>About Mythic C2</summary>
+
+Mythic is a collaborative C2 framework built by Cody Thomas with a modern web-based GUI accessible through a browser. It uses a modular architecture where agents (called "payloads") and communication profiles are installed separately as Docker containers, making it highly extensible. Mythic is GUI-driven and includes a built-in task manager, file browser, and credential storage, making it well suited for multi-operator engagements.
+
+</details>
 
 The goal here is not to learn Mythic. Confirm the environment works end-to-end by getting a Windows `.exe` beacon to call back through the redirector. Once you have a callback, the lab is proven functional. For full documentation, refer to the [official Mythic docs](https://docs.mythic-c2.net).
 
@@ -987,8 +984,12 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 
 ## Part 5: Sliver C2 Setup
 
-> [!IMPORTANT]
-> Sliver is an open-source C2 framework developed by BishopFox, designed as a modern alternative to Cobalt Strike for red team operations. It supports multiple communication protocols (HTTP/S, DNS, mTLS, WireGuard) and cross-compiles implants for Windows, Linux, and macOS. Sliver is primarily CLI-driven through an interactive console, with multiplayer support allowing multiple operators to connect to a shared server daemon simultaneously.
+<details>
+<summary>About Sliver C2</summary>
+
+Sliver is an open-source C2 framework developed by BishopFox, designed as a modern alternative to Cobalt Strike for red team operations. It supports multiple communication protocols (HTTP/S, DNS, mTLS, WireGuard) and cross-compiles implants for Windows, Linux, and macOS. Sliver is primarily CLI-driven through an interactive console, with multiplayer support allowing multiple operators to connect to a shared server daemon simultaneously.
+
+</details>
 
 Same goal as Part 4: get a Windows `.exe` implant calling back through the redirector to confirm Sliver is working. This is a proof-of-function run, not a Sliver deep-dive. For full documentation, refer to the [Sliver wiki](https://github.com/BishopFox/sliver/wiki).
 
@@ -1089,10 +1090,14 @@ sudo tail -f /var/log/apache2/redirector-ssl-access.log
 
 ## Part 6: Havoc C2 Setup
 
-> [!IMPORTANT]
-> Havoc is a modern open-source C2 framework developed by Paul Ungur (5pider) with a focus on evasion and advanced post-exploitation. It features a Qt-based GUI client (the "Katana" client) that connects to a remote teamserver, similar in model to Cobalt Strike. Havoc's agents ("Demons") are written in C and include features like indirect syscalls and sleep obfuscation, making it a popular choice for practicing modern evasion techniques.
->
-> **Access model:** The Havoc client GUI runs directly on the Havoc server inside an XFCE4 desktop. Operators access it through Guacamole via VNC with no local client install required.
+<details>
+<summary>About Havoc C2</summary>
+
+Havoc is a modern open-source C2 framework developed by Paul Ungur (5pider) with a focus on evasion and advanced post-exploitation. It features a Qt-based GUI client (the "Katana" client) that connects to a remote teamserver, similar in model to Cobalt Strike. Havoc's agents ("Demons") are written in C and include features like indirect syscalls and sleep obfuscation, making it a popular choice for practicing modern evasion techniques.
+
+**Access model:** The Havoc client GUI runs directly on the Havoc server inside an XFCE4 desktop. Operators access it through Guacamole via VNC with no local client install required.
+
+</details>
 
 Same goal: get a Windows `.exe` demon calling back through the redirector to confirm Havoc is working. Not a Havoc tutorial. For full documentation, refer to the [Havoc Framework docs](https://havocframework.com/docs).
 
@@ -1358,7 +1363,7 @@ SSH to Sliver via Guacamole, then:
 which sliver-server
 ```
 
-If missing, see [Sliver Not Installed](#sliver-not-installed).
+If missing, see **Sliver Not Installed** (in Part 7 troubleshooting).
 
 #### Havoc C2 Server
 
@@ -1368,7 +1373,7 @@ SSH to Havoc via Guacamole, then:
 sudo systemctl status havoc
 ```
 
-If not running: `sudo systemctl start havoc`. If the binary is missing, see [Havoc Build Failed](#havoc-build-failed).
+If not running: `sudo systemctl start havoc`. If the binary is missing, see **Havoc Build Failed** (in Part 7 troubleshooting).
 
 #### SSH Connections via Guacamole
 
@@ -1384,7 +1389,8 @@ Each Guacamole SSH connection should connect without a password prompt and land 
 
 ---
 
-### redirect.rules Download Fails
+<details>
+<summary>redirect.rules Download Fails</summary>
 
 **Symptoms:** Apache fails to start, `apache2ctl -S` shows:
 
@@ -1408,9 +1414,12 @@ curl -sL "https://raw.githubusercontent.com/BaddKharma/redRules/main/redirect.ru
 sudo apache2ctl configtest && sudo systemctl reload apache2
 ```
 
+</details>
+
 ---
 
-### Mythic nginx SSL Certificate Missing
+<details>
+<summary>Mythic nginx SSL Certificate Missing</summary>
 
 **Symptoms:** `mythic_nginx` container keeps restarting. Logs show:
 
@@ -1439,15 +1448,18 @@ sudo ./mythic-cli status
 # mythic_nginx should now show "running (healthy)"
 ```
 
+</details>
+
 ---
 
-### Guacamole Connections Not Auto-Created
+<details>
+<summary>Guacamole Connections Not Auto-Created (resolved in current version)</summary>
 
 **Symptoms:** Some or all of the 7 connections don't appear in Guacamole UI after deployment
 
-**Root Cause:** Previous versions had a bug where the setup script used incorrect database backend ('mysql' instead of 'postgresql')
+**Root Cause:** Previous versions had a bug where the setup script used incorrect database backend ('mysql' instead of 'postgresql'). Fixed in current version.
 
-**Solution:**
+**Verify:**
 
 ```bash
 # SSH to Guacamole server
@@ -1464,21 +1476,14 @@ docker exec -it postgres_guacamole psql -U guacamole_user -d guacamole_db \
 
 1. Log into Guacamole web UI
 2. Settings (top right) → Connections → New Connection
+3. For each missing connection: Protocol SSH, Hostname from `terraform output deployment_info`, Port 22, Username `admin`, Password from deployment info
 
-**SSH Connections (for any missing C2 server):**
-
-- Name: `Sliver C2 Server (SSH)` or `Havoc C2 Server (SSH)`
-- Protocol: SSH
-- Hostname: Private IP from `terraform output deployment_info`
-- Port: 22
-- Username: admin
-- Password: from `terraform output deployment_info`
-
-**Fixed in Current Version:** The setup script correctly creates all 7 connections automatically
+</details>
 
 ---
 
-### Mythic Not Starting
+<details>
+<summary>Mythic Not Starting</summary>
 
 **Symptoms:** mythic-cli status shows containers not running
 
@@ -1499,11 +1504,14 @@ sudo ./mythic-cli restart
 - Docker still pulling images (wait 5 min)
 - Port conflicts (check: `sudo netstat -tlnp`)
 - Memory issues (upgrade to t3.large)
-- Missing SSL cert. See [Mythic nginx SSL Certificate Missing](#mythic-nginx-ssl-certificate-missing)
+- Missing SSL cert. See **Mythic nginx SSL Certificate Missing** (in Part 7 troubleshooting above)
+
+</details>
 
 ---
 
-### Sliver Not Installed
+<details>
+<summary>Sliver Not Installed</summary>
 
 **Symptoms:** `sliver-server` command not found
 
@@ -1517,9 +1525,12 @@ sudo cat /var/log/user-data.log
 curl https://sliver.sh/install | sudo bash
 ```
 
+</details>
+
 ---
 
-### Havoc Build Failed
+<details>
+<summary>Havoc Build Failed</summary>
 
 **Symptoms:** Havoc teamserver binary not found or service fails to start
 
@@ -1540,9 +1551,12 @@ sudo -E /usr/local/go/bin/go build -o teamserver .
 ./teamserver server --profile /opt/Havoc/profiles/default.yaotl
 ```
 
+</details>
+
 ---
 
-### Guacamole RDP Fails
+<details>
+<summary>Guacamole RDP Fails</summary>
 
 **Symptoms:** Can't connect to Windows via Guacamole
 
@@ -1563,9 +1577,12 @@ nc -zv win-operator 3389
 - Security group misconfiguration
 - Guacamole didn't auto-configure connection
 
+</details>
+
 ---
 
-### Agent Won't Callback
+<details>
+<summary>Agent Won't Callback</summary>
 
 **Symptoms:** Agent executes but no callback in Mythic/Sliver/Havoc
 
@@ -1593,9 +1610,12 @@ sudo tail -100 /var/log/apache2/redirector-ssl-error.log
 sudo /home/admin/test_redirector.sh
 ```
 
+</details>
+
 ---
 
-### Terraform Errors
+<details>
+<summary>Terraform Errors</summary>
 
 **Error:** `InvalidKeyPair.NotFound`
 
@@ -1611,6 +1631,8 @@ aws ec2 describe-key-pairs --query 'KeyPairs[].KeyName'
 # Use default VPC instead
 # In terraform.tfvars: use_default_vpc = true
 ```
+
+</details>
 
 ---
 
@@ -1678,6 +1700,9 @@ At the end of this deployment, you should have:
 Route traffic from your internal lab machines (Windows workstation, C2 servers) to external target environments like HackTheBox (HTB), VulnLabs (VL), or Proving Grounds (PG) through the Apache redirector's OpenVPN tunnel.
 
 ### How It Works
+
+<details>
+<summary>Architecture diagram and routing flow</summary>
 
 ```text
 +----------------------------------------------------------------------+
@@ -1759,7 +1784,10 @@ Why VPC peering alone cannot do this:
   so they pass peering cleanly. The ExtVPN target IP rides inside the payload.
 ```
 
-### Why WireGuard?
+</details>
+
+<details>
+<summary>Why WireGuard? (Technical explanation)</summary>
 
 AWS VPC peering has a hard constraint: it will only deliver packets whose destination IP falls within one of the two peered VPC CIDR blocks. Attempting to route ExtVPN target traffic (e.g. `10.13.38.33`) via a peering connection causes it to be silently dropped at the AWS fabric level. Correct route tables, security groups, and `source_dest_check=false` make no difference.
 
@@ -1768,6 +1796,8 @@ WireGuard solves this by creating a Layer 3 encrypted tunnel directly between Gu
 The result is a double-NAT path: Guacamole MASQUERADEs onto `wg0` (source becomes `10.100.0.2`), and the redirector's `ext-vpn` up-script MASQUERADEs onto `tun0` (source becomes the VPN-assigned IP). ExtVPN targets see traffic from the redirector's `tun0` IP and reply normally.
 
 **WireGuard configuration is fully automatic.** Guacamole generates both keypairs at boot, writes its own config, then SSHes into the redirector to push the server config and start the service. No pre-deployment key generation is required.
+
+</details>
 
 ### Step 8.1: Configure terraform.tfvars
 
