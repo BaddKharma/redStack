@@ -296,7 +296,7 @@ ssh_private_key_path = "./rs-rsa-key.pem"     # Path to your .pem file (for Wind
 > ```
 >
 > **Closed environment** (HTB/VL/PG Pro Labs, OpenVPN-only, no public DNS):
-> Leave `redirector_domain` empty and set the two CTF toggles below. The redirector uses its public Elastic IP as the server identity with a self-signed certificate. Scanner/AV blocking is disabled since it is not needed in lab environments. Skip Step 1.6 and Step 3.1. See Part 8 for the full CTF deployment workflow.
+> Leave `redirector_domain` empty and set the two ExtVPN toggles below. The redirector uses its public Elastic IP as the server identity with a self-signed certificate. Scanner/AV blocking is disabled since it is not needed in lab environments. Skip Step 1.6 and Step 3.1. See Part 8 for the full ExtVPN deployment workflow.
 >
 > ```hcl
 > # redirector_domain = ""                    # leave empty; redirector uses its public IP
@@ -317,8 +317,8 @@ mythic_uri_prefix = "/cdn/media/stream"
 sliver_uri_prefix = "/cloud/storage/objects"
 havoc_uri_prefix  = "/edge/cache/assets"
 
-# --- CTF/Pro Lab mode (HTB/VL/PG via OpenVPN) ---
-# Default is open-environment (public domain + htaccess on). Only change these for CTF/Pro Lab use.
+# --- ExtVPN/Pro Lab mode (HTB/VL/PG via OpenVPN) ---
+# Default is open-environment (public domain + htaccess on). Only change these for ExtVPN/Pro Lab use.
 enable_external_vpn                  = false  # Set to true for HTB/VL/PG. Enables OpenVPN client + VPC routing (see Part 8)
 enable_redirector_htaccess_filtering = true   # Set to false for HTB/VL/PG. Scanner/AV blocking not needed in lab environments
 
@@ -1791,7 +1791,7 @@ Why VPC peering alone cannot do this:
 
 AWS VPC peering has a hard constraint: it will only deliver packets whose destination IP falls within one of the two peered VPC CIDR blocks. Attempting to route ExtVPN target traffic (e.g. `10.13.38.33`) via a peering connection causes it to be silently dropped at the AWS fabric level. Correct route tables, security groups, and `source_dest_check=false` make no difference.
 
-WireGuard solves this by creating a Layer 3 encrypted tunnel directly between Guacamole (in the default VPC) and the redirector (in the redirector VPC). Guacamole receives CTF-bound packets from the teamservers via normal same-VPC routing, encapsulates them in WireGuard UDP frames, and sends those frames to the redirector over VPC peering. Because the WireGuard UDP frames are addressed to the redirector's VPC IP (`10.60.x.x`), not to the ExtVPN target, they pass through VPC peering cleanly. The redirector decapsulates the packets and forwards them out `tun0` to the OpenVPN server.
+WireGuard solves this by creating a Layer 3 encrypted tunnel directly between Guacamole (in the default VPC) and the redirector (in the redirector VPC). Guacamole receives ExtVPN-bound packets from the teamservers via normal same-VPC routing, encapsulates them in WireGuard UDP frames, and sends those frames to the redirector over VPC peering. Because the WireGuard UDP frames are addressed to the redirector's VPC IP (`10.60.x.x`), not to the ExtVPN target, they pass through VPC peering cleanly. The redirector decapsulates the packets and forwards them out `tun0` to the OpenVPN server.
 
 The result is a double-NAT path: Guacamole MASQUERADEs onto `wg0` (source becomes `10.100.0.2`), and the redirector's `ext-vpn` up-script MASQUERADEs onto `tun0` (source becomes the VPN-assigned IP). ExtVPN targets see traffic from the redirector's `tun0` IP and reply normally.
 
@@ -1814,7 +1814,7 @@ This enables the following at deploy time:
 - Installs WireGuard on both instances (redirector at boot, Guacamole configures both via SSH)
 - Enables IP forwarding on both the redirector and Guacamole
 - Disables AWS `source_dest_check` on both ENIs (required for packet forwarding)
-- Routes CTF target CIDRs in the default VPC to Guacamole's ENI (bypasses VPC peering restriction)
+- Routes ExtVPN target CIDRs in the default VPC to Guacamole's ENI (bypasses VPC peering restriction)
 
 **Custom Target CIDRs (optional):**
 
@@ -1831,7 +1831,7 @@ external_vpn_cidrs = ["10.10.0.0/16", "10.13.0.0/16", "10.129.0.0/16"]
 
 1. Deploy the infrastructure with `terraform apply`
 2. Wait for cloud-init to complete on all instances (~5 minutes). Guacamole will automatically configure the WireGuard tunnel with the redirector during this time.
-3. Download your `.ovpn` file from your CTF platform (HTB, THM, or Proving Grounds)
+3. Download your `.ovpn` file from your ExtVPN platform (HTB, THM, or Proving Grounds)
 
 ### Step 8.3: Get the .ovpn File to the Redirector
 
@@ -1926,7 +1926,7 @@ All other settings (URI prefix, `X-Request-ID` header) remain the same.
 **From the Windows operator workstation (via Guacamole RDP):**
 
 ```powershell
-# Ping a target on the CTF network
+# Ping a target on the ExtVPN network
 ping 10.10.10.2
 
 # Or run nmap, etc.
@@ -1939,7 +1939,7 @@ nmap -sC -sV 10.10.10.2
 ping 10.10.10.2
 ```
 
-Traffic from any internal machine destined for the CTF target CIDRs is automatically routed through the redirector's VPN tunnel.
+Traffic from any internal machine destined for the ExtVPN target CIDRs is automatically routed through the redirector's VPN tunnel.
 
 ### Step 8.6: Stop the VPN
 
@@ -1956,9 +1956,9 @@ This stops the OpenVPN process and removes the iptables MASQUERADE rules on `tun
 > [!IMPORTANT]
 >
 > - **WireGuard is automatic.** Keys are generated on Guacamole at first boot. Guacamole then SSHes into the redirector to push the server config and start `wg-quick@wg0` on both ends. No pre-deployment key setup is needed.
-> - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only CTF target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
+> - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only ExtVPN target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
 > - **Only the configured CIDRs are routed.** Traffic to other destinations (internet, VPC peers) is unaffected. Add CIDRs to `external_vpn_cidrs` in `terraform.tfvars` if your platform uses different subnets.
 > - **The .ovpn file persists across reboots** in `~/vpn/`. The VPN tunnel itself does not auto-start. Run `sudo systemctl start ext-vpn` after a reboot. The WireGuard tunnel (`wg-quick@wg0`) is enabled at boot on both instances and comes up automatically.
-> - **All internal machines can reach CTF targets.** Routing is configured at the VPC level. The Windows workstation, all C2 servers, and Guacamole can all reach targets through the tunnel.
+> - **All internal machines can reach ExtVPN targets.** Routing is configured at the VPC level. The Windows workstation, all C2 servers, and Guacamole can all reach targets through the tunnel.
 > - **tun0 IP is dynamic.** It changes with each VPN reconnect. Agents baked with the tun0 IP will stop working after a reconnect that assigns a different IP. Check the IP after each reconnect and regenerate agents if it changed.
 > - **Callback address choice.** If targets have internet access, use the public Elastic IP (stable, no regeneration needed). If targets are isolated to the VPN network only, use the tun0 IP with HTTP (port 80).
