@@ -134,7 +134,6 @@ Public Internet Environment (C2 Callback Flow):
 > - Requests without a valid `X-Request-ID` header receive a decoy CloudEdge CDN maintenance page
 > - Only requests with a matching URI prefix and the correct header token are proxied to the correct C2 server
 > - `redirect.rules` blocks AV vendors and TOR exits (403)
-> - WireGuard keys are generated automatically at boot. No pre-deployment setup needed
 > - Run `terraform output network_architecture` to see the diagram populated with your actual IPs
 
 ---
@@ -199,21 +198,6 @@ You will be prompted for:
 **Checkpoint:** ✅ Repository cloned, AWS CLI and Terraform installed
 
 ### Step 0.2: Verification Commands
-
-**Windows (PowerShell):**
-
-```powershell
-# Check AWS access
-aws sts get-caller-identity
-
-# Check Terraform
-terraform --version
-
-# Get your public IP
-curl -s ifconfig.me
-```
-
-**Linux/Mac (bash):**
 
 ```bash
 # Check AWS access
@@ -414,7 +398,8 @@ Terraform has been successfully initialized!
 terraform plan
 ```
 
-**Expected Output:**
+<details>
+<summary>Expected output</summary>
 
 - **~50+ resources** to be created
 - 6 EC2 instances (Mythic, Sliver, Havoc, Guacamole, Windows, Redirector)
@@ -423,6 +408,8 @@ terraform plan
 - Mythic, Sliver, and Havoc have **no public IPs** (internal only)
 - Security groups, VPC peering, route tables
 - No errors or warnings
+
+</details>
 
 **Checkpoint:** ✅ Plan shows expected resources
 
@@ -937,19 +924,20 @@ The wizard has 5 steps:
 
 The Mythic UI runs in the **Windows workstation browser**, so `apollo.exe` is already on the Windows workstation after the download in the previous step. Open `C:\Users\Administrator\Downloads\` in File Explorer and double-click `apollo.exe` to run it.
 
-**Extracting the agent to your host machine:**
+<details>
+<summary>Extracting the agent to your host machine</summary>
 
 Apollo (and all agents built in this lab) are unobfuscated by default. To get the binary to your host, zip it on the Windows workstation and copy it into the `GuacShare on Guacamole RDP\Download\` folder (visible in Windows Explorer under **This PC**). The Guacamole HTML5 sidebar will then show the file as a clickable download, which triggers a browser download to your host machine.
 
 > [!WARNING]
 > Windows Defender and most AV solutions will flag unobfuscated C2 agents on download or execution. Before downloading `apollo.zip` to your host, disable real-time protection or add your download folder as an exclusion. Any victim VM or target environment you run the agent in will also need AV disabled or exempted, unless you are specifically practicing AV evasion techniques.
 
-**Zip and place in GuacShare (Windows Explorer):**
-
 1. Navigate to `C:\Users\Administrator\Downloads\`, right-click `apollo.exe`, and select **Compress to ZIP file** (or **Send to → Compressed (zipped) folder**)
 2. Open **This PC → GuacShare on Guacamole RDP → Download** and copy `apollo.zip` into it
 
-Then press `Ctrl+Alt+Shift` in Guacamole, click **Devices**, and click `apollo.zip` to download it to your host machine. From there, transfer it to your victim environment or lab VM as needed.
+Then press `Ctrl+Alt+Shift` in Guacamole, click **Devices**, and click `apollo.zip` to download it to your host machine.
+
+</details>
 
 **Watch Mythic UI:**
 
@@ -1916,10 +1904,14 @@ ip -4 addr show tun0 | grep -oP '(?<=inet\s)\d+(\.\d+)+'
 
 All other settings (URI prefix, `X-Request-ID` header) remain the same.
 
-> [!NOTE]
-> Apache is already listening on `0.0.0.0:80` and `0.0.0.0:443` across all interfaces. The VirtualHost configs use `<VirtualHost *:80>` and `<VirtualHost *:443>`, and UFW allows ports 80/443 on all interfaces. When tun0 comes up after `vpn.sh start`, Apache automatically handles traffic arriving on that IP with no reload or restart required. Header validation and URI routing apply to all requests regardless of which interface they arrive on.
->
-> If the target machine has outbound internet access (most HTB standalone boxes and many Pro Lab machines do), you can use the public Elastic IP with HTTPS (`https://<REDIR_PUBLIC_IP>/prefix/`) instead. The tun0 IP is only needed when targets are fully isolated from the internet and can only reach the VPN network.
+<details>
+<summary>Why Apache works on tun0 without a reload</summary>
+
+Apache listens on `0.0.0.0:80` and `0.0.0.0:443` across all interfaces. The VirtualHost configs use `<VirtualHost *:80>` and `<VirtualHost *:443>`, and UFW allows ports 80/443 on all interfaces. When `tun0` comes up, Apache automatically handles traffic arriving on that IP with no reload or restart required. Header validation and URI routing apply to all requests regardless of which interface they arrive on.
+
+If the target machine has outbound internet access (most HTB standalone boxes and many Pro Lab machines do), you can use the public Elastic IP with HTTPS (`https://<REDIR_PUBLIC_IP>/prefix/`) instead. The `tun0` IP is only needed when targets are fully isolated from the internet and can only reach the VPN network.
+
+</details>
 
 ### Step 8.5: Verify Connectivity from Internal Machines
 
@@ -1955,8 +1947,6 @@ This stops the OpenVPN process and removes the iptables MASQUERADE rules on `tun
 
 > [!IMPORTANT]
 >
-> - **WireGuard is automatic.** Keys are generated on Guacamole at first boot. Guacamole then SSHes into the redirector to push the server config and start `wg-quick@wg0` on both ends. No pre-deployment key setup is needed.
-> - **The VPN does NOT affect C2 operations.** The `--pull-filter ignore "redirect-gateway"` flag ensures only ExtVPN target traffic goes through the tunnel. All VPC peering, Apache proxy, and C2 callback traffic continues to work normally.
 > - **Only the configured CIDRs are routed.** Traffic to other destinations (internet, VPC peers) is unaffected. Add CIDRs to `external_vpn_cidrs` in `terraform.tfvars` if your platform uses different subnets.
 > - **The .ovpn file persists across reboots** in `~/vpn/`. The VPN tunnel itself does not auto-start. Run `sudo systemctl start ext-vpn` after a reboot. The WireGuard tunnel (`wg-quick@wg0`) is enabled at boot on both instances and comes up automatically.
 > - **All internal machines can reach ExtVPN targets.** Routing is configured at the VPC level. The Windows workstation, all C2 servers, and Guacamole can all reach targets through the tunnel.
