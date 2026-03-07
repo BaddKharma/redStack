@@ -7,7 +7,7 @@
 
 # Your public IP for SSH access (find with: curl ifconfig.me)
 # Must be in CIDR format with /32 suffix
-localPub_ip = "1.2.3.4/32"
+localPub_ip = "108.51.27.140/32"
 
 # Name of your existing AWS SSH key pair
 # Must already exist in AWS EC2 Console > Key Pairs
@@ -18,7 +18,7 @@ ssh_private_key_path = "./rs-rsa-key.pem"
 
 # Your redirector domain — apex or subdomain (e.g. c2.yourdomain.com)
 # Point this domain's A record to the Redirector Elastic IP after deployment
-redirector_domain = "c2.example.com"
+redirector_domain = "newflavorstudio.com"
 
 # ============================================================================
 # OPTIONAL VARIABLES - Customize as needed
@@ -66,7 +66,7 @@ enable_redirector_htaccess_filtering = true   # Set to false for HTB/VL/PG — s
 # Useful for cost tracking, filtering resources in the AWS Console, and billing reports
 tags = {
   Owner      = "Operator"
-  CostCenter = "redStack"
+  CostCenter = "pub-redStack"
   Purpose    = "Boot-to-Breach Training Environment"
 }
 
@@ -81,7 +81,12 @@ tags = {
 # 2. To create an SSH key pair in AWS:
 #    AWS Console > EC2 > Key Pairs > Create key pair
 #    OR via CLI: aws ec2 create-key-pair --key-name rs-rsa-key --query 'KeyMaterial' --output text > ./rs-rsa-key.pem
-#    Then: chmod 400 ./rs-rsa-key.pem
+#
+#    Set permissions on the key file:
+#    Linux/Mac:
+#      chmod 400 ./rs-rsa-key.pem
+#    Windows (PowerShell):
+#      icacls .\rs-rsa-key.pem /inheritance:r /grant:r "$($env:USERNAME):(R)"
 #
 # 3. Estimated monthly cost (all instances running 24/7):
 #    - t3.medium (3x): ~$90/month

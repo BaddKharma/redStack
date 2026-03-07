@@ -111,6 +111,30 @@ echo "[*] Enabling and starting Sliver service..."
 systemctl daemon-reload
 systemctl enable sliver --now && echo "[+] Sliver service enabled and started" || echo "[!] WARNING: Could not start sliver service"
 
+# Wait for Sliver daemon to be ready on port 31337
+echo "[*] Waiting for Sliver daemon to be ready..."
+for i in $(seq 1 30); do
+    if ss -tlnp | grep -q ':31337'; then
+        echo "[+] Sliver daemon ready on port 31337"
+        break
+    fi
+    echo "    Waiting... ($i/30)"
+    sleep 2
+done
+
+# Generate operator config for local admin access
+echo "[*] Generating operator config for operator..."
+sliver-server operator --name operator --lhost localhost --save /root/operator.cfg
+echo "[+] Operator config saved to /root/operator.cfg"
+
+# Install config so admin can run sliver-client immediately on login
+echo "[*] Installing operator config for admin user..."
+mkdir -p /home/admin/.sliver-client/configs
+cp /root/operator.cfg /home/admin/.sliver-client/configs/operator.cfg
+chown -R admin:admin /home/admin/.sliver-client
+chmod 600 /home/admin/.sliver-client/configs/operator.cfg
+echo "[+] sliver-client is ready for admin user"
+
 # Create HTTP C2 profile with the redirector validation header pre-configured
 echo "[*] Creating redstack HTTP C2 profile..."
 jq -n \
@@ -158,7 +182,7 @@ fi
 
 OPERATOR_NAME=$1
 echo "[*] Generating operator config for: $OPERATOR_NAME"
-sliver-server operator --name "$OPERATOR_NAME" --lhost 0.0.0.0 --save "/root/$${OPERATOR_NAME}.cfg"
+sliver-server operator --name "$OPERATOR_NAME" --lhost "$(hostname -I | awk '{print $1}')" --save "/root/$${OPERATOR_NAME}.cfg"
 echo "[*] Config saved to /root/$${OPERATOR_NAME}.cfg"
 echo "[*] Transfer this file to the operator's machine to connect"
 OPSCRIPT
