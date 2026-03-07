@@ -124,7 +124,7 @@ done
 
 # Generate operator config for local admin access
 echo "[*] Generating operator config for operator..."
-sliver-server operator --name operator --lhost localhost --save /root/operator.cfg
+sliver-server operator --name operator --lhost localhost --save /root/operator.cfg --permissions all
 echo "[+] Operator config saved to /root/operator.cfg"
 
 # Install config so admin can run sliver-client immediately on login
@@ -182,7 +182,7 @@ fi
 
 OPERATOR_NAME=$1
 echo "[*] Generating operator config for: $OPERATOR_NAME"
-sliver-server operator --name "$OPERATOR_NAME" --lhost "$(hostname -I | awk '{print $1}')" --save "/root/$${OPERATOR_NAME}.cfg"
+sliver-server operator --name "$OPERATOR_NAME" --lhost "$(hostname -I | awk '{print $1}')" --save "/root/$${OPERATOR_NAME}.cfg" --permissions all
 echo "[*] Config saved to /root/$${OPERATOR_NAME}.cfg"
 echo "[*] Transfer this file to the operator's machine to connect"
 OPSCRIPT
