@@ -1146,14 +1146,17 @@ The teamserver runs on port 40056 with the profile at `/opt/Havoc/profiles/defau
 > [!NOTE]
 > Havoc has two separate Guacamole connections. The **SSH** connection gives terminal-only access for checking service status and logs. The **VNC** connection opens the full XFCE4 desktop where the GUI client runs. The Havoc client can only be used from the VNC session.
 
-An XFCE4 desktop loads. The Havoc GUI client launches automatically. When the login dialog appears, enter:
+An XFCE4 desktop loads. Double-click the **Havoc Client** icon on the desktop. If prompted that the file is not executable, click **"Mark Executable"** then double-click again to launch it.
 
+When the login dialog appears, enter:
+
+- **Name:** `operator`
 - **Host:** `localhost`
 - **Port:** `40056`
 - **Username:** `operator`
 - **Password:** `<lab-password>`
 
-If the client does not autostart, open a terminal on the desktop and run:
+If the icon is not on the desktop, open a terminal and run:
 
 ```bash
 havoc-client client
