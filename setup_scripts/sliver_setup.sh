@@ -122,6 +122,11 @@ for i in $(seq 1 30); do
     sleep 2
 done
 
+# Remove auto-generated configs from Sliver installer
+echo "[*] Removing installer-generated operator configs..."
+rm -f /home/admin/.sliver-client/configs/admin_localhost.cfg
+rm -f /root/.sliver-client/configs/root_localhost.cfg
+
 # Generate operator config for local admin access
 echo "[*] Generating operator config for operator..."
 sliver-server operator --name operator --lhost localhost --save /root/operator.cfg --permissions all
