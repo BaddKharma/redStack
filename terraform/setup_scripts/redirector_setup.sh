@@ -16,11 +16,11 @@ echo "===== Apache Redirector Setup Started $(date) ====="
 # Variables (populated by Terraform during deployment)
 MYTHIC_PRIVATE_IP="${mythic_private_ip}"
 SLIVER_PRIVATE_IP="${sliver_private_ip}"
-HAVOC_PRIVATE_IP="${havoc_private_ip}"
+ADAPTIX_PRIVATE_IP="${adaptix_private_ip}"
 DOMAIN_NAME="${domain_name}"
 MYTHIC_URI_PREFIX="${mythic_uri_prefix}"
 SLIVER_URI_PREFIX="${sliver_uri_prefix}"
-HAVOC_URI_PREFIX="${havoc_uri_prefix}"
+ADAPTIX_URI_PREFIX="${adaptix_uri_prefix}"
 C2_HEADER_NAME="${c2_header_name}"
 C2_HEADER_VALUE="${c2_header_value}"
 ENABLE_VPN="${enable_vpn_tunnel}"
@@ -82,7 +82,7 @@ echo ""
 echo "[*] URI routing (requires correct header):"
 echo "  MYTHIC_PREFIX_PLACEHOLDER/ -> Mythic  (MYTHIC_IP_PLACEHOLDER)"
 echo "  SLIVER_PREFIX_PLACEHOLDER/ -> Sliver  (SLIVER_IP_PLACEHOLDER)"
-echo "  HAVOC_PREFIX_PLACEHOLDER/ -> Havoc   (HAVOC_IP_PLACEHOLDER)"
+echo "  ADAPTIX_PREFIX_PLACEHOLDER/ -> Adaptix   (ADAPTIX_IP_PLACEHOLDER)"
 echo ""
 echo ""
 echo "[*] Testing direct backend connectivity:"
@@ -90,14 +90,14 @@ curl -I -k -m 5 -A "$UA" https://MYTHIC_IP_PLACEHOLDER/ 2>/dev/null && echo "  M
 echo ""
 curl -I -k -m 5 -A "$UA" https://SLIVER_IP_PLACEHOLDER/ 2>/dev/null && echo "  Sliver: OK" || echo "  Sliver: FAILED"
 echo ""
-curl -I -k -m 5 -A "$UA" https://HAVOC_IP_PLACEHOLDER/ 2>/dev/null && echo "  Havoc:  OK" || echo "  Havoc:  FAILED"
+curl -I -k -m 5 -A "$UA" https://ADAPTIX_IP_PLACEHOLDER/ 2>/dev/null && echo "  Adaptix:  OK" || echo "  Adaptix:  FAILED"
 TESTSCRIPT
 sed -i "s|MYTHIC_IP_PLACEHOLDER|$MYTHIC_PRIVATE_IP|g" /root/test_redirector.sh
 sed -i "s|SLIVER_IP_PLACEHOLDER|$SLIVER_PRIVATE_IP|g" /root/test_redirector.sh
-sed -i "s|HAVOC_IP_PLACEHOLDER|$HAVOC_PRIVATE_IP|g" /root/test_redirector.sh
+sed -i "s|ADAPTIX_IP_PLACEHOLDER|$ADAPTIX_PRIVATE_IP|g" /root/test_redirector.sh
 sed -i "s|MYTHIC_PREFIX_PLACEHOLDER|$MYTHIC_URI_PREFIX|g" /root/test_redirector.sh
 sed -i "s|SLIVER_PREFIX_PLACEHOLDER|$SLIVER_URI_PREFIX|g" /root/test_redirector.sh
-sed -i "s|HAVOC_PREFIX_PLACEHOLDER|$HAVOC_URI_PREFIX|g" /root/test_redirector.sh
+sed -i "s|ADAPTIX_PREFIX_PLACEHOLDER|$ADAPTIX_URI_PREFIX|g" /root/test_redirector.sh
 sed -i "s|HEADER_NAME_PLACEHOLDER|$C2_HEADER_NAME|g" /root/test_redirector.sh
 sed -i "s|HEADER_VALUE_PLACEHOLDER|$C2_HEADER_VALUE|g" /root/test_redirector.sh
 chmod +x /root/test_redirector.sh
@@ -254,10 +254,10 @@ cat > /etc/apache2/sites-available/redirector-http.conf << 'APACHECONF'
     RewriteRule ^SLIVER_PREFIX_PLACEHOLDER/(.*) https://SLIVER_IP_PLACEHOLDER/$1 [P,L]
     ProxyPassReverse SLIVER_PREFIX_PLACEHOLDER/ https://SLIVER_IP_PLACEHOLDER/
 
-    # Havoc C2 - header validation + URI prefix routing
+    # Adaptix C2 - header validation + URI prefix routing
     RewriteCond %%{HTTP:HEADER_NAME_PLACEHOLDER} ^HEADER_VALUE_PLACEHOLDER$
-    RewriteRule ^(HAVOC_PREFIX_PLACEHOLDER/.*) https://HAVOC_IP_PLACEHOLDER$1 [P,L]
-    ProxyPassReverse HAVOC_PREFIX_PLACEHOLDER/ https://HAVOC_IP_PLACEHOLDER/
+    RewriteRule ^(ADAPTIX_PREFIX_PLACEHOLDER/.*) https://ADAPTIX_IP_PLACEHOLDER$1 [P,L]
+    ProxyPassReverse ADAPTIX_PREFIX_PLACEHOLDER/ https://ADAPTIX_IP_PLACEHOLDER/
 
     # Default: serve decoy page (falls through to DocumentRoot)
 
@@ -311,10 +311,10 @@ cat > /etc/apache2/sites-available/redirector-https.conf << 'APACHECONF'
     RewriteRule ^SLIVER_PREFIX_PLACEHOLDER/(.*) https://SLIVER_IP_PLACEHOLDER/$1 [P,L]
     ProxyPassReverse SLIVER_PREFIX_PLACEHOLDER/ https://SLIVER_IP_PLACEHOLDER/
 
-    # Havoc C2 - header validation + URI prefix routing
+    # Adaptix C2 - header validation + URI prefix routing
     RewriteCond %%{HTTP:HEADER_NAME_PLACEHOLDER} ^HEADER_VALUE_PLACEHOLDER$
-    RewriteRule ^(HAVOC_PREFIX_PLACEHOLDER/.*) https://HAVOC_IP_PLACEHOLDER$1 [P,L]
-    ProxyPassReverse HAVOC_PREFIX_PLACEHOLDER/ https://HAVOC_IP_PLACEHOLDER/
+    RewriteRule ^(ADAPTIX_PREFIX_PLACEHOLDER/.*) https://ADAPTIX_IP_PLACEHOLDER$1 [P,L]
+    ProxyPassReverse ADAPTIX_PREFIX_PLACEHOLDER/ https://ADAPTIX_IP_PLACEHOLDER/
 
     # Default: serve decoy page (falls through to DocumentRoot)
 
@@ -339,10 +339,10 @@ APACHECONF
 sed -i "s|DOMAIN_PLACEHOLDER|$DOMAIN_NAME|g" /etc/apache2/sites-available/redirector-http.conf
 sed -i "s|MYTHIC_IP_PLACEHOLDER|$MYTHIC_PRIVATE_IP|g" /etc/apache2/sites-available/redirector-http.conf
 sed -i "s|SLIVER_IP_PLACEHOLDER|$SLIVER_PRIVATE_IP|g" /etc/apache2/sites-available/redirector-http.conf
-sed -i "s|HAVOC_IP_PLACEHOLDER|$HAVOC_PRIVATE_IP|g" /etc/apache2/sites-available/redirector-http.conf
+sed -i "s|ADAPTIX_IP_PLACEHOLDER|$ADAPTIX_PRIVATE_IP|g" /etc/apache2/sites-available/redirector-http.conf
 sed -i "s|MYTHIC_PREFIX_PLACEHOLDER|$MYTHIC_URI_PREFIX|g" /etc/apache2/sites-available/redirector-http.conf
 sed -i "s|SLIVER_PREFIX_PLACEHOLDER|$SLIVER_URI_PREFIX|g" /etc/apache2/sites-available/redirector-http.conf
-sed -i "s|HAVOC_PREFIX_PLACEHOLDER|$HAVOC_URI_PREFIX|g" /etc/apache2/sites-available/redirector-http.conf
+sed -i "s|ADAPTIX_PREFIX_PLACEHOLDER|$ADAPTIX_URI_PREFIX|g" /etc/apache2/sites-available/redirector-http.conf
 sed -i "s|HEADER_NAME_PLACEHOLDER|$C2_HEADER_NAME|g" /etc/apache2/sites-available/redirector-http.conf
 sed -i "s|HEADER_VALUE_PLACEHOLDER|$C2_HEADER_VALUE|g" /etc/apache2/sites-available/redirector-http.conf
 
@@ -350,10 +350,10 @@ sed -i "s|HEADER_VALUE_PLACEHOLDER|$C2_HEADER_VALUE|g" /etc/apache2/sites-availa
 sed -i "s|DOMAIN_PLACEHOLDER|$DOMAIN_NAME|g" /etc/apache2/sites-available/redirector-https.conf
 sed -i "s|MYTHIC_IP_PLACEHOLDER|$MYTHIC_PRIVATE_IP|g" /etc/apache2/sites-available/redirector-https.conf
 sed -i "s|SLIVER_IP_PLACEHOLDER|$SLIVER_PRIVATE_IP|g" /etc/apache2/sites-available/redirector-https.conf
-sed -i "s|HAVOC_IP_PLACEHOLDER|$HAVOC_PRIVATE_IP|g" /etc/apache2/sites-available/redirector-https.conf
+sed -i "s|ADAPTIX_IP_PLACEHOLDER|$ADAPTIX_PRIVATE_IP|g" /etc/apache2/sites-available/redirector-https.conf
 sed -i "s|MYTHIC_PREFIX_PLACEHOLDER|$MYTHIC_URI_PREFIX|g" /etc/apache2/sites-available/redirector-https.conf
 sed -i "s|SLIVER_PREFIX_PLACEHOLDER|$SLIVER_URI_PREFIX|g" /etc/apache2/sites-available/redirector-https.conf
-sed -i "s|HAVOC_PREFIX_PLACEHOLDER|$HAVOC_URI_PREFIX|g" /etc/apache2/sites-available/redirector-https.conf
+sed -i "s|ADAPTIX_PREFIX_PLACEHOLDER|$ADAPTIX_URI_PREFIX|g" /etc/apache2/sites-available/redirector-https.conf
 sed -i "s|HEADER_NAME_PLACEHOLDER|$C2_HEADER_NAME|g" /etc/apache2/sites-available/redirector-https.conf
 sed -i "s|HEADER_VALUE_PLACEHOLDER|$C2_HEADER_VALUE|g" /etc/apache2/sites-available/redirector-https.conf
 

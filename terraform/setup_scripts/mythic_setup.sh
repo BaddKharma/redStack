@@ -27,7 +27,7 @@ cat >> /etc/hosts << HOSTS
 ${mythic_private_ip}     mythic
 ${guacamole_private_ip}  guac
 ${sliver_private_ip}     sliver
-${havoc_private_ip}      havoc
+${adaptix_private_ip}      adaptix
 ${redirector_private_ip} redirector
 ${windows_private_ip}    windows
 ${kali_private_ip}       kali

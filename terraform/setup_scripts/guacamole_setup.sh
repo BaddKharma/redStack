@@ -17,7 +17,7 @@ SSH_PASSWORD="${ssh_password}"
 MYTHIC_PRIVATE_IP="${mythic_private_ip}"
 REDIRECTOR_PRIVATE_IP="${redirector_private_ip}"
 SLIVER_PRIVATE_IP="${sliver_private_ip}"
-HAVOC_PRIVATE_IP="${havoc_private_ip}"
+ADAPTIX_PRIVATE_IP="${adaptix_private_ip}"
 GUACAMOLE_PRIVATE_IP="${guacamole_private_ip}"
 KALI_PRIVATE_IP="${kali_private_ip}"
 KALI_DEPLOYMENT_MODE="${kali_deployment_mode}"
@@ -321,10 +321,10 @@ if [ -n "$TOKEN" ]; then
     curl -s -X POST "http://localhost:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
         -H "Content-Type: application/json" \
         -d "{
-            \"name\": \"Havoc (SSH)\",
+            \"name\": \"Adaptix (SSH)\",
             \"protocol\": \"ssh\",
             \"parameters\": {
-                \"hostname\": \"$HAVOC_PRIVATE_IP\",
+                \"hostname\": \"$ADAPTIX_PRIVATE_IP\",
                 \"port\": \"22\",
                 \"username\": \"admin\",
                 \"password\": \"$SSH_PASSWORD\",
@@ -340,10 +340,10 @@ if [ -n "$TOKEN" ]; then
     curl -s -X POST "http://localhost:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
         -H "Content-Type: application/json" \
         -d "{
-            \"name\": \"Havoc Desktop (VNC)\",
+            \"name\": \"Adaptix Desktop (VNC)\",
             \"protocol\": \"vnc\",
             \"parameters\": {
-                \"hostname\": \"$HAVOC_PRIVATE_IP\",
+                \"hostname\": \"$ADAPTIX_PRIVATE_IP\",
                 \"port\": \"5901\",
                 \"password\": \"$SSH_PASSWORD\",
                 \"color-depth\": \"24\"
