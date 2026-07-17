@@ -41,16 +41,16 @@ locals {
     Guacamole:    Sliver (SSH)
 
   +---------------------------------------------------------------------+
-  | 4. HAVOC C2                                                         |
+  | 4. ADAPTIX C2                                                         |
   +---------------------------------------------------------------------+
-    Private IP:   ${aws_network_interface.havoc.private_ip}
+    Private IP:   ${aws_network_interface.adaptix.private_ip}
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
-    SSH (internal): ssh admin@${aws_network_interface.havoc.private_ip}
-    Havoc User:   admin
-    Havoc Pass:   ${nonsensitive(random_password.lab.result)}
-    Teamserver:   Host: havoc  |  Port: 40056  |  User: admin  |  Pass: ${nonsensitive(random_password.lab.result)}
-    Guacamole:    Havoc Desktop (VNC) | Havoc (SSH)
+    SSH (internal): ssh admin@${aws_network_interface.adaptix.private_ip}
+    Adaptix User:   admin
+    Adaptix Pass:   ${nonsensitive(random_password.lab.result)}
+    Teamserver:   adaptix:4321  |  Endpoint: /adaptix  |  User: (any nickname)  |  Pass: ${nonsensitive(random_password.lab.result)}
+    Guacamole:    Adaptix Desktop (VNC) | Adaptix (SSH)
 
   +---------------------------------------------------------------------+
   | 5. REDIRECTOR                                                       |
@@ -66,7 +66,7 @@ locals {
     C2 Header:    ${var.c2_header_name}: ${local.c2_header_value}
     URI Routing:  ${var.mythic_uri_prefix}/ -> Mythic
                   ${var.sliver_uri_prefix}/ -> Sliver
-                  ${var.havoc_uri_prefix}/ -> Havoc
+                  ${var.adaptix_uri_prefix}/ -> Adaptix
     Decoy Page:   CloudEdge CDN maintenance (no header = decoy)
 ${var.enable_vpn_tunnel ? <<-VPNINFO
 
@@ -83,7 +83,7 @@ ${var.enable_vpn_tunnel ? <<-VPNINFO
     NOTE: WireGuard is configured automatically at boot, no pre-deploy key setup needed.
 
     Traffic path (internal -> CTF target):
-      [internal lab host: windows / kali / mythic / sliver / havoc]
+      [internal lab host: windows / kali / mythic / sliver / adaptix]
         -> default VPC route -> guacamole (wg0 gateway, MASQUERADE)
         -> WireGuard tunnel (UDP 51820) -> redirector (wg0 server)
         -> tun0 (OpenVPN, MASQUERADE) -> CTF target
@@ -135,7 +135,7 @@ network_architecture_content = <<-EOT
   +-------------------------+-------------------------------------------+
   |  mythic                 |  ${aws_network_interface.mythic.private_ip}
   |  sliver                 |  ${aws_network_interface.sliver.private_ip}
-  |  havoc                  |  ${aws_network_interface.havoc.private_ip}
+  |  adaptix                  |  ${aws_network_interface.adaptix.private_ip}
   |  guacamole              |  ${aws_network_interface.guacamole.private_ip} (priv)  /  ${aws_eip.guacamole.public_ip} (pub)
   |  windows                |  ${aws_network_interface.windows.private_ip}
   |  kali                   |  ${aws_network_interface.kali.private_ip} (${var.kali_deployment_mode})
@@ -159,7 +159,7 @@ network_architecture_content = <<-EOT
        |
        +--  ${format("%-25s", format("%s/", var.mythic_uri_prefix))}-->  ${format("%-15s", aws_network_interface.mythic.private_ip)}  (mythic)
        +--  ${format("%-25s", format("%s/", var.sliver_uri_prefix))}-->  ${format("%-15s", aws_network_interface.sliver.private_ip)}  (sliver)
-       +--  ${format("%-25s", format("%s/", var.havoc_uri_prefix))}-->  ${format("%-15s", aws_network_interface.havoc.private_ip)}  (havoc)
+       +--  ${format("%-25s", format("%s/", var.adaptix_uri_prefix))}-->  ${format("%-15s", aws_network_interface.adaptix.private_ip)}  (adaptix)
        +--  ${format("%-25s", "[no valid header]")}-->  Decoy page (CloudEdge CDN)
 
 ${var.enable_vpn_tunnel ? <<-VPNARCH

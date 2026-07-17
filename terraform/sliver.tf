@@ -150,7 +150,7 @@ resource "aws_instance" "sliver" {
     sliver_private_ip     = aws_network_interface.sliver.private_ip
     guacamole_private_ip  = aws_network_interface.guacamole.private_ip
     mythic_private_ip     = aws_network_interface.mythic.private_ip
-    havoc_private_ip      = aws_network_interface.havoc.private_ip
+    adaptix_private_ip      = aws_network_interface.adaptix.private_ip
     redirector_private_ip = aws_network_interface.redirector.private_ip
     windows_private_ip    = aws_network_interface.windows.private_ip
     kali_private_ip       = aws_network_interface.kali.private_ip

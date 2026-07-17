@@ -61,8 +61,8 @@ variable "sliver_instance_type" {
   default     = "t3.medium"
 }
 
-variable "havoc_instance_type" {
-  description = "EC2 instance type for Havoc C2 server"
+variable "adaptix_instance_type" {
+  description = "EC2 instance type for Adaptix C2 server"
   type        = string
   default     = "t3.medium"
 }
@@ -150,8 +150,8 @@ variable "sliver_uri_prefix" {
   default     = "/cloud/storage/objects"
 }
 
-variable "havoc_uri_prefix" {
-  description = "URI prefix for Havoc C2 callbacks on the redirector"
+variable "adaptix_uri_prefix" {
+  description = "URI prefix for Adaptix C2 callbacks on the redirector"
   type        = string
   default     = "/edge/cache/assets"
 }

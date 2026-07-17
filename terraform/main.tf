@@ -244,7 +244,7 @@ resource "aws_instance" "mythic" {
     mythic_private_ip     = aws_network_interface.mythic.private_ip
     guacamole_private_ip  = aws_network_interface.guacamole.private_ip
     sliver_private_ip     = aws_network_interface.sliver.private_ip
-    havoc_private_ip      = aws_network_interface.havoc.private_ip
+    adaptix_private_ip      = aws_network_interface.adaptix.private_ip
     redirector_private_ip = aws_network_interface.redirector.private_ip
     windows_private_ip    = aws_network_interface.windows.private_ip
     kali_private_ip       = aws_network_interface.kali.private_ip
@@ -308,7 +308,7 @@ resource "aws_instance" "guacamole" {
     guacamole_private_ip  = aws_network_interface.guacamole.private_ip
     mythic_private_ip     = aws_network_interface.mythic.private_ip
     sliver_private_ip     = aws_network_interface.sliver.private_ip
-    havoc_private_ip      = aws_network_interface.havoc.private_ip
+    adaptix_private_ip      = aws_network_interface.adaptix.private_ip
     redirector_private_ip = aws_network_interface.redirector.private_ip
     windows_private_ip    = aws_network_interface.windows.private_ip
     kali_private_ip       = aws_network_interface.kali.private_ip
@@ -321,7 +321,7 @@ resource "aws_instance" "guacamole" {
       mythic_private_ip     = aws_network_interface.mythic.private_ip
       redirector_private_ip = aws_network_interface.redirector.private_ip
       sliver_private_ip     = aws_network_interface.sliver.private_ip
-      havoc_private_ip      = aws_network_interface.havoc.private_ip
+      adaptix_private_ip      = aws_network_interface.adaptix.private_ip
       guacamole_private_ip  = aws_network_interface.guacamole.private_ip
       kali_private_ip       = aws_network_interface.kali.private_ip
       kali_deployment_mode  = var.kali_deployment_mode
@@ -388,7 +388,7 @@ resource "aws_instance" "windows" {
       "${aws_network_interface.guacamole.private_ip}    guac",
       "${aws_network_interface.mythic.private_ip}    mythic",
       "${aws_network_interface.sliver.private_ip}    sliver",
-      "${aws_network_interface.havoc.private_ip}    havoc",
+      "${aws_network_interface.adaptix.private_ip}    adaptix",
       "${aws_network_interface.redirector.private_ip}    redirector",
       "${aws_network_interface.kali.private_ip}    kali",
     ])

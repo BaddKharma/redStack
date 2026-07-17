@@ -55,7 +55,7 @@ mythic_instance_type     = "t3.medium"  # 2 vCPU, 4GB RAM
 guacamole_instance_type  = "t3.small"   # 2 vCPU, 2GB RAM
 windows_instance_type    = "t3.medium"  # 2 vCPU, 4GB RAM
 sliver_instance_type     = "t3.medium"  # 2 vCPU, 4GB RAM
-havoc_instance_type      = "t3.medium"  # 2 vCPU, 4GB RAM
+adaptix_instance_type      = "t3.medium"  # 2 vCPU, 4GB RAM
 redirector_instance_type = "t3.small"   # 2 vCPU, 2GB RAM
 
 # Kali operator workstation
@@ -77,7 +77,7 @@ enable_mythic_autostart = true  # Auto-start Mythic on boot
 # These are baked into payloads at deploy time. Customize before deploying.
 mythic_uri_prefix = "/cdn/media/stream"
 sliver_uri_prefix = "/cloud/storage/objects"
-havoc_uri_prefix  = "/edge/cache/assets"
+adaptix_uri_prefix  = "/edge/cache/assets"
 
 # C2 header validation is always enabled. These override the defaults:
 # c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
@@ -120,7 +120,7 @@ tags = {
 # 3. Estimated monthly cost (us-east-1, on-demand pricing):
 #
 #    Hourly compute mix (Windows AMI bundles license into the rate):
-#      2x Linux  t3.medium  (Mythic, Havoc):            $0.0416/hr each
+#      2x Linux  t3.medium  (Mythic, Adaptix):            $0.0416/hr each
 #      3x Linux  t3.small   (Guac, Sliver, Redirector): $0.0208/hr each
 #      1x Windows t3.medium (windows):             $0.0608/hr
 #      Combined: ~$0.21/hr
@@ -131,9 +131,9 @@ tags = {
 #      10 hrs/week (~43 hrs/mo): ~$9/mo
 #
 #    Tradeoff: each redeploy adds ~30-45 min of setup before the lab is
-#    ready (terraform apply + cloud-init + Windows boot + Havoc rebuild
+#    ready (terraform apply + cloud-init + Windows boot + Adaptix rebuild
 #    from source). In open mode, DNS A records must be re-pointed to the
-#    new redirector EIP each redeploy. Mythic/Sliver/Havoc state is
+#    new redirector EIP each redeploy. Mythic/Sliver/Adaptix state is
 #    destroyed; for training that is usually the point.
 #
 #    ALTERNATIVE: stop (don't destroy) between sessions. Preserves state
