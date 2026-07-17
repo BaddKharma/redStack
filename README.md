@@ -16,7 +16,7 @@
   <a href="https://github.com/BaddKharma/redStack-defcon34"><img src="https://img.shields.io/badge/Session%20Docs%20%26%20Prereqs-1f6feb?logo=github" alt="Session Docs &amp; Prereqs"></a>
 </p>
 
-> A self-contained Boot-to-Breach lab on AWS. Deploy a full red-team training environment in ~45 minutes: three C2 frameworks (Mythic, Sliver, Havoc), an Apache redirector, a Kali workstation, a Windows workstation, and a Guacamole portal. Two peered VPCs, header + URI gating, scanner blocking, optional OpenVPN routing for cyber ranges (Hack Smarter Labs is the featured partner platform; HTB, VulnLab, and OffSec also supported).
+> A self-contained Boot-to-Breach lab on AWS. Deploy a full red-team training environment in ~45 minutes: three C2 frameworks (Mythic, Sliver, Adaptix), an Apache redirector, a Kali workstation, a Windows workstation, and a Guacamole portal. Two peered VPCs, header + URI gating, scanner blocking, optional OpenVPN routing for cyber ranges (Hack Smarter Labs is the featured partner platform; HTB, VulnLab, and OffSec also supported).
 
 **📖 [Full documentation lives in the redStack Wiki →](https://github.com/BaddKharma/redStack/wiki)**
 
@@ -40,7 +40,7 @@ The wiki is the de facto operator handbook. This README is a thin landing page s
 | 2 | Pick open or closed environment | **[Deployment Modes](https://github.com/BaddKharma/redStack/wiki/03.-Deployment-Architecture)** |
 | 3 | Configure tfvars and `terraform apply` | **[Deploy](https://github.com/BaddKharma/redStack/wiki/04.-Deploying-Terraform)** |
 | 4 | Confirm Guacamole + Windows + internal DNS | **[Verify](https://github.com/BaddKharma/redStack/wiki/05.-Verify)** |
-| 5 | Land first beacon: pick a C2 | **[Mythic](https://github.com/BaddKharma/redStack/wiki/10.-Mythic)** · **[Sliver](https://github.com/BaddKharma/redStack/wiki/11.-Sliver)** · **[Havoc](https://github.com/BaddKharma/redStack/wiki/12.-Havoc)** |
+| 5 | Land first beacon: pick a C2 | **[Mythic](https://github.com/BaddKharma/redStack/wiki/10.-Mythic)** · **[Sliver](https://github.com/BaddKharma/redStack/wiki/11.-Sliver)** · **[Adaptix](https://github.com/BaddKharma/redStack/wiki/12.-Adaptix)** |
 
 **Total time:** ~30-60 minutes on first deploy. Subsequent deploys: ~20-30 minutes.
 
@@ -58,7 +58,7 @@ Seven EC2 instances across two peered VPCs. Two have public Elastic IPs (Guacamo
 | `redirector` | Apache reverse proxy + C2 frontend | EIP exposes 80/443 only |
 | `mythic` | Mythic C2 server | No |
 | `sliver` | Sliver C2 server | No |
-| `havoc` | Havoc C2 server + desktop (VNC) | No |
+| `adaptix` | Adaptix C2 server + desktop (VNC) | No |
 | `windows` | Windows Server 2022 workstation | No |
 | `kali` | Kali Linux workstation (AD enum + attack toolset) | No |
 
@@ -78,7 +78,7 @@ Roughly **$0.27/hour** of compute while running. With `terraform destroy` betwee
 
 ## When Something Breaks
 
-**[Troubleshooting](https://github.com/BaddKharma/redStack/wiki/17.-Troubleshooting)** covers the failure modes that actually come up: Mythic SSL cert, Sliver missing, Havoc build failed, agent not calling back, Marketplace `OptInRequired`, VPC limits, `redirect.rules` download issues, Kali user rename, `ssh -R` binding behavior, and more.
+**[Troubleshooting](https://github.com/BaddKharma/redStack/wiki/17.-Troubleshooting)** covers the failure modes that actually come up: Mythic SSL cert, Sliver missing, Adaptix build failed, agent not calling back, Marketplace `OptInRequired`, VPC limits, `redirect.rules` download issues, Kali user rename, `ssh -R` binding behavior, and more.
 
 ---
 
@@ -88,7 +88,7 @@ Roughly **$0.27/hour** of compute while running. With `terraform destroy` betwee
 
 **Reference:** [Lab-Architecture](https://github.com/BaddKharma/redStack/wiki/03.-Deployment-Architecture) · [Lab-Inventory](https://github.com/BaddKharma/redStack/wiki/07.-Lab-Inventory) · [Guacamole](https://github.com/BaddKharma/redStack/wiki/08.-Guacamole) · [Cost-Management](https://github.com/BaddKharma/redStack/wiki/16.-Cost-Management)
 
-**C2 backends:** [Mythic](https://github.com/BaddKharma/redStack/wiki/10.-Mythic) · [Sliver](https://github.com/BaddKharma/redStack/wiki/11.-Sliver) · [Havoc](https://github.com/BaddKharma/redStack/wiki/12.-Havoc)
+**C2 backends:** [Mythic](https://github.com/BaddKharma/redStack/wiki/10.-Mythic) · [Sliver](https://github.com/BaddKharma/redStack/wiki/11.-Sliver) · [Adaptix](https://github.com/BaddKharma/redStack/wiki/12.-Adaptix)
 
 **Workstations:** [Windows](https://github.com/BaddKharma/redStack/wiki/13.-Windows) · [Kali](https://github.com/BaddKharma/redStack/wiki/14.-Kali)
 
@@ -111,7 +111,7 @@ redStack/
     ├── variables.tf          Input variables
     ├── security_groups.tf    Per-host security groups
     ├── sliver.tf             Sliver SG, ENI, instance
-    ├── havoc.tf              Havoc SG, ENI, instance
+    ├── adaptix.tf              Adaptix SG, ENI, instance
     ├── redirector.tf         Redirector VPC, peering, SG, ENI, instance
     ├── kali.tf               Kali SG, ENI, instance
     ├── outputs.tf            deployment_info + network_architecture
@@ -120,7 +120,7 @@ redStack/
     └── setup_scripts/        Cloud-init scripts templated by templatefile()
 ```
 
-The Terraform code is one file per role: Sliver, Havoc, Redirector, and Kali each own their own `.tf`; Mythic / Guacamole / Windows live in `main.tf` alongside the shared VPC scaffolding. Setup scripts in `terraform/setup_scripts/` are rendered into user-data at apply time.
+The Terraform code is one file per role: Sliver, Adaptix, Redirector, and Kali each own their own `.tf`; Mythic / Guacamole / Windows live in `main.tf` alongside the shared VPC scaffolding. Setup scripts in `terraform/setup_scripts/` are rendered into user-data at apply time.
 
 **Workflow:**
 
