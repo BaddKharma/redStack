@@ -3,6 +3,10 @@
 # Configures OS, SSH, firewall, VNC desktop, builds and starts the AdaptixC2
 # teamserver (Go), and drops build_adaptix_client.sh for manual execution
 # after boot (the Qt6 GUI client is built as a Docker AppImage).
+#
+# The AdaptixC2 build is deliberately non-fatal: a build failure must not strand
+# the VNC desktop or the rest of provisioning. cloud-init runs user-data with no
+# HOME, so HOME/GOPATH/GOCACHE are set explicitly before any go/make call.
 
 set -e
 
@@ -19,6 +23,13 @@ ADAPTIX_URI_PREFIX="${adaptix_uri_prefix}"
 C2_HEADER_NAME="${c2_header_name}"
 C2_HEADER_VALUE="${c2_header_value}"
 export SSH_PASSWORD
+
+# cloud-init has no HOME; Go needs it (and GOPATH/GOCACHE) or module verification
+# fails with "missing $GOPATH: HOME is not set".
+export HOME=/root
+export GOPATH=/root/go
+export GOCACHE=/root/.cache/go-build
+export PATH=$PATH:/usr/local/go/bin
 
 # Set hostname
 hostnamectl set-hostname adaptix
@@ -111,8 +122,8 @@ else
     tar -C /usr/local -xzf /tmp/go.tar.gz
     rm /tmp/go.tar.gz
 fi
-export PATH=$PATH:/usr/local/go/bin
 ln -sf /usr/local/go/bin/go /usr/local/bin/go
+mkdir -p "$GOPATH" "$GOCACHE"
 go version
 
 # ── yq for profile editing ───────────────────────────────────────────────────
@@ -121,46 +132,50 @@ if ! command -v yq >/dev/null 2>&1; then
     chmod +x /usr/local/bin/yq
 fi
 
-# ── Clone and build AdaptixC2 server + extenders ─────────────────────────────
-if [ -d "/opt/AdaptixC2/.git" ]; then
-    echo "[*] /opt/AdaptixC2 already cloned, skipping"
-else
+# ── Clone + build AdaptixC2 server + extenders (NON-FATAL) ────────────────────
+# A build failure must not abort the rest of provisioning (VNC desktop, service
+# units, client build script). If it fails, ~/build_adaptix_server.sh retries it.
+ADAPTIX_BUILT=0
+set +e
+if [ ! -d /opt/AdaptixC2/.git ]; then
     echo "[*] Cloning AdaptixC2..."
     git clone https://github.com/Adaptix-Framework/AdaptixC2.git /opt/AdaptixC2
 fi
-
 echo "[*] Building AdaptixC2 server + extenders (make server-ext)..."
-cd /opt/AdaptixC2
-make server-ext
-echo "[+] Build complete — artifacts in /opt/AdaptixC2/dist"
-
-# ── Teamserver TLS cert for the operator endpoint ────────────────────────────
-cd /opt/AdaptixC2/dist
-if [ ! -f server.rsa.key ] || [ ! -f server.rsa.crt ]; then
-    openssl req -x509 -newkey rsa:2048 -nodes \
-        -keyout server.rsa.key -out server.rsa.crt -days 3650 \
-        -subj "/CN=adaptix"
-fi
-
-# ── Patch the shipped server profile ─────────────────────────────────────────
-# Set the operator password to the lab secret and pin the endpoint/port so the
-# quickstart connect string is deterministic. Extenders stay as shipped, so all
-# beacon listeners (HTTP/SMB/TCP/DNS) are available in the client.
-if [ -f /opt/AdaptixC2/dist/profile.yaml ]; then
-    yq -i '.Teamserver.password = strenv(SSH_PASSWORD)' profile.yaml
-    yq -i '.Teamserver.endpoint = "/adaptix"' profile.yaml
-    yq -i '.Teamserver.port = 4321' profile.yaml
-    yq -i '.Teamserver.interface = "0.0.0.0"' profile.yaml
-    yq -i '.Teamserver.cert = "server.rsa.crt"' profile.yaml
-    yq -i '.Teamserver.key = "server.rsa.key"' profile.yaml
-    echo "[+] profile.yaml patched"
+( cd /opt/AdaptixC2 && make server-ext )
+if [ -f /opt/AdaptixC2/dist/adaptixserver ]; then
+    ADAPTIX_BUILT=1
+    echo "[+] AdaptixC2 server built"
 else
-    echo "[!] WARNING: /opt/AdaptixC2/dist/profile.yaml not found after build — teamserver will not start until a profile is present"
+    echo "[!] AdaptixC2 server build FAILED — desktop/services still provisioned; run ~/build_adaptix_server.sh to retry"
 fi
+set -e
 
-chown -R admin:admin /opt/AdaptixC2
+# ── Teamserver cert + profile (only if the build produced a binary) ──────────
+if [ "$ADAPTIX_BUILT" = "1" ]; then
+    cd /opt/AdaptixC2/dist
+    if [ ! -f server.rsa.key ] || [ ! -f server.rsa.crt ]; then
+        openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout server.rsa.key -out server.rsa.crt -days 3650 \
+            -subj "/CN=adaptix"
+    fi
+    # Patch the shipped server profile: operator password = lab secret, pinned
+    # endpoint/port. Extenders stay as shipped so all beacon listeners exist.
+    if [ -f /opt/AdaptixC2/dist/profile.yaml ]; then
+        yq -i '.Teamserver.password = strenv(SSH_PASSWORD)' profile.yaml
+        yq -i '.Teamserver.endpoint = "/adaptix"' profile.yaml
+        yq -i '.Teamserver.port = 4321' profile.yaml
+        yq -i '.Teamserver.interface = "0.0.0.0"' profile.yaml
+        yq -i '.Teamserver.cert = "server.rsa.crt"' profile.yaml
+        yq -i '.Teamserver.key = "server.rsa.key"' profile.yaml
+        echo "[+] profile.yaml patched"
+    else
+        echo "[!] WARNING: /opt/AdaptixC2/dist/profile.yaml not found after build"
+    fi
+fi
+chown -R admin:admin /opt/AdaptixC2 2>/dev/null || true
 
-# ── Systemd service: AdaptixC2 teamserver ────────────────────────────────────
+# ── Systemd service: AdaptixC2 teamserver (unit written regardless) ──────────
 cat > /etc/systemd/system/adaptix.service << 'SVCEOF'
 [Unit]
 Description=AdaptixC2 Teamserver
@@ -181,6 +196,41 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 SVCEOF
+
+# ── Manual server (re)build+start script, for a failed/updated build ─────────
+cat > /home/admin/build_adaptix_server.sh << 'SRVBUILD'
+#!/bin/bash
+# build_adaptix_server.sh - (re)build the AdaptixC2 teamserver and start it.
+# Runs with a proper HOME/GOPATH so the Go module verification works.
+set -e
+export HOME=/root
+export GOPATH=/root/go
+export GOCACHE=/root/.cache/go-build
+export PATH=$PATH:/usr/local/go/bin
+sudo mkdir -p /root/go /root/.cache/go-build
+echo "[*] Building AdaptixC2 server + extenders..."
+sudo -E env HOME=/root GOPATH=/root/go GOCACHE=/root/.cache/go-build PATH="$PATH" \
+    bash -c 'cd /opt/AdaptixC2 && make server-ext'
+cd /opt/AdaptixC2/dist
+if [ ! -f server.rsa.key ] || [ ! -f server.rsa.crt ]; then
+    sudo openssl req -x509 -newkey rsa:2048 -nodes \
+        -keyout server.rsa.key -out server.rsa.crt -days 3650 -subj "/CN=adaptix"
+fi
+APASS='${ssh_password}'
+export APASS
+sudo -E yq -i '.Teamserver.password = strenv(APASS)' profile.yaml
+sudo yq -i '.Teamserver.endpoint = "/adaptix"' profile.yaml
+sudo yq -i '.Teamserver.port = 4321' profile.yaml
+sudo yq -i '.Teamserver.interface = "0.0.0.0"' profile.yaml
+sudo yq -i '.Teamserver.cert = "server.rsa.crt"' profile.yaml
+sudo yq -i '.Teamserver.key = "server.rsa.key"' profile.yaml
+sudo chown -R admin:admin /opt/AdaptixC2
+sudo systemctl daemon-reload
+sudo systemctl enable adaptix.service
+sudo systemctl restart adaptix.service
+echo "[+] Teamserver (re)started — sudo systemctl status adaptix"
+SRVBUILD
+chmod +x /home/admin/build_adaptix_server.sh
 
 # ── TigerVNC desktop (operator runs the Adaptix client here) ─────────────────
 mkdir -p /home/admin/.vnc
@@ -297,6 +347,8 @@ cat > /home/admin/adaptix_quickstart.txt << QUICKSTART
 
 The teamserver runs as a systemd service and starts on boot:
   sudo systemctl status adaptix
+If the server build failed at deploy, run once:
+  ~/build_adaptix_server.sh
 
 1. Build the GUI client (one time, ~10-20 min):
      ~/build_adaptix_client.sh
@@ -336,8 +388,10 @@ cat > /etc/motd << 'MOTD'
 ║        AdaptixC2 — Teamserver auto-starts         ║
 ╠═══════════════════════════════════════════════════╣
 ║  Build the GUI client (~10-20 min):               ║
-║                                                   ║
 ║      ~/build_adaptix_client.sh                    ║
+║                                                   ║
+║  Server build failed? retry with:                 ║
+║      ~/build_adaptix_server.sh                    ║
 ║                                                   ║
 ║  Connect + listener values:                       ║
 ║      ~/adaptix_quickstart.txt                     ║
@@ -350,7 +404,11 @@ chown -R admin:admin /home/admin
 # Enable and start services
 systemctl daemon-reload
 systemctl enable adaptix.service
-systemctl start adaptix.service || echo "[!] adaptix teamserver start failed — check 'journalctl -u adaptix' and profile.yaml"
+if [ "$ADAPTIX_BUILT" = "1" ]; then
+    systemctl start adaptix.service || echo "[!] adaptix teamserver start failed — check 'journalctl -u adaptix'"
+else
+    echo "[!] adaptix teamserver not started (build pending) — run ~/build_adaptix_server.sh"
+fi
 systemctl enable vncserver@1.service
 systemctl start vncserver@1.service || echo "[!] VNC start failed — run 'sudo systemctl start vncserver@1' manually after boot"
 
@@ -359,4 +417,4 @@ echo "===== AdaptixC2 Server Setup Completed $(date) ====="
 echo "[+] SSH available with password auth from VPC"
 echo "[+] Teamserver on 4321 (operator client), listeners bind 80/443"
 echo "[+] VNC desktop on port 5901"
-echo "[+] Run ~/build_adaptix_client.sh to build the GUI client (10-20 min)"
+echo "[+] Client build: ~/build_adaptix_client.sh (10-20 min)"
