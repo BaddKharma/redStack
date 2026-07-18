@@ -340,23 +340,6 @@ if [ -n "$TOKEN" ]; then
     curl -s -X POST "http://localhost:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
         -H "Content-Type: application/json" \
         -d "{
-            \"name\": \"Adaptix Desktop (VNC)\",
-            \"protocol\": \"vnc\",
-            \"parameters\": {
-                \"hostname\": \"$ADAPTIX_PRIVATE_IP\",
-                \"port\": \"5901\",
-                \"password\": \"$SSH_PASSWORD\",
-                \"color-depth\": \"24\"
-            },
-            \"attributes\": {
-                \"max-connections\": \"2\",
-                \"max-connections-per-user\": \"1\"
-            }
-        }"
-
-    curl -s -X POST "http://localhost:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "{
             \"name\": \"Kali (SSH)\",
             \"protocol\": \"ssh\",
             \"parameters\": {

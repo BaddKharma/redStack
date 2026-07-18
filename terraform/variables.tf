@@ -64,7 +64,7 @@ variable "sliver_instance_type" {
 variable "adaptix_instance_type" {
   description = "EC2 instance type for Adaptix C2 server"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.small"
 }
 
 variable "kali_deployment_mode" {
@@ -166,6 +166,18 @@ variable "c2_header_value" {
   description = "HTTP header value required for C2 traffic (leave empty to auto-generate)"
   type        = string
   default     = ""
+}
+
+variable "adaptix_version" {
+  description = "AdaptixC2 git tag to pin the teamserver build to (reproducible; avoids upstream main drift)"
+  type        = string
+  default     = "v1.2"
+}
+
+variable "adaptix_client_url" {
+  description = "URL to the prebuilt AdaptixClient Windows zip (downloaded onto the Windows workstation at deploy)"
+  type        = string
+  default     = "https://github.com/BaddKharma/redStack/releases/download/adaptix-client-v1.2/AdaptixClient-v1.2-win64.zip"
 }
 
 variable "tags" {

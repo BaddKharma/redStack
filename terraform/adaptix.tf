@@ -70,27 +70,6 @@ resource "aws_security_group_rule" "adaptix_teamserver_from_windows" {
   security_group_id        = aws_security_group.adaptix.id
 }
 
-# VNC from Guacamole (desktop access for the Adaptix client GUI)
-resource "aws_security_group_rule" "adaptix_vnc_from_guacamole" {
-  type                     = "ingress"
-  from_port                = 5901
-  to_port                  = 5901
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.guacamole.id
-  description              = "VNC from Guacamole for Adaptix client desktop"
-  security_group_id        = aws_security_group.adaptix.id
-}
-
-# Adaptix teamserver from Guacamole (operator access via web)
-resource "aws_security_group_rule" "adaptix_teamserver_from_guacamole" {
-  type                     = "ingress"
-  from_port                = 4321
-  to_port                  = 4321
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.guacamole.id
-  description              = "Adaptix teamserver from Guacamole"
-  security_group_id        = aws_security_group.adaptix.id
-}
 
 # All traffic from main VPC (internal lab connectivity)
 resource "aws_security_group_rule" "adaptix_all_from_vpc" {
@@ -149,7 +128,7 @@ resource "aws_instance" "adaptix" {
   }
 
   root_block_device {
-    volume_size           = 40
+    volume_size           = 25
     volume_type           = "gp3"
     delete_on_termination = true
     encrypted             = true
@@ -170,6 +149,7 @@ resource "aws_instance" "adaptix" {
     adaptix_uri_prefix    = var.adaptix_uri_prefix
     c2_header_name        = var.c2_header_name
     c2_header_value       = local.c2_header_value
+    adaptix_version       = var.adaptix_version
   })
 
   metadata_options {
