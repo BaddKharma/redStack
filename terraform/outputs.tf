@@ -44,15 +44,14 @@ locals {
   +---------------------------------------------------------------------+
   | 4. ADAPTIX C2                                                       |
   +---------------------------------------------------------------------+
+    Login User:   (any nickname)
+    Login Pass:   ${nonsensitive(random_password.lab.result)}
     Client URL:   https://adaptix:4321/adaptix  (open in AdaptixClient on the windows workstation)
     Private IP:   ${aws_network_interface.adaptix.private_ip}
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
-    Login User:   (any nickname)
-    Login Pass:   ${nonsensitive(random_password.lab.result)}
     URI Prefix:   ${var.adaptix_uri_prefix}/
     C2 Header:    ${var.c2_header_name}: ${local.c2_header_value}
-    Operator:     Port 4321 (AdaptixClient via windows + Guacamole RDP)
     Guacamole:    Adaptix (SSH)
 
   +---------------------------------------------------------------------+
