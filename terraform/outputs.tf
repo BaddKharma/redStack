@@ -41,7 +41,7 @@ locals {
     Guacamole:    Sliver (SSH)
 
   +---------------------------------------------------------------------+
-  | 4. ADAPTIX C2                                                         |
+  | 4. ADAPTIX C2                                                       |
   +---------------------------------------------------------------------+
     Private IP:   ${aws_network_interface.adaptix.private_ip}
     SSH Username: admin
@@ -50,7 +50,8 @@ locals {
     Adaptix User:   admin
     Adaptix Pass:   ${nonsensitive(random_password.lab.result)}
     Teamserver:   adaptix:4321  |  Endpoint: /adaptix  |  User: (any nickname)  |  Pass: ${nonsensitive(random_password.lab.result)}
-    Guacamole:    Adaptix Desktop (VNC) | Adaptix (SSH)
+    Client:       AdaptixClient on windows (Guacamole > Windows RDP)
+    Guacamole:    Adaptix (SSH)
 
   +---------------------------------------------------------------------+
   | 5. REDIRECTOR                                                       |
@@ -68,10 +69,10 @@ locals {
                   ${var.sliver_uri_prefix}/ -> Sliver
                   ${var.adaptix_uri_prefix}/ -> Adaptix
     Decoy Page:   CloudEdge CDN maintenance (no header = decoy)
-${var.enable_vpn_tunnel ? <<-VPNINFO
+${var.enable_vpn_tunnel ? <<VPNINFO
 
   +---------------------------------------------------------------------+
-  | 5b. vpnTUN ROUTING (OpenVPN + WireGuard)                      |
+  | 5b. vpnTUN ROUTING (OpenVPN + WireGuard)                            |
   +---------------------------------------------------------------------+
     Status:       ENABLED
     WG Server:    ${aws_network_interface.redirector.private_ip} (redirector, wg0: 10.100.0.1)
@@ -135,7 +136,7 @@ network_architecture_content = <<-EOT
   +-------------------------+-------------------------------------------+
   |  mythic                 |  ${aws_network_interface.mythic.private_ip}
   |  sliver                 |  ${aws_network_interface.sliver.private_ip}
-  |  adaptix                  |  ${aws_network_interface.adaptix.private_ip}
+  |  adaptix                |  ${aws_network_interface.adaptix.private_ip}
   |  guacamole              |  ${aws_network_interface.guacamole.private_ip} (priv)  /  ${aws_eip.guacamole.public_ip} (pub)
   |  windows                |  ${aws_network_interface.windows.private_ip}
   |  kali                   |  ${aws_network_interface.kali.private_ip} (${var.kali_deployment_mode})
@@ -162,7 +163,7 @@ network_architecture_content = <<-EOT
        +--  ${format("%-25s", format("%s/", var.adaptix_uri_prefix))}-->  ${format("%-15s", aws_network_interface.adaptix.private_ip)}  (adaptix)
        +--  ${format("%-25s", "[no valid header]")}-->  Decoy page (CloudEdge CDN)
 
-${var.enable_vpn_tunnel ? <<-VPNARCH
+${var.enable_vpn_tunnel ? <<VPNARCH
 
   vpnTUN Routing (Cyber Ranges via OpenVPN + WireGuard):
   +-------------------------+-------------------------------------------+

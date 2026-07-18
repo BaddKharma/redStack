@@ -55,7 +55,7 @@ mythic_instance_type     = "t3.medium"  # 2 vCPU, 4GB RAM
 guacamole_instance_type  = "t3.small"   # 2 vCPU, 2GB RAM
 windows_instance_type    = "t3.medium"  # 2 vCPU, 4GB RAM
 sliver_instance_type     = "t3.medium"  # 2 vCPU, 4GB RAM
-adaptix_instance_type      = "t3.medium"  # 2 vCPU, 4GB RAM
+adaptix_instance_type    = "t3.small"   # 2 vCPU, 2GB RAM (headless teamserver)
 redirector_instance_type = "t3.small"   # 2 vCPU, 2GB RAM
 
 # Kali operator workstation
@@ -82,6 +82,10 @@ adaptix_uri_prefix  = "/edge/cache/assets"
 # C2 header validation is always enabled. These override the defaults:
 # c2_header_name  = "X-Request-ID"  # Header name (default: X-Request-ID)
 # c2_header_value = ""              # Token value — leave empty to auto-generate (recommended)
+
+# AdaptixC2 pin + prebuilt Windows client (defaults shown; override to bump the version)
+# adaptix_version    = "v1.2"
+# adaptix_client_url = "https://github.com/BaddKharma/redStack/releases/download/adaptix-client-v1.2/AdaptixClient-v1.2-win64.zip"
 
 
 # Optional: Custom tags applied to every AWS resource (instances, SGs, EIPs, etc.)
@@ -120,30 +124,30 @@ tags = {
 # 3. Estimated monthly cost (us-east-1, on-demand pricing):
 #
 #    Hourly compute mix (Windows AMI bundles license into the rate):
-#      2x Linux  t3.medium  (Mythic, Adaptix):            $0.0416/hr each
-#      3x Linux  t3.small   (Guac, Sliver, Redirector): $0.0208/hr each
-#      1x Windows t3.medium (windows):             $0.0608/hr
-#      Combined: ~$0.21/hr
+#      3x Linux   t3.medium  (Mythic, Sliver, Kali):      $0.0416/hr each
+#      3x Linux   t3.small   (Guac, Adaptix, Redirector): $0.0208/hr each
+#      1x Windows t3.medium  (windows):                   $0.0608/hr
+#      Combined: ~$0.25/hr   (Kali headless; gui mode = t3.large, +~$0.04/hr)
 #
 #    RECOMMENDED: 5-10 hrs/week study + `terraform destroy` between sessions.
 #    Pay only for compute hours actively used. No idle EBS or EIP charges.
-#      5  hrs/week (~22 hrs/mo): ~$5/mo
-#      10 hrs/week (~43 hrs/mo): ~$9/mo
+#      5  hrs/week (~22 hrs/mo): ~$6/mo
+#      10 hrs/week (~43 hrs/mo): ~$11/mo
 #
-#    Tradeoff: each redeploy adds ~30-45 min of setup before the lab is
-#    ready (terraform apply + cloud-init + Windows boot + Adaptix rebuild
-#    from source). In open mode, DNS A records must be re-pointed to the
-#    new redirector EIP each redeploy. Mythic/Sliver/Adaptix state is
-#    destroyed; for training that is usually the point.
+#    Tradeoff: each redeploy adds ~30-45 min before the lab is ready
+#    (terraform apply + cloud-init + Windows boot). The AdaptixC2 server
+#    builds from source at deploy (pinned to a tag, ~2-3 min); the operator
+#    client is a prebuilt download, no compile. In open mode, DNS A records
+#    must be re-pointed to the new redirector EIP each redeploy.
 #
 #    ALTERNATIVE: stop (don't destroy) between sessions. Preserves state
 #    and skips rebuilds (~5-10 min boot to resume), but EBS volumes
-#    (~$14/mo) and Elastic IPs (~$7/mo) bill 24/7 even when stopped.
-#      5  hrs/week + stopped between: ~$26/mo
-#      10 hrs/week + stopped between: ~$30/mo
+#    (~$16/mo) and Elastic IPs (~$7/mo) bill 24/7 even when stopped.
+#      5  hrs/week + stopped between: ~$28/mo
+#      10 hrs/week + stopped between: ~$34/mo
 #
 #    REFERENCE (all instances running 24/7):
-#      Compute ~$151/mo + storage/EIPs ~$21/mo = ~$172/mo
+#      Compute ~$181/mo + storage/EIPs ~$23/mo = ~$204/mo
 #
 #    Data transfer: first 100 GB/mo outbound free, light study use ~$0
 #
