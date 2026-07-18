@@ -14,7 +14,6 @@ locals {
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
     SSH (external): ssh -i ${var.ssh_key_name}.pem admin@${aws_eip.guacamole.public_ip}
-    SSH (internal): ssh admin@${aws_network_interface.guacamole.private_ip}
 
   +---------------------------------------------------------------------+
   | 2. MYTHIC C2                                                        |
@@ -23,9 +22,10 @@ locals {
     Private IP:   ${aws_network_interface.mythic.private_ip}
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
-    SSH (internal): ssh admin@${aws_network_interface.mythic.private_ip}
     UI Username:  mythic_admin
     UI Password:  ${nonsensitive(random_password.lab.result)}
+    URI Prefix:   ${var.mythic_uri_prefix}/
+    C2 Header:    ${var.c2_header_name}: ${local.c2_header_value}
     Operator:     Port 7443 (Web UI via windows + Guacamole)
     Guacamole:    Mythic (SSH)
 
@@ -35,8 +35,9 @@ locals {
     Private IP:   ${aws_network_interface.sliver.private_ip}
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
-    SSH (internal): ssh admin@${aws_network_interface.sliver.private_ip}
     Sliver Op:    admin (config at /home/admin/.sliver-client/configs/admin.cfg)
+    URI Prefix:   ${var.sliver_uri_prefix}/
+    C2 Header:    ${var.c2_header_name}: ${local.c2_header_value}
     Operator:     Port 31337 (gRPC multiplexer)
     Guacamole:    Sliver (SSH)
 
@@ -47,9 +48,10 @@ locals {
     Private IP:   ${aws_network_interface.adaptix.private_ip}
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
-    SSH (internal): ssh admin@${aws_network_interface.adaptix.private_ip}
     Login User:   (any nickname)
     Login Pass:   ${nonsensitive(random_password.lab.result)}
+    URI Prefix:   ${var.adaptix_uri_prefix}/
+    C2 Header:    ${var.c2_header_name}: ${local.c2_header_value}
     Operator:     Port 4321 (AdaptixClient via windows + Guacamole RDP)
     Guacamole:    Adaptix (SSH)
 
@@ -119,7 +121,6 @@ VPNINFO
     Mode:         ${upper(var.kali_deployment_mode)}
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
-    SSH (internal): ssh admin@${aws_network_interface.kali.private_ip}
     Guacamole:    Kali (SSH)${var.kali_deployment_mode == "gui" ? " | Kali (XRDP)" : ""}
     Tools:        AD/enum lineup pre-installed at provision; GUI mode + extra metapackages documented in the wiki
 
