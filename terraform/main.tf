@@ -380,7 +380,7 @@ resource "aws_instance" "windows" {
     encrypted             = true
   }
 
-  user_data = replace(
+  user_data = replace(replace(
     file("${path.module}/setup_scripts/windows_setup.ps1"),
     "__HOSTS_ENTRIES__",
     join("\r\n", [
@@ -392,7 +392,7 @@ resource "aws_instance" "windows" {
       "${aws_network_interface.redirector.private_ip}    redirector",
       "${aws_network_interface.kali.private_ip}    kali",
     ])
-  )
+  ), "__ADAPTIX_CLIENT_URL__", var.adaptix_client_url)
 
   metadata_options {
     http_endpoint = "enabled"

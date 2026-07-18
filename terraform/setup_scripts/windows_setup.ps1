@@ -73,6 +73,27 @@ $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";
 & "$env:ProgramData\chocolatey\bin\choco.exe" install git -y --no-progress
 
 # ============================================================================
+# ADAPTIX C2 CLIENT (prebuilt, hosted - downloaded, not built)
+# ============================================================================
+$adaptixUrl = "__ADAPTIX_CLIENT_URL__"
+$adaptixDir = "C:\Tools\AdaptixClient"
+try {
+    New-Item -ItemType Directory -Force -Path $adaptixDir | Out-Null
+    $acZip = "$env:TEMP\AdaptixClient.zip"
+    Invoke-WebRequest -Uri $adaptixUrl -OutFile $acZip -UseBasicParsing
+    Expand-Archive -Path $acZip -DestinationPath $adaptixDir -Force
+    Remove-Item $acZip -Force
+    $wsh = New-Object -ComObject WScript.Shell
+    $lnk = $wsh.CreateShortcut("C:\Users\Administrator\Desktop\AdaptixClient.lnk")
+    $lnk.TargetPath = "$adaptixDir\AdaptixClient.exe"
+    $lnk.WorkingDirectory = $adaptixDir
+    $lnk.Save()
+    Write-Host "[+] Adaptix client installed to $adaptixDir"
+} catch {
+    Write-Host "[!] Adaptix client download failed: $($_.Exception.Message)"
+}
+
+# ============================================================================
 # PRE-CONFIGURE MOBAXTERM SESSIONS
 # ============================================================================
 
