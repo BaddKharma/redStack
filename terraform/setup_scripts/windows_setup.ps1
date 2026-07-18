@@ -35,6 +35,25 @@ Start-Transcript -Path "C:\Windows\Temp\user-data.log" -Append
 
 Write-Host "===== Windows Client Setup Started $(Get-Date) ====="
 
+# Visible provisioning status for anyone who RDPs in: this desktop file says setup is
+# still running and is replaced by _SETUP-COMPLETE.txt at the end. The "Setup Log"
+# shortcut tails the live provisioning log so you can watch it finish.
+$deskDir = "C:\Users\Administrator\Desktop"
+New-Item -ItemType Directory -Force -Path $deskDir | Out-Null
+Set-Content -Path "$deskDir\_SETUP-IN-PROGRESS.txt" -Encoding ASCII -Value @"
+redStack Windows setup is STILL RUNNING - do not rely on this box yet.
+This file is replaced by _SETUP-COMPLETE.txt when provisioning finishes.
+Live log: C:\Windows\Temp\user-data.log  (or open the "Setup Log" desktop shortcut)
+"@
+try {
+    $wshLog = New-Object -ComObject WScript.Shell
+    $logLnk = $wshLog.CreateShortcut("$deskDir\Setup Log.lnk")
+    $logLnk.TargetPath = "powershell.exe"
+    $logLnk.Arguments = "-NoExit -Command `"Get-Content 'C:\Windows\Temp\user-data.log' -Wait`""
+    $logLnk.IconLocation = "powershell.exe,0"
+    $logLnk.Save()
+} catch {}
+
 # Set hostname
 Rename-Computer -NewName "windows" -Force
 
@@ -66,32 +85,10 @@ Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://com
 # Refresh PATH to include Chocolatey
 $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
 
-& "$env:ProgramData\chocolatey\bin\choco.exe" install chromium -y --no-progress
-& "$env:ProgramData\chocolatey\bin\choco.exe" install vscode -y --no-progress
-& "$env:ProgramData\chocolatey\bin\choco.exe" install mobaxterm -y --no-progress
-& "$env:ProgramData\chocolatey\bin\choco.exe" install 7zip -y --no-progress
-& "$env:ProgramData\chocolatey\bin\choco.exe" install git -y --no-progress
+# ---- Operator tools, installed in priority order (MobaXterm first) ----
 
-# ============================================================================
-# ADAPTIX C2 CLIENT (prebuilt, hosted - downloaded, not built)
-# ============================================================================
-$adaptixUrl = "__ADAPTIX_CLIENT_URL__"
-$adaptixDir = "C:\Tools\AdaptixClient"
-try {
-    New-Item -ItemType Directory -Force -Path $adaptixDir | Out-Null
-    $acZip = "$env:TEMP\AdaptixClient.zip"
-    Invoke-WebRequest -Uri $adaptixUrl -OutFile $acZip -UseBasicParsing
-    Expand-Archive -Path $acZip -DestinationPath $adaptixDir -Force
-    Remove-Item $acZip -Force
-    $wsh = New-Object -ComObject WScript.Shell
-    $lnk = $wsh.CreateShortcut("C:\Users\Administrator\Desktop\AdaptixClient.lnk")
-    $lnk.TargetPath = "$adaptixDir\AdaptixClient.exe"
-    $lnk.WorkingDirectory = $adaptixDir
-    $lnk.Save()
-    Write-Host "[+] Adaptix client installed to $adaptixDir"
-} catch {
-    Write-Host "[!] Adaptix client download failed: $($_.Exception.Message)"
-}
+# 1) MobaXterm - operator SSH to every lab box, plus its saved sessions
+& "$env:ProgramData\chocolatey\bin\choco.exe" install mobaxterm -y --no-progress
 
 # ============================================================================
 # PRE-CONFIGURE MOBAXTERM SESSIONS
@@ -183,6 +180,12 @@ Kali Linux (SSH)= #109#0%kali%22%admin%%-1%-1%%%%%0%-1%0%%%-1%-1%0%0%%1080%%0%0%
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText("$mobaDir\MobaXterm.ini", $mobaIni, $utf8NoBom)
 
+# 2) 7-Zip
+& "$env:ProgramData\chocolatey\bin\choco.exe" install 7zip -y --no-progress
+
+# 3) Chromium, with preloaded bookmarks
+& "$env:ProgramData\chocolatey\bin\choco.exe" install chromium -y --no-progress
+
 # ============================================================================
 # PRE-CONFIGURE CHROMIUM BOOKMARKS
 # ============================================================================
@@ -250,6 +253,41 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 
 $prefs = '{"bookmark_bar":{"show_on_all_tabs":true}}'
 [System.IO.File]::WriteAllText("$chromiumDir\Preferences", $prefs, $utf8NoBom)
+
+# 4) Adaptix C2 client (prebuilt, hosted - downloaded, not built)
+$adaptixUrl = "__ADAPTIX_CLIENT_URL__"
+$adaptixDir = "C:\Tools\AdaptixClient"
+try {
+    New-Item -ItemType Directory -Force -Path $adaptixDir | Out-Null
+    $acZip = "$env:TEMP\AdaptixClient.zip"
+    Invoke-WebRequest -Uri $adaptixUrl -OutFile $acZip -UseBasicParsing
+    Expand-Archive -Path $acZip -DestinationPath $adaptixDir -Force
+    Remove-Item $acZip -Force
+    $wsh = New-Object -ComObject WScript.Shell
+    $lnk = $wsh.CreateShortcut("C:\Users\Administrator\Desktop\AdaptixClient.lnk")
+    $lnk.TargetPath = "$adaptixDir\AdaptixClient.exe"
+    $lnk.WorkingDirectory = $adaptixDir
+    $acIco = Get-ChildItem -Path $adaptixDir -Recurse -Filter *.ico -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($acIco) { $lnk.IconLocation = "$($acIco.FullName),0" } else { $lnk.IconLocation = "$adaptixDir\AdaptixClient.exe,0" }
+    $lnk.Save()
+    Write-Host "[+] Adaptix client installed to $adaptixDir"
+} catch {
+    Write-Host "[!] Adaptix client download failed: $($_.Exception.Message)"
+}
+
+# 5) Visual Studio Code
+& "$env:ProgramData\chocolatey\bin\choco.exe" install vscode -y --no-progress
+
+# 6) Remaining tools
+& "$env:ProgramData\chocolatey\bin\choco.exe" install git -y --no-progress
+
+# Flip the desktop status marker to COMPLETE - the visible provisioning done-signal
+Remove-Item "$deskDir\_SETUP-IN-PROGRESS.txt" -Force -ErrorAction SilentlyContinue
+Set-Content -Path "$deskDir\_SETUP-COMPLETE.txt" -Encoding ASCII -Value @"
+redStack Windows setup COMPLETE - $(Get-Date)
+This box is ready: all operator tools are installed and MobaXterm has its saved sessions.
+Full provisioning log: C:\Windows\Temp\user-data.log  (or the "Setup Log" desktop shortcut)
+"@
 
 Write-Host "===== Windows Client Setup Completed $(Get-Date) ====="
 
