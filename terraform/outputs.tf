@@ -43,14 +43,14 @@ locals {
   +---------------------------------------------------------------------+
   | 4. ADAPTIX C2                                                       |
   +---------------------------------------------------------------------+
+    Client URL:   https://adaptix:4321/adaptix  (open in AdaptixClient on the windows workstation)
     Private IP:   ${aws_network_interface.adaptix.private_ip}
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
     SSH (internal): ssh admin@${aws_network_interface.adaptix.private_ip}
-    Adaptix User:   admin
-    Adaptix Pass:   ${nonsensitive(random_password.lab.result)}
-    Teamserver:   adaptix:4321  |  Endpoint: /adaptix  |  User: (any nickname)  |  Pass: ${nonsensitive(random_password.lab.result)}
-    Client:       AdaptixClient on windows (Guacamole > Windows RDP)
+    Login User:   (any nickname)
+    Login Pass:   ${nonsensitive(random_password.lab.result)}
+    Operator:     Port 4321 (AdaptixClient via windows + Guacamole RDP)
     Guacamole:    Adaptix (SSH)
 
   +---------------------------------------------------------------------+
@@ -58,7 +58,7 @@ locals {
   +---------------------------------------------------------------------+
     Public IP:    ${aws_eip.redirector.public_ip}
     Private IP:   ${aws_network_interface.redirector.private_ip}
-    Domain:       ${var.redirector_domain != "" ? var.redirector_domain : "c2.example.com"}
+    Domain:       ${var.redirector_domain != "" ? var.redirector_domain : "(none)"}
     SSH Username: admin
     SSH Password: ${nonsensitive(random_password.lab.result)}
     SSH Access:   Guacamole > "Redirector (SSH)"  (recommended)
@@ -121,8 +121,7 @@ VPNINFO
     SSH Password: ${nonsensitive(random_password.lab.result)}
     SSH (internal): ssh admin@${aws_network_interface.kali.private_ip}
     Guacamole:    Kali (SSH)${var.kali_deployment_mode == "gui" ? " | Kali (XRDP)" : ""}
-    First steps:  sudo install-kali-tools  (21-package AD/enum lineup)
-                  ${var.kali_deployment_mode == "headless" ? "sudo kali-go-gui          (convert headless -> GUI later)" : "GUI active. Connect via Guacamole > Kali (XRDP)."}
+    Tools:        AD/enum lineup pre-installed at provision; GUI mode + extra metapackages documented in the wiki
 
   EOT
 
