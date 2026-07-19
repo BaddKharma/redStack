@@ -16,7 +16,7 @@
   <a href="https://github.com/BaddKharma/redStack-defcon34"><img src="https://img.shields.io/badge/Session%20Docs%20%26%20Prereqs-1f6feb?logo=github" alt="Session Docs &amp; Prereqs"></a>
 </p>
 
-> A self-contained Boot-to-Breach lab on AWS. Deploy a full red-team training environment in ~45 minutes: three C2 frameworks (Mythic, Sliver, Adaptix), an Apache redirector, a Kali workstation, a Windows workstation, and a Guacamole portal. Two peered VPCs, header + URI gating, scanner blocking, optional OpenVPN routing for cyber ranges (Hack Smarter Labs is the featured partner platform; HTB, VulnLab, and OffSec also supported).
+> A red-team operator stack on AWS, up in ~45 minutes: three C2 frameworks (Mythic, Sliver, Adaptix), an Apache redirector, Kali and Windows workstations, and a Guacamole portal, across two peered VPCs with header + URI gating and scanner blocking. Run it two ways: **Direct Access** against your own self-hosted cyber range, or **Tunneled Access** over OpenVPN into a hosted training platform, Hack Smarter Labs, Hack The Box, OffSec Proving Grounds/Labs, VulnLab, or any platform that provides an `.ovpn`.
 
 **📖 [Full documentation lives in the redStack Wiki →](https://github.com/BaddKharma/redStack/wiki)**
 
@@ -54,11 +54,11 @@ Seven EC2 instances across two peered VPCs. Two have public Elastic IPs (Guacamo
 
 | Hostname | Role | Public IP |
 |----------|------|-----------|
-| `guac` | Guacamole portal (web SSH/RDP/VNC) | Yes |
+| `guac` | Guacamole portal (web SSH/RDP) | Yes |
 | `redirector` | Apache reverse proxy + C2 frontend | EIP exposes 80/443 only |
 | `mythic` | Mythic C2 server | No |
 | `sliver` | Sliver C2 server | No |
-| `adaptix` | Adaptix C2 server + desktop (VNC) | No |
+| `adaptix` | Adaptix C2 teamserver (headless) | No |
 | `windows` | Windows Server 2022 workstation | No |
 | `kali` | Kali Linux workstation (AD enum + attack toolset) | No |
 
@@ -111,7 +111,7 @@ redStack/
     ├── variables.tf          Input variables
     ├── security_groups.tf    Per-host security groups
     ├── sliver.tf             Sliver SG, ENI, instance
-    ├── adaptix.tf              Adaptix SG, ENI, instance
+    ├── adaptix.tf            Adaptix SG, ENI, instance
     ├── redirector.tf         Redirector VPC, peering, SG, ENI, instance
     ├── kali.tf               Kali SG, ENI, instance
     ├── outputs.tf            deployment_info + network_architecture
