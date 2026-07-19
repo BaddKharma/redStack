@@ -134,6 +134,12 @@ The SSH private key (`rs-rsa-key.pem`) lives at the repo root; `terraform.tfvars
 
 ---
 
+## Acknowledgments
+
+Thanks to P3n3tr@t0r, Cr4ck3rj4ck5, cyberbandit74, and wcmocha for testing redStack and providing feedback that shaped the platform and its documentation.
+
+---
+
 ## License
 
 MIT License with Commons Clause. Free to use, deploy, modify, and share for any purpose.
