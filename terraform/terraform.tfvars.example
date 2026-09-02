@@ -5,9 +5,11 @@
 # REQUIRED VARIABLES - YOU MUST SET THESE
 # ============================================================================
 
-# Your public IP for SSH access (find with: curl -4 ifconfig.me)
+# Your public IP(s) for SSH access (find with: curl -4 ifconfig.me)
+# This is a list. Add one entry per network you deploy from (home, office, hotspot);
+# every entry is allowlisted on the SSH and RDP management rules.
 # Use -4 so you get IPv4; a plain "curl ifconfig.me" may return IPv6 on v6-enabled networks.
-# Must be an IPv4 address in CIDR format with /32 suffix (IPv6 is not supported by the SGs)
+# Each entry must be an IPv4 address in CIDR format with /32 suffix (IPv6 is not supported by the SGs)
 localPub_ip = [
   "x.x.x.x/32",
   # "y.y.y.y/32",   # add more home/office IPs as needed
@@ -112,7 +114,8 @@ tags = {
 #    curl -4 ifconfig.me
 #    (Use -4 to force IPv4. A plain "curl ifconfig.me" can return an IPv6
 #     address on v6-enabled networks, which the security groups do not accept.)
-#    Then append /32 for CIDR format
+#    Then append /32 for CIDR format. Repeat from each network you deploy
+#    from and list every result in localPub_ip.
 #
 # 2. To create an SSH key pair in AWS:
 #    AWS Console > EC2 > Key Pairs > Create key pair
