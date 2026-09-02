@@ -8,7 +8,10 @@
 # Your public IP for SSH access (find with: curl -4 ifconfig.me)
 # Use -4 so you get IPv4; a plain "curl ifconfig.me" may return IPv6 on v6-enabled networks.
 # Must be an IPv4 address in CIDR format with /32 suffix (IPv6 is not supported by the SGs)
-localPub_ip = "x.x.x.x/32"
+localPub_ip = [
+  "x.x.x.x/32",
+  # "y.y.y.y/32",   # add more home/office IPs as needed
+]
 
 # Name of your existing AWS SSH key pair
 # Must already exist in AWS EC2 Console > Key Pairs

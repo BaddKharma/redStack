@@ -21,7 +21,7 @@ resource "aws_security_group_rule" "adaptix_ssh" {
   from_port         = 22
   to_port           = 22
   protocol          = "tcp"
-  cidr_blocks       = [var.localPub_ip]
+  cidr_blocks       = var.localPub_ip
   description       = "SSH access for instructor"
   security_group_id = aws_security_group.adaptix.id
 }

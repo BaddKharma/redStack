@@ -10,7 +10,7 @@ exec 2>&1
 echo "===== Mythic Team Server Setup Started $(date) ====="
 
 # Variables from Terraform template
-LOCAL_PUB_IP="${localPub_ip}"
+LOCAL_PUB_IPS="${localPub_ip}"
 ENABLE_AUTOSTART="${enable_autostart}"
 SSH_PASSWORD="${ssh_password}"
 VPC_CIDR="${vpc_cidr}"
@@ -87,8 +87,10 @@ docker compose version
 ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
-ufw allow from $LOCAL_PUB_IP to any port 22 proto tcp comment 'SSH from instructor'
-ufw allow from $LOCAL_PUB_IP to any port 7443:7444 proto tcp comment 'Mythic UI from instructor'
+for ip in $LOCAL_PUB_IPS; do
+  ufw allow from $ip to any port 22 proto tcp comment 'SSH from instructor'
+  ufw allow from $ip to any port 7443:7444 proto tcp comment 'Mythic UI from instructor'
+done
 ufw allow from $VPC_CIDR to any port 22 proto tcp comment 'SSH from Guacamole via VPC'
 ufw allow from $VPC_CIDR to any port 7443:7444 proto tcp comment 'Mythic UI from Windows client'
 ufw allow from $REDIRECTOR_VPC_CIDR to any port 80 proto tcp comment 'HTTP C2 from redirector'

@@ -13,11 +13,11 @@ variable "project_name" {
 }
 
 variable "localPub_ip" {
-  description = "Local public IP for SSH/management access (CIDR format, e.g., 1.2.3.4/32)"
-  type        = string
+  description = "Local public IPs for SSH/management access (list of CIDRs, e.g., [\"1.2.3.4/32\"])"
+  type        = list(string)
   validation {
-    condition     = can(cidrhost(var.localPub_ip, 0))
-    error_message = "Must be a valid CIDR block (e.g., 1.2.3.4/32)"
+    condition     = alltrue([for ip in var.localPub_ip : can(cidrhost(ip, 0))])
+    error_message = "Every entry must be a valid CIDR block (e.g., 1.2.3.4/32)"
   }
 }
 

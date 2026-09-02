@@ -21,7 +21,7 @@ resource "aws_security_group_rule" "mythic_ssh" {
   from_port         = 22
   to_port           = 22
   protocol          = "tcp"
-  cidr_blocks       = [var.localPub_ip]
+  cidr_blocks       = var.localPub_ip
   description       = "SSH access for instructor"
   security_group_id = aws_security_group.mythic.id
 }
@@ -104,7 +104,7 @@ resource "aws_security_group_rule" "guacamole_ssh" {
   from_port         = 22
   to_port           = 22
   protocol          = "tcp"
-  cidr_blocks       = [var.localPub_ip]
+  cidr_blocks       = var.localPub_ip
   description       = "SSH access for instructor"
   security_group_id = aws_security_group.guacamole.id
 }
@@ -206,7 +206,7 @@ resource "aws_security_group_rule" "windows_rdp_instructor" {
   from_port         = 3389
   to_port           = 3389
   protocol          = "tcp"
-  cidr_blocks       = [var.localPub_ip]
+  cidr_blocks       = var.localPub_ip
   description       = "TEMPORARY: RDP from instructor for initial setup"
   security_group_id = aws_security_group.windows.id
 }
@@ -264,7 +264,7 @@ resource "aws_security_group_rule" "kali_ssh" {
   from_port         = 22
   to_port           = 22
   protocol          = "tcp"
-  cidr_blocks       = [var.localPub_ip]
+  cidr_blocks       = var.localPub_ip
   description       = "SSH access for instructor"
   security_group_id = aws_security_group.kali.id
 }

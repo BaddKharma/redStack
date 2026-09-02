@@ -236,7 +236,7 @@ resource "aws_instance" "mythic" {
   }
 
   user_data = templatefile("${path.module}/setup_scripts/mythic_setup.sh", {
-    localPub_ip           = var.localPub_ip
+    localPub_ip           = join(" ", var.localPub_ip)
     enable_autostart      = var.enable_mythic_autostart
     ssh_password          = random_password.lab.result
     vpc_cidr              = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : var.vpc_cidr
