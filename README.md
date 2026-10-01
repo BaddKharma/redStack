@@ -18,6 +18,10 @@
 
 > A red-team operator stack on AWS, up in ~45 minutes: three C2 frameworks (Mythic, Sliver, Adaptix), an Apache redirector, Kali and Windows workstations, and a Guacamole portal, across two peered VPCs with header + URI gating and scanner blocking. Run it two ways: **Direct Access** against your own self-hosted cyber range, or **Tunneled Access** over OpenVPN into a hosted training platform, Hack Smarter Labs, Hack The Box, OffSec Proving Grounds/Labs, VulnLab, or any platform that provides an `.ovpn`.
 
+> [!TIP]
+> **redStack now has a provider-agnostic successor: [redStackPRO](https://github.com/devZero-Security/redStackPRO).**
+> It is a web canvas that composes red team infrastructure and cyber ranges as a provider-agnostic topology, then compiles that topology to a complete, runnable directory of Terraform and Ansible you run yourself. GCP and AWS are tested end to end; Azure, Proxmox, and ESXi are on the roadmap. Built and maintained under devZero Security. See [redstackpro.com](https://redstackpro.com).
+
 **📖 [Full documentation lives in the redStack Wiki →](https://github.com/BaddKharma/redStack/wiki)**
 
 The wiki is the de facto operator handbook. This README is a thin landing page so you can find your way in. Everything you need to deploy, verify, run the C2 walkthroughs, troubleshoot, or extend the lab lives there.
